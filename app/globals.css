@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 240 33% 7%;
+  --foreground: 0 0% 95%;
+
+  --card: 240 30% 11%;
+  --card-foreground: 0 0% 95%;
+
+  --border: 240 20% 20%;
+  --input: 240 25% 20%;
+  --ring: 128 49% 48%;
+
+  --primary: 128 49% 48%;
+  --primary-foreground: 0 0% 5%;
+
+  --secondary: 240 25% 14%;
+  --secondary-foreground: 0 0% 95%;
+
+  --muted: 240 25% 15%;
+  --muted-foreground: 240 10% 60%;
+
+  --accent: 128 49% 20%;
+  --accent-foreground: 128 49% 70%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 95%;
+
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Montserrat', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    @apply font-bold tracking-tight uppercase;
+  }
+
+  ::selection {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-white/5 shadow-xl;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px hsla(128, 49%, 48%, 0.5);
+  }
+
+  .box-glow {
+    box-shadow: 0 0 20px hsla(128, 49%, 48%, 0.15);
+  }
+
+  .font-display {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
