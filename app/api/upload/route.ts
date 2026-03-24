@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -17,12 +17,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  // Validate file type
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "File must be an image" }, { status: 400 });
   }
 
-  // Validate file size (10MB max)
   if (file.size > 10 * 1024 * 1024) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
@@ -30,11 +28,9 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "gym-photos";
 
-  // Generate unique filename
   const ext = file.name.split(".").pop() || "jpg";
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-  // Upload to Supabase Storage
   const bytes = await file.arrayBuffer();
   const { error: uploadError } = await supabase.storage
     .from(bucket)
@@ -47,11 +43,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
-  // Get public URL
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
   const url = urlData.publicUrl;
 
-  // Save to database
   const { data: photo, error: dbError } = await supabase
     .from("photos")
     .insert({ url, caption, member_id: memberId })
@@ -59,7 +53,6 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (dbError) {
-    // Clean up storage if DB insert fails
     await supabase.storage.from(bucket).remove([filename]);
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }

@@ -6,7 +6,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,7 +27,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,14 +49,13 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const id = parseInt(params.id);
   const supabase = getSupabaseAdmin();
 
-  // Delete associated photos from storage
   const { data: photos } = await supabase
     .from("photos")
     .select("url")
