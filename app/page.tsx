@@ -1,17 +1,128 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { useLookupMember, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dumbbell, Calendar, CreditCard, LogOut, Bell, ImageIcon,
-  ChevronRight, X, Menu, Check,
+  ChevronRight, X, Menu, Check, Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { isMembershipActive, cn } from "@/lib/utils";
 import type { Member } from "@/lib/supabase";
+
+interface Bundle {
+  id: number;
+  name: string;
+  price: number;
+  period: string;
+  features: string[];
+  highlight: boolean;
+}
+
+function PricingSection() {
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/bundles")
+      .then((res) => res.json())
+      .then((data) => {
+        setBundles(data);
+        setIsLoading(false);
+      })
+      .catch(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-8 rounded-xl bg-white/5 border border-white/5 animate-pulse">
+            <div className="h-8 bg-white/10 rounded w-32 mb-4" />
+            <div className="h-12 bg-white/10 rounded w-24 mb-6" />
+            <div className="space-y-3 mb-8">
+              {[1, 2, 3, 4].map((f) => (
+                <div key={f} className="h-4 bg-white/10 rounded w-full" />
+              ))}
+            </div>
+            <div className="h-12 bg-white/10 rounded w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!bundles || bundles.length === 0) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          { name: "Basic", price: "199", period: "/ mo", features: ["Full gym access", "Locker room", "Free Wi-Fi"], highlight: false },
+          { name: "Premium", price: "349", period: "/ mo", features: ["Everything in Basic", "Group classes", "Personal trainer (2x/mo)", "Nutrition consultation"], highlight: true },
+          { name: "VIP", price: "599", period: "/ mo", features: ["Everything in Premium", "Unlimited PT sessions", "Priority booking", "Guest passes (2/mo)"], highlight: false },
+        ].map((plan) => (
+          <motion.div key={plan.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <Card className={`p-8 h-full flex flex-col ${plan.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
+              {plan.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
+              <h4 className="text-2xl font-display text-white mb-2">{plan.name}</h4>
+              <div className="flex items-end gap-1 mb-6">
+                <span className="text-4xl font-black text-white">EGP {plan.price}</span>
+                <span className="text-muted-foreground mb-1">{plan.period}</span>
+              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-muted-foreground">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={`https://wa.me/2010099887771?text=${encodeURIComponent(`Hi! I'm interested in the ${plan.name} membership plan.`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className={`inline-flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-widest h-12 px-6 rounded-xl transition-colors ${plan.highlight ? "bg-primary text-black hover:bg-primary/90" : "border border-white/20 text-white hover:bg-white/10"}`}
+              >
+                <WhatsAppIcon className="w-4 h-4" /> Get Started
+              </a>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {bundles.map((plan) => (
+        <motion.div key={plan.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+          <Card className={`p-8 h-full flex flex-col ${plan.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
+            {plan.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
+            <h4 className="text-2xl font-display text-white mb-2">{plan.name}</h4>
+            <div className="flex items-end gap-1 mb-6">
+              <span className="text-4xl font-black text-white">EGP {plan.price}</span>
+              <span className="text-muted-foreground mb-1">{plan.period}</span>
+            </div>
+            <ul className="space-y-3 mb-8 flex-1">
+              {plan.features.map((f, i) => (
+                <li key={i} className="flex items-center gap-3 text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary flex-shrink-0" /> {f}
+                </li>
+              ))}
+            </ul>
+            <a
+              href={`https://wa.me/2010099887771?text=${encodeURIComponent(`Hi! I'm interested in the ${plan.name} membership plan.`)}`}
+              target="_blank" rel="noopener noreferrer"
+              className={`inline-flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-widest h-12 px-6 rounded-xl transition-colors ${plan.highlight ? "bg-primary text-black hover:bg-primary/90" : "border border-white/20 text-white hover:bg-white/10"}`}
+            >
+              <WhatsAppIcon className="w-4 h-4" /> Get Started
+            </a>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -28,6 +139,7 @@ export default function MemberPortal() {
   const [error, setError] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "photos">("overview");
+  const [zoomedPhoto, setZoomedPhoto] = useState<{ url: string; caption: string } | null>(null);
 
   const lookupMutation = useLookupMember();
   const { data: announcements } = useListAnnouncements();
@@ -52,6 +164,24 @@ export default function MemberPortal() {
         },
       }
     );
+  };
+
+  const handleDownload = async (url: string, caption: string, id: number) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${caption || `photo-${id}`}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Download failed:", err);
+      window.open(url, "_blank");
+    }
   };
 
   if (currentMember) {
@@ -211,9 +341,25 @@ export default function MemberPortal() {
               {photos && photos.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {photos.map((p) => (
-                    <Card key={p.id} className="overflow-hidden">
-                      <div className="h-48 overflow-hidden bg-black">
-                        <img src={p.url} alt={p.caption || ""} className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" />
+                    <Card key={p.id} className="overflow-hidden group">
+                      <div className="h-48 overflow-hidden bg-black relative">
+                        <img
+                          src={p.url}
+                          alt={p.caption || ""}
+                          className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity cursor-zoom-in"
+                          onClick={() => setZoomedPhoto({ url: p.url, caption: p.caption || "No caption" })}
+                        />
+                        {p.caption && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(p.url, p.caption, p.id);
+                            }}
+                            className="absolute bottom-2 right-2 p-2 bg-white/90 hover:bg-white rounded-lg transition-opacity opacity-0 group-hover:opacity-100"
+                          >
+                            <Download className="w-4 h-4 text-black" />
+                          </button>
+                        )}
                       </div>
                       {p.caption && (
                         <div className="p-3">
@@ -235,6 +381,55 @@ export default function MemberPortal() {
             </div>
           )}
         </div>
+
+        {/* Photo Zoom Modal */}
+        <AnimatePresence>
+          {zoomedPhoto && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setZoomedPhoto(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative max-w-5xl w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setZoomedPhoto(null)}
+                  className="absolute -top-12 right-0 text-white hover:text-white/80 transition-colors"
+                >
+                  <X className="w-8 h-8" />
+                </button>
+                <div className="bg-card rounded-xl overflow-hidden border border-white/10">
+                  <div className="relative">
+                    <img
+                      src={zoomedPhoto.url}
+                      alt={zoomedPhoto.caption}
+                      className="w-full max-h-[80vh] object-contain bg-black"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(zoomedPhoto.url, zoomedPhoto.caption, 0);
+                      }}
+                      className="absolute bottom-4 right-4 inline-flex items-center gap-2 bg-white/90 hover:bg-white text-black font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Download className="w-5 h-5" /> Download
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-white">{zoomedPhoto.caption}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Login modal backdrop close */}
         <AnimatePresence>
@@ -412,38 +607,7 @@ export default function MemberPortal() {
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">Membership</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">Choose Your Plan</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { name: "Basic", price: "199", period: "/ mo", features: ["Full gym access", "Locker room", "Free Wi-Fi"], highlight: false },
-              { name: "Premium", price: "349", period: "/ mo", features: ["Everything in Basic", "Group classes", "Personal trainer (2x/mo)", "Nutrition consultation"], highlight: true },
-              { name: "VIP", price: "599", period: "/ mo", features: ["Everything in Premium", "Unlimited PT sessions", "Priority booking", "Guest passes (2/mo)"], highlight: false },
-            ].map((plan) => (
-              <motion.div key={plan.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                <Card className={`p-8 h-full flex flex-col ${plan.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
-                  {plan.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
-                  <h4 className="text-2xl font-display text-white mb-2">{plan.name}</h4>
-                  <div className="flex items-end gap-1 mb-6">
-                    <span className="text-4xl font-black text-white">EGP {plan.price}</span>
-                    <span className="text-muted-foreground mb-1">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-3 text-muted-foreground">
-                        <Check className="w-4 h-4 text-primary flex-shrink-0" /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <a
-                    href={`https://wa.me/2010099887771?text=${encodeURIComponent(`Hi! I'm interested in the ${plan.name} membership plan.`)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className={`inline-flex items-center justify-center gap-2 font-bold text-sm uppercase tracking-widest h-12 px-6 rounded-xl transition-colors ${plan.highlight ? "bg-primary text-black hover:bg-primary/90" : "border border-white/20 text-white hover:bg-white/10"}`}
-                  >
-                    <WhatsAppIcon className="w-4 h-4" /> Get Started
-                  </a>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+          <PricingSection />
         </div>
       </section>
 

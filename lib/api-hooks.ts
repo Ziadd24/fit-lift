@@ -2,24 +2,47 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Member, Photo, Announcement } from "@/lib/supabase";
 import { useAuth } from "@/lib/use-auth";
 
-function getAuthHeaders(token?: string | null) {
+function getAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
-
 // ─── Members ───────────────────────────────────────────────────────────────
 
-export function useListMembers() {
+export interface MembersPage {
+  members: Member[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface MembersFilters {
+  page?: number;
+  search?: string;
+  status?: "all" | "active" | "expired";
+  type?: string;
+}
+
+export function useListMembers(filters: MembersFilters = {}) {
   const { adminToken } = useAuth();
-  return useQuery<Member[]>({
-    queryKey: ["members"],
+  const { page = 1, search = "", status = "all", type = "all" } = filters;
+
+  return useQuery<MembersPage>({
+    queryKey: ["members", page, search, status, type],
     queryFn: async () => {
-      const res = await fetch("/api/members", {
+      const params = new URLSearchParams({
+        page: String(page),
+        search,
+        status,
+        type,
+      });
+      const res = await fetch(`/api/members?${params}`, {
         headers: getAuthHeaders(adminToken),
       });
       if (!res.ok) throw new Error("Failed to fetch members");
       return res.json();
     },
     enabled: !!adminToken,
+    placeholderData: (prev) => prev, // keep previous page visible while loading next
   });
 }
 
@@ -118,6 +141,7 @@ export function useListPhotos(params?: { memberId?: number }) {
       if (!res.ok) throw new Error("Failed to fetch photos");
       return res.json();
     },
+    enabled: !!adminToken || !!memberCode,
   });
 }
 

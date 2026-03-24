@@ -3,13 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, Megaphone, Image as ImageIcon, LogOut, Activity } from "lucide-react";
+import { Users, Megaphone, Image as ImageIcon, LogOut, Activity, Dumbbell } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: Activity },
   { label: "Members", href: "/admin/members", icon: Users },
+  { label: "Bundles", href: "/admin/bundles", icon: Dumbbell },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
   { label: "Photos", href: "/admin/photos", icon: ImageIcon },
 ];
@@ -34,14 +35,10 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="p-6">
           <div className="flex items-center gap-3">
             <img
-              src="/images/logo-mark.png"
+              src="/images/logo.png"
               alt="FitGym"
-              className="w-8 h-8 object-contain"
+              className="h-10 w-auto object-contain"
             />
-            <h1 className="text-2xl font-display text-white tracking-wider m-0">
-              Fit<span className="text-primary">Gym</span>{" "}
-              <span className="text-sm text-muted-foreground ml-1">ADMIN</span>
-            </h1>
           </div>
         </div>
 

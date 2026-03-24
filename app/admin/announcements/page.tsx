@@ -16,7 +16,8 @@ import { format } from "date-fns";
 export default function AdminAnnouncements() {
   const queryClient = useQueryClient();
   const { data: announcements, isLoading } = useListAnnouncements();
-  const { data: members } = useListMembers();
+  const { data: membersData } = useListMembers();
+  const members = membersData?.members ?? [];
 
   const createMutation = useCreateAnnouncement();
   const deleteMutation = useDeleteAnnouncement();
@@ -105,7 +106,7 @@ export default function AdminAnnouncements() {
                   onChange={(e) => setMemberId(e.target.value)}
                 >
                   <option value="">Global (All Members)</option>
-                  {members?.map((m) => (
+                  {members.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.membership_code})
                     </option>
