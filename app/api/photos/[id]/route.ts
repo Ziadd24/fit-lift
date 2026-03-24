@@ -6,7 +6,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -14,7 +14,6 @@ export async function DELETE(
   const supabase = getSupabaseAdmin();
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "gym-photos";
 
-  // Get photo to find storage path
   const { data: photo } = await supabase
     .from("photos")
     .select("url")
@@ -22,7 +21,6 @@ export async function DELETE(
     .single();
 
   if (photo) {
-    // Extract filename from URL to delete from storage
     const urlParts = photo.url.split("/");
     const filename = urlParts[urlParts.length - 1];
     if (filename) {
