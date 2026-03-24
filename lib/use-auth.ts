@@ -2,34 +2,78 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Member } from "@/lib/supabase";
 
+// Session expires after 24 hours of inactivity
+const MEMBER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+// Admin JWT is already time-limited server-side (8h), but we also
+// clear it client-side after 8 hours to force re-login
+const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+
 interface AuthState {
   adminToken: string | null;
+  adminLoginAt: number | null;
   setAdminToken: (token: string | null) => void;
 
   memberCode: string | null;
   currentMember: Member | null;
+  memberLoginAt: number | null;
   setMemberAuth: (code: string | null, member: Member | null) => void;
 
   logoutMember: () => void;
   logoutAdmin: () => void;
+
+  // Call this on app init to clear expired sessions
+  checkSessionExpiry: () => void;
 }
 
 export const useAuth = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       adminToken: null,
-      setAdminToken: (token) => set({ adminToken: token }),
+      adminLoginAt: null,
+      setAdminToken: (token) =>
+        set({ adminToken: token, adminLoginAt: token ? Date.now() : null }),
 
       memberCode: null,
       currentMember: null,
+      memberLoginAt: null,
       setMemberAuth: (code, member) =>
-        set({ memberCode: code, currentMember: member }),
+        set({
+          memberCode: code,
+          currentMember: member,
+          memberLoginAt: code ? Date.now() : null,
+        }),
 
-      logoutMember: () => set({ memberCode: null, currentMember: null }),
-      logoutAdmin: () => set({ adminToken: null }),
+      logoutMember: () =>
+        set({ memberCode: null, currentMember: null, memberLoginAt: null }),
+
+      logoutAdmin: () =>
+        set({ adminToken: null, adminLoginAt: null }),
+
+      checkSessionExpiry: () => {
+        const { memberLoginAt, adminLoginAt } = get();
+        const now = Date.now();
+
+        // Clear expired member session
+        if (memberLoginAt && now - memberLoginAt > MEMBER_SESSION_TTL_MS) {
+          set({ memberCode: null, currentMember: null, memberLoginAt: null });
+        }
+
+        // Clear expired admin session
+        if (adminLoginAt && now - adminLoginAt > ADMIN_SESSION_TTL_MS) {
+          set({ adminToken: null, adminLoginAt: null });
+        }
+      },
     }),
     {
       name: "fitgym-auth-storage",
+      // Only persist what we need — don't persist functions
+      partialize: (state) => ({
+        adminToken: state.adminToken,
+        adminLoginAt: state.adminLoginAt,
+        memberCode: state.memberCode,
+        currentMember: state.currentMember,
+        memberLoginAt: state.memberLoginAt,
+      }),
     }
   )
 );
