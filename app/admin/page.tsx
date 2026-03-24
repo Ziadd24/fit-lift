@@ -10,16 +10,18 @@ import { isMembershipActive } from "@/lib/utils";
 import Link from "next/link";
 
 export default function AdminDashboard() {
-  const { data: members } = useListMembers();
+  const { data: membersData } = useListMembers();
   const { data: announcements } = useListAnnouncements();
   const { data: photos } = useListPhotos();
 
-  const activeMembers =
-    members?.filter((m) => isMembershipActive(m.sub_expiry_date)).length || 0;
-  const expiredMembers = (members?.length || 0) - activeMembers;
+  const members = membersData?.members ?? [];
+  const totalMembers = membersData?.total ?? 0;
+
+  const activeMembers = members.filter((m) => isMembershipActive(m.sub_expiry_date)).length;
+  const expiredMembers = members.length - activeMembers;
 
   const stats = [
-    { title: "Total Members", value: members?.length || 0, icon: Users, color: "text-blue-500" },
+    { title: "Total Members", value: totalMembers, icon: Users, color: "text-blue-500" },
     { title: "Active Members", value: activeMembers, icon: Activity, color: "text-primary" },
     { title: "Announcements", value: announcements?.length || 0, icon: Megaphone, color: "text-purple-500" },
     { title: "Photos Uploaded", value: photos?.length || 0, icon: ImageIcon, color: "text-pink-500" },
