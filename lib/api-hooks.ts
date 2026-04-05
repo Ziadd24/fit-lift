@@ -1,48 +1,34 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Member, Photo, Announcement } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Member, Photo, Announcement, Coach, Message, Session } from "@/lib/supabase";
 import { useAuth } from "@/lib/use-auth";
 
 function getAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
 // ─── Members ───────────────────────────────────────────────────────────────
 
-export interface MembersPage {
+type MembersPage = {
   members: Member[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
-}
+};
 
-export interface MembersFilters {
-  page?: number;
-  search?: string;
-  status?: "all" | "active" | "expired";
-  type?: string;
-}
-
-export function useListMembers(filters: MembersFilters = {}) {
-  const { adminToken } = useAuth();
-  const { page = 1, search = "", status = "all", type = "all" } = filters;
-
+export function useListMembers() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken;
   return useQuery<MembersPage>({
-    queryKey: ["members", page, search, status, type],
+    queryKey: ["members"],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        search,
-        status,
-        type,
-      });
-      const res = await fetch(`/api/members?${params}`, {
-        headers: getAuthHeaders(adminToken),
+      const res = await fetch("/api/members", {
+        headers: getAuthHeaders(token),
       });
       if (!res.ok) throw new Error("Failed to fetch members");
       return res.json();
     },
-    enabled: !!adminToken,
-    placeholderData: (prev) => prev, // keep previous page visible while loading next
+    enabled: !!token,
   });
 }
 
@@ -97,20 +83,25 @@ export function useCreateMember() {
 }
 
 export function useUpdateMember() {
-  const { adminToken } = useAuth();
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken;
+  const queryClient = useQueryClient();
   return useMutation<Member, Error, { id: number; data: Partial<Member> }>({
     mutationFn: async ({ id, data }) => {
       const res = await fetch(`/api/members/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeaders(adminToken),
+          ...getAuthHeaders(token),
         },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to update member");
       return res.json();
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    }
   });
 }
 
@@ -129,19 +120,22 @@ export function useDeleteMember() {
 
 // ─── Photos ────────────────────────────────────────────────────────────────
 
-export function useListPhotos(params?: { memberId?: number }) {
+export function useListPhotos(params?: { memberId?: number; global?: boolean }) {
   const { adminToken, memberCode } = useAuth();
   return useQuery<Photo[]>({
     queryKey: ["photos", params],
     queryFn: async () => {
-      const qs = params?.memberId ? `?memberId=${params.memberId}` : "";
+      const queryParams = new URLSearchParams();
+      if (params?.memberId) queryParams.append("memberId", String(params.memberId));
+      if (params?.global) queryParams.append("global", "true");
+      
+      const qs = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const res = await fetch(`/api/photos${qs}`, {
         headers: getAuthHeaders(adminToken || memberCode),
       });
       if (!res.ok) throw new Error("Failed to fetch photos");
       return res.json();
     },
-    enabled: !!adminToken || !!memberCode,
   });
 }
 
@@ -260,5 +254,438 @@ export function useAdminLogin() {
       if (!res.ok) throw new Error("Invalid credentials");
       return res.json();
     },
+  });
+}
+
+// ─── Coach Auth ─────────────────────────────────────────────────────────────
+
+export function useCoachLogin() {
+  return useMutation<
+    { success: boolean; token: string; coach: Coach },
+    Error,
+    { name: string; password: string }
+  >({
+    mutationFn: async ({ name, password }) => {
+      const res = await fetch("/api/coach/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Invalid credentials");
+      }
+      return res.json();
+    },
+  });
+}
+
+export function useCoachRegister() {
+  return useMutation<
+    { success: boolean; token: string; coach: Coach },
+    Error,
+    { name: string; password: string }
+  >({
+    mutationFn: async ({ name, password }) => {
+      const res = await fetch("/api/coach/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Registration failed");
+      }
+      return res.json();
+    },
+  });
+}
+
+// ─── Messages ───────────────────────────────────────────────────────────────
+
+export function useListConversations() {
+  const { coachToken } = useAuth();
+  return useQuery<(Message & { member_name: string })[]>({
+    queryKey: ["conversations"],
+    queryFn: async () => {
+      const res = await fetch("/api/messages", {
+        headers: getAuthHeaders(coachToken),
+      });
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      return res.json();
+    },
+    enabled: !!coachToken,
+  });
+}
+
+export function useListMessages(memberId: number | null) {
+  const { coachToken } = useAuth();
+  return useQuery<Message[]>({
+    queryKey: ["messages", memberId],
+    queryFn: async () => {
+      const res = await fetch(`/api/messages?memberId=${memberId}`, {
+        headers: getAuthHeaders(coachToken),
+      });
+      if (!res.ok) throw new Error("Failed to fetch messages");
+      return res.json();
+    },
+    enabled: !!coachToken && !!memberId,
+    refetchInterval: 5000, // Poll every 5s
+  });
+}
+
+export function useSendMessage() {
+  const { coachToken } = useAuth();
+  return useMutation<Message, Error, { memberId: number; content: string }>({
+    mutationFn: async ({ memberId, content }) => {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(coachToken),
+        },
+        body: JSON.stringify({ memberId, content, senderType: "coach" }),
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+      return res.json();
+    },
+  });
+}
+
+// ─── Sessions ───────────────────────────────────────────────────────────────
+
+export function useListSessions(date?: string) {
+  const { coachToken } = useAuth();
+  return useQuery<(Session & { member_name?: string })[]>({
+    queryKey: ["sessions", date],
+    queryFn: async () => {
+      const qs = date ? `?date=${date}` : "";
+      const res = await fetch(`/api/sessions${qs}`, {
+        headers: getAuthHeaders(coachToken),
+      });
+      if (!res.ok) throw new Error("Failed to fetch sessions");
+      return res.json();
+    },
+    enabled: !!coachToken,
+  });
+}
+
+export function useCreateSession() {
+  const { coachToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<
+    Session,
+    Error,
+    {
+      memberId?: number;
+      sessionType?: string;
+      scheduledAt: string;
+      durationMinutes?: number;
+      notes?: string;
+    }
+  >({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(coachToken),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create session");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    }
+  });
+}
+
+export function useUpdateSession() {
+  const { coachToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<
+    Session,
+    Error,
+    { id: number; status?: string; started_at?: string; ended_at?: string }
+  >({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/sessions", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(coachToken),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update session");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    }
+  });
+}
+
+// ─── Calories ─────────────────────────────────────────────────────────────
+
+export interface CalorieLog {
+  id: number;
+  member_id: number;
+  coach_id: number | null;
+  meal: string;
+  result: any;
+  category: string;
+  created_at: string;
+}
+
+export function useListCalorieLogs(memberId?: number) {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken;
+  return useQuery<CalorieLog[]>({
+    queryKey: ["calorie_logs", memberId],
+    queryFn: async () => {
+      const qs = memberId ? `?memberId=${memberId}` : "";
+      const res = await fetch(`/api/calories${qs}`, {
+        headers: getAuthHeaders(token || "client-fallback"),
+      });
+      if (!res.ok) throw new Error("Failed to fetch calorie logs");
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
+}
+
+export function useSaveCalorieLog() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken;
+  const queryClient = useQueryClient();
+  return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/calories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token || "client-fallback"),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save calorie log");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calorie_logs"] });
+    }
+  });
+}
+
+export function useDeleteCalorieLog() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken;
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { id: number }>({
+    mutationFn: async ({ id }) => {
+      const res = await fetch(`/api/calories/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(token || "client-fallback"),
+      });
+      if (!res.ok) throw new Error("Failed to delete calorie log");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calorie_logs"] });
+    }
+  });
+}
+
+// ─── Client Tasks ─────────────────────────────────────────────────────────────
+
+export interface ClientTask {
+  id: number;
+  member_id: number;
+  type: string;
+  title: string;
+  status: string;
+  duration: string | null;
+  assigned_by: string | null;
+  coach_assigned: boolean;
+  created_at: string;
+}
+
+export function useListTasks(memberId?: number) {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  return useQuery<ClientTask[]>({
+    queryKey: ["client_tasks", memberId],
+    queryFn: async () => {
+      const qs = memberId ? `?memberId=${memberId}` : "";
+      const res = await fetch(`/api/client-tasks${qs}`, {
+        headers: getAuthHeaders(token),
+      });
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
+}
+
+export function useCreateTask() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<ClientTask, Error, Partial<ClientTask>>({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/client-tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create task");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_tasks"] });
+    }
+  });
+}
+
+export function useUpdateTask() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<ClientTask, Error, { id: number; data: Partial<ClientTask> }>({
+    mutationFn: async ({ id, data }) => {
+      const res = await fetch(`/api/client-tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update task");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_tasks"] });
+    }
+  });
+}
+
+export function useDeleteTask() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { id: number }>({
+    mutationFn: async ({ id }) => {
+      const res = await fetch(`/api/client-tasks/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(token),
+      });
+      if (!res.ok) throw new Error("Failed to delete task");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_tasks"] });
+    }
+  });
+}
+
+// ─── Client Workouts ──────────────────────────────────────────────────────────
+
+export interface ClientWorkout {
+  id: number;
+  member_id: number;
+  title: string;
+  coach_assigned: boolean;
+  status: string;
+  duration: string | null;
+  calories: number | null;
+  muscles: string[] | null;
+  difficulty: string | null;
+  sets: any[] | null;
+  created_at: string;
+}
+
+export function useListWorkouts(memberId?: number) {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  return useQuery<ClientWorkout[]>({
+    queryKey: ["client_workouts", memberId],
+    queryFn: async () => {
+      const qs = memberId ? `?memberId=${memberId}` : "";
+      const res = await fetch(`/api/client-workouts${qs}`, {
+        headers: getAuthHeaders(token),
+      });
+      if (!res.ok) throw new Error("Failed to fetch workouts");
+      return res.json();
+    },
+    refetchInterval: 5000,
+  });
+}
+
+export function useCreateWorkout() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<ClientWorkout, Error, Partial<ClientWorkout>>({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/client-workouts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create workout");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_workouts"] });
+    }
+  });
+}
+
+export function useUpdateWorkout() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<ClientWorkout, Error, { id: number; data: Partial<ClientWorkout> }>({
+    mutationFn: async ({ id, data }) => {
+      const res = await fetch(`/api/client-workouts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token),
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update workout");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_workouts"] });
+    }
+  });
+}
+
+export function useDeleteWorkout() {
+  const { adminToken, coachToken } = useAuth();
+  const token = adminToken || coachToken || "client-fallback";
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { id: number }>({
+    mutationFn: async ({ id }) => {
+      const res = await fetch(`/api/client-workouts/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(token),
+      });
+      if (!res.ok) throw new Error("Failed to delete workout");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client_workouts"] });
+    }
   });
 }

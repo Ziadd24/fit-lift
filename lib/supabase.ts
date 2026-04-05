@@ -44,3 +44,37 @@ export type Announcement = {
   created_at: string;
   target_member_name?: string | null;
 };
+
+export type Coach = {
+  id: number;
+  name: string;
+  email: string;
+  password_hash?: string;
+  created_at: string;
+};
+
+export type Message = {
+  id: number;
+  coach_id: number;
+  member_id: number;
+  content: string | null;
+  sender_type: "coach" | "member";
+  image_url: string | null;
+  created_at: string;
+  member_name?: string;
+};
+
+export type Session = {
+  id: number;
+  coach_id: number;
+  member_id: number | null;
+  session_type: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  started_at: string | null;
+  ended_at: string | null;
+  notes: string | null;
+  created_at: string;
+  member_name?: string;
+};

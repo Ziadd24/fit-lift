@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyAdminAuth } from "@/lib/auth";
+import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
 export async function GET(req: NextRequest) {
-  if (!await verifyAdminAuth(req)) {
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  
+  if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -54,7 +59,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!await verifyAdminAuth(req)) {
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  
+  if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

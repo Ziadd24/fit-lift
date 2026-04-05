@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyAdminAuth } from "@/lib/auth";
+import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!await verifyAdminAuth(req)) {
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,7 +29,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!await verifyAdminAuth(req)) {
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,7 +53,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!await verifyAdminAuth(req)) {
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

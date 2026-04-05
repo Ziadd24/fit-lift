@@ -9,17 +9,15 @@ import {
   useListMembers,
 } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
-import { Upload, Trash2, ImageIcon, X, Download, ZoomIn } from "lucide-react";
+import { Upload, Trash2, ImageIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
 
 export default function AdminPhotos() {
   const queryClient = useQueryClient();
   const { data: photos, isLoading } = useListPhotos();
-  const { data: membersData } = useListMembers();
-  const members = membersData?.members;
+  const { data: membersPage } = useListMembers();
+  const members = membersPage?.members || [];
 
   const uploadMutation = useUploadPhoto();
   const deleteMutation = useDeletePhoto();
@@ -29,7 +27,6 @@ export default function AdminPhotos() {
   const [caption, setCaption] = useState("");
   const [memberId, setMemberId] = useState<string>("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [zoomedPhoto, setZoomedPhoto] = useState<{ url: string; caption: string; memberName: string } | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -74,25 +71,6 @@ export default function AdminPhotos() {
           onSuccess: () => queryClient.invalidateQueries({ queryKey: ["photos"] }),
         }
       );
-    }
-  };
-
-  const handleDownload = async (url: string, caption: string, id: number) => {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${caption || `photo-${id}`}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error("Download failed:", err);
-      // Fallback: open in new tab
-      window.open(url, "_blank");
     }
   };
 
@@ -192,31 +170,17 @@ export default function AdminPhotos() {
                 <img
                   src={photo.url}
                   alt={photo.caption || "Gym"}
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity cursor-zoom-in"
-                  onClick={() => setZoomedPhoto({ url: photo.url, caption: photo.caption || "No caption", memberName: photo.member_name || "Global" })}
+                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                 />
-                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="px-2 h-8"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(photo.url, photo.caption || "", photo.id);
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="px-2 h-8"
-                    onClick={() => handleDelete(photo.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 px-2 h-8 transition-opacity"
+                  onClick={() => handleDelete(photo.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
               <div className="p-4 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
@@ -238,58 +202,6 @@ export default function AdminPhotos() {
           ))}
         </div>
       )}
-
-      {/* Zoom Modal */}
-      <AnimatePresence>
-        {zoomedPhoto && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setZoomedPhoto(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-5xl w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setZoomedPhoto(null)}
-                className="absolute -top-12 right-0 text-white hover:text-white/80 transition-colors"
-              >
-                <X className="w-8 h-8" />
-              </button>
-              <div className="bg-card rounded-xl overflow-hidden border border-white/10">
-                <div className="relative">
-                  <img
-                    src={zoomedPhoto.url}
-                    alt={zoomedPhoto.caption}
-                    className="w-full max-h-[80vh] object-contain bg-black"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(zoomedPhoto.url, zoomedPhoto.caption, 0);
-                    }}
-                    className="absolute bottom-4 right-4 inline-flex items-center gap-2 bg-white/90 hover:bg-white text-black font-medium px-4 py-2 rounded-lg transition-colors"
-                  >
-                    <Download className="w-5 h-5" /> Download
-                  </button>
-                </div>
-                <div className="p-4 flex justify-between items-center">
-                  <div>
-                    <Badge variant="outline">{zoomedPhoto.memberName}</Badge>
-                    <p className="text-white mt-2">{zoomedPhoto.caption}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </AdminLayout>
   );
 }

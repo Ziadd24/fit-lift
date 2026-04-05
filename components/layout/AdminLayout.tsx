@@ -33,12 +33,13 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-card border-b md:border-b-0 md:border-r border-white/5 flex flex-col z-10 relative">
         <div className="p-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-0">
             <img
               src="/images/logo.png"
               alt="FitGym"
-              className="h-10 w-auto object-contain"
+              className="h-[112px] w-auto object-contain"
             />
+            <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
           </div>
         </div>
 

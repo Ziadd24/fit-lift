@@ -130,7 +130,7 @@ export default function AdminBundles() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bundles.map((bundle) => (
+          {bundles?.map((bundle: Bundle) => (
             <Card key={bundle.id} className={`p-6 flex flex-col ${bundle.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
               {bundle.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
               <h3 className="text-2xl font-display text-white mb-2">{bundle.name}</h3>
@@ -159,7 +159,7 @@ export default function AdminBundles() {
                   size="sm"
                   className="text-destructive hover:text-destructive"
                   onClick={() => {
-                    if (confirm("Delete this bundle?")) deleteMutation.mutate({ id: bundle.id });
+                    if (confirm("Delete this bundle?")) deleteMutation.mutate(bundle.id);
                   }}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -255,7 +255,7 @@ function BundleForm({
             onChange={(e) => setFormData({ ...formData, highlight: e.target.checked })}
             className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
           />
-          <Label htmlFor="highlight" className="mb-0">Highlight as Most Popular</Label>
+          <Label htmlFor="highlight" className="mb-0 text-white cursor-pointer">Highlight as Most Popular</Label>
         </div>
 
         <div className="md:col-span-2">

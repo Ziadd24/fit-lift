@@ -1,0 +1,11 @@
+{
+  "membersInfo": null,
+  "mErr": {
+    "code": "PGRST202",
+    "details": "Searched for the function public.get_schema_info with parameter table_name or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.",
+    "hint": null,
+    "message": "Could not find the function public.get_schema_info(table_name) in the schema cache"
+  },
+  "ziad": [],
+  "zErr": null
+}

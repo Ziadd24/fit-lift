@@ -11,9 +11,9 @@
 
   --border: 240 20% 20%;
   --input: 240 25% 20%;
-  --ring: 128 49% 48%;
+  --ring: 90 100% 49%;
 
-  --primary: 128 49% 48%;
+  --primary: 90 100% 49%;
   --primary-foreground: 0 0% 5%;
 
   --secondary: 240 25% 14%;
@@ -69,4 +69,177 @@
   .font-display {
     font-family: 'Montserrat', sans-serif;
   }
+
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* ── Dashboard Design System ─────────────────────────────── */
+:root {
+  --color-bg: #0D0D10;
+  --color-card: #16161A;
+  --color-lime: #7CFC00;
+  --color-lime-hover: #6BE000;
+  --color-lime-glow: rgba(124,252,0,0.3);
+  --color-text: #FFFFFF;
+  --color-text-secondary: #8B8B8B;
+  --color-text-tertiary: #5A5A5A;
+  --color-purple: #8B5CF6;
+  --color-orange: #F59E0B;
+  --color-green: #10B981;
+  --radius-card: 16px;
+  --radius-pill: 24px;
+  --shadow-card: 0 4px 20px rgba(0,0,0,0.4);
+  --shadow-card-hover: 0 8px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,252,0,0.1);
+  --shadow-glow: 0 0 20px rgba(124,252,0,0.4);
+  --transition-fast: 0.2s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Shimmer / skeleton loading animation */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #16161A 0%, #1F1F24 50%, #16161A 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Lime pulse overlay for skeleton state */
+@keyframes limePulse {
+  0%, 100% { opacity: 0.1; }
+  50%       { opacity: 0.25; }
+}
+.lime-pulse {
+  animation: limePulse 1.5s ease-in-out infinite;
+  background: #7CFC00;
+}
+
+/* Scrollbar hide utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Dashboard card base */
+.dash-card {
+  background: var(--color-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition-smooth), transform var(--transition-smooth);
+}
+.dash-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Carousel edge fade mask */
+.carousel-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 5%, black 95%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+/* ── Hero Section Redesign ──────────────────────────────── */
+.hero-new {
+  position: relative;
+  min-height: 100vh;
+  background: #000000;
+  overflow: hidden;
+}
+
+.hero-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.85) 90%);
+  z-index: 2; /* Sits above image */
+  pointer-events: none;
+}
+
+/* Dark green accent borders */
+.hero-new::before,
+.hero-new::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: #1a472a;
+  z-index: 30;
+}
+.hero-new::before { left: 0; }
+.hero-new::after { right: 0; }
+
+/* Central athlete image container */
+.hero-athlete-img {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Backup for CSS only */
+  height: 180vh;
+  width: auto;
+  object-fit: contain;
+  z-index: 15; /* Keeps image above the text! */
+  filter: brightness(0.7) contrast(1.45);
+  pointer-events: none;
+}
+
+/* Social sidebar vertical line */
+.hero-social-line {
+  width: 2px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Avatar stack overlap */
+.avatar-stack {
+  display: flex;
+  flex-direction: row;
+}
+.avatar-stack img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid #7CFC00;
+  object-fit: cover;
+  margin-left: -16px;
+}
+.avatar-stack img:first-child {
+  margin-left: 0;
+  z-index: 3;
+}
+.avatar-stack img:nth-child(2) { z-index: 2; }
+.avatar-stack img:nth-child(3) { z-index: 1; }
+
+/* Nav link hover underline animation */
+.nav-link-hero {
+  position: relative;
+  transition: opacity 0.2s ease;
+}
+.nav-link-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #7CFC00;
+  transition: width 0.3s ease;
+}
+.nav-link-hero:hover::after {
+  width: 100%;
+}
+
+/* CTA button glow */
+.cta-book {
+  background: #7CFC00;
+  box-shadow: 0 4px 20px rgba(124, 252, 0, 0.3);
+  transition: all 0.3s ease;
+}
+.cta-book:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(124, 252, 0, 0.5);
 }

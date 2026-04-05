@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const memberIdParam = searchParams.get("memberId");
   const memberId = memberIdParam ? parseInt(memberIdParam) : null;
+  const isGlobal = searchParams.get("global") === "true";
 
   const supabase = getSupabaseAdmin();
 
@@ -15,7 +16,10 @@ export async function GET(req: NextRequest) {
 
   if (memberId) {
     query = query.or(`member_id.eq.${memberId},member_id.is.null`);
+  } else if (isGlobal) {
+    query = query.is("member_id", null);
   }
+
 
   const { data, error } = await query;
 
