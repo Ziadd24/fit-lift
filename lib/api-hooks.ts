@@ -430,19 +430,44 @@ export function useUpdateSession() {
 
 // ─── Calories ─────────────────────────────────────────────────────────────
 
+export interface FoodItem {
+  name: string;
+  grams: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 export interface CalorieLog {
   id: number;
-  member_id: number;
+  member_id: number | null;
   coach_id: number | null;
   meal: string;
-  result: any;
+  result: {
+    totals: { calories: number; protein: number; carbs: number; fat: number };
+    items?: FoodItem[];
+    confidence?: "high" | "medium" | "low";
+    confidence_score?: number;
+    display_title?: string;
+    meal_type?: string;
+    portion_analysis?: string;
+    notes?: string;
+    client_suggestion?: string | null;
+    coach_alert?: string | null;
+    [key: string]: any;
+  };
   category: string;
+  verified_status: "pending" | "verified" | "edited";
+  coach_note: string | null;
   created_at: string;
+  // Populated by join in some queries
+  member_name?: string;
 }
 
 export function useListCalorieLogs(memberId?: number) {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
@@ -453,7 +478,33 @@ export function useListCalorieLogs(memberId?: number) {
       if (!res.ok) throw new Error("Failed to fetch calorie logs");
       return res.json();
     },
-    refetchInterval: 5000,
+    refetchInterval: 8000, // Realtime hook handles instant updates; polling is fallback
+  });
+}
+
+export function useVerifyCalorieLog() {
+  const { coachToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<
+    CalorieLog,
+    Error,
+    { id: number; action: "verified" | "edited"; coach_note?: string; edited_result?: any }
+  >({
+    mutationFn: async ({ id, action, coach_note, edited_result }) => {
+      const res = await fetch(`/api/calories/${id}/verify`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(coachToken),
+        },
+        body: JSON.stringify({ action, coach_note, edited_result }),
+      });
+      if (!res.ok) throw new Error("Failed to verify log");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calorie_logs"] });
+    },
   });
 }
 

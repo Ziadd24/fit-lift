@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { CoachLayout } from "@/components/layout/CoachLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame, Zap, Wheat, Droplets, Plus, Trash2, Clock,
-  ChevronRight, Sparkles, Target, RotateCcw, CheckCircle,
-  AlertCircle, Loader2, UtensilsCrossed, TrendingUp, Camera, X
+  Sparkles, Target, RotateCcw, CheckCircle,
+  AlertCircle, Loader2, UtensilsCrossed, TrendingUp, Camera, X, Users, Bell
 } from "lucide-react";
-import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, CalorieLog } from "@/lib/api-hooks";
+import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCalorieLog, CalorieLog } from "@/lib/api-hooks";
+import { useNutritionRealtime } from "@/lib/use-nutrition-realtime";
+import { CalorieMarkerCard } from "@/components/ui/CalorieMarkerCard";
 
 /* ─── Types ─── */
 interface MacroTotals {
@@ -37,7 +39,7 @@ interface AIResult {
 
 
 /* ─── Helpers ─── */
-function getMealCategory(ts: number): LogEntry["category"] {
+function getMealCategory(ts: number): CalorieLog["category"] {
   const h = new Date(ts).getHours();
   if (h < 11) return "breakfast";
   if (h < 15) return "lunch";
@@ -128,20 +130,35 @@ const EXAMPLES = [
    MAIN PAGE
    ════════════════════════════════════════ */
 export default function CaloriesPage() {
+  const [activeTab, setActiveTab] = useState<"my" | "clients">("my");
   const [meal, setMeal] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AIResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: logs } = useListCalorieLogs();
-  const log = logs || [];
+  const { data: myLogs } = useListCalorieLogs();
+  const log = myLogs || [];
+  // Client logs (all members — no memberId filter = coach sees everyone today)
+  const { data: clientLogs } = useListCalorieLogs(undefined);
+  const allClientLogs = (clientLogs || []).filter((l) => l.member_id !== null);
+  const pendingCount = allClientLogs.filter((l) => l.verified_status === "pending").length;
 
   const { mutate: saveCalorieLog } = useSaveCalorieLog();
   const { mutate: deleteCalorieLog } = useDeleteCalorieLog();
+  const { mutate: verifyLog, isLoading: isVerifying } = useVerifyCalorieLog();
   const [goals, setGoals] = useState({ calories: 2500, protein: 150, carbs: 300, fat: 80 });
   const [showGoals, setShowGoals] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
+
+  // Real-time subscription — coach sees client logs appear instantly
+  useNutritionRealtime();
+
+  // Alerts for coach
+  const coachAlerts = allClientLogs
+    .filter((l) => l.result?.coach_alert)
+    .map((l) => ({ id: l.id, alert: l.result.coach_alert as string, member: l.member_name ?? "Client" }));
 
   const totals: MacroTotals = log.reduce(
     (acc, e) => ({
@@ -218,7 +235,7 @@ export default function CaloriesPage() {
       <div style={{ fontFamily: "Inter, sans-serif" }}>
 
         {/* ── HEADER ── */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
@@ -230,7 +247,7 @@ export default function CaloriesPage() {
               </h1>
             </div>
             <p className="text-sm" style={{ color: "#8B8B8B", paddingLeft: 52 }}>
-              Describe any meal — AI calculates calories &amp; macros instantly
+              Track your own meals or review &amp; verify client food logs in real-time
             </p>
           </div>
 
@@ -251,6 +268,80 @@ export default function CaloriesPage() {
             </button>
           </div>
         </div>
+
+        {/* ── TAB SWITCHER ── */}
+        <div className="flex gap-2 mb-6">
+          {([
+            { key: "my",      label: "My Tracker",  Icon: Flame },
+            { key: "clients", label: "Client Logs", Icon: Users },
+          ] as const).map(({ key, label, Icon }) => (
+            <button key={key} onClick={() => setActiveTab(key)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all relative"
+              style={{
+                background: activeTab === key ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)",
+                color: activeTab === key ? "#7CFC00" : "#8B8B8B",
+                border: `1px solid ${activeTab === key ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.06)"}`,
+              }}>
+              <Icon className="w-4 h-4" />
+              {label}
+              {key === "clients" && pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-black"
+                  style={{ background: "#FF4444" }}>
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── COACH ALERTS ── */}
+        {activeTab === "clients" && coachAlerts.length > 0 && (
+          <div className="flex flex-col gap-2 mb-6">
+            {coachAlerts.slice(0, 3).map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                style={{ background: "rgba(255,68,68,0.08)", border: "1px solid rgba(255,68,68,0.2)" }}>
+                <Bell className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <span className="text-sm text-red-400 font-semibold">{a.member}:</span>
+                <span className="text-sm text-red-300">{a.alert}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── CLIENT LOGS TAB ── */}
+        {activeTab === "clients" && (
+          <div className="flex flex-col gap-4">
+            {allClientLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24"
+                style={{ border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 20 }}>
+                <Users className="w-12 h-12 mb-4 opacity-20 text-white" />
+                <p className="font-bold text-white mb-1">No client meals logged today</p>
+                <p className="text-sm" style={{ color: "#5A5A5A" }}>
+                  When clients log meals, they appear here in real-time
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {allClientLogs.map((entry) => (
+                  <CalorieMarkerCard
+                    key={entry.id}
+                    log={entry}
+                    mode="coach"
+                    isVerifying={verifyingId === entry.id && isVerifying}
+                    onVerify={(id, note) => {
+                      setVerifyingId(id);
+                      verifyLog({ id, action: "verified", coach_note: note });
+                    }}
+                    onEdit={(log) => alert(`Edit macros for: ${log.result?.display_title ?? log.meal}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── MY TRACKER (original content) ── */}
+        {activeTab === "my" && (<div>
 
         {/* ── GOALS PANEL ── */}
         <AnimatePresence>
@@ -630,6 +721,7 @@ export default function CaloriesPage() {
             </div>
           )}
         </div>
+        </div>)} {/* end My Tracker tab */}
       </div>
     </CoachLayout>
   );
