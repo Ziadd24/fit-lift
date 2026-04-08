@@ -4,7 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/use-auth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      throwOnError: false,
+    },
+  },
+});
 
 function SessionGuard({ children }: { children: React.ReactNode }) {
   const checkSessionExpiry = useAuth((s) => s.checkSessionExpiry);

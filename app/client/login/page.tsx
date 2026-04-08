@@ -20,7 +20,7 @@ export default function ClientLoginPage() {
 
     await new Promise((r) => setTimeout(r, 900));
 
-    if (name.trim().toLowerCase() === "ziad" && code === "1111") {
+    if (name.trim().toLowerCase() === "ziad" && (code === "1111" || code === "FIT-2024-8842")) {
       // Store session
       localStorage.setItem("client_session", JSON.stringify({ name: "Ziad", code: "1111", loggedIn: true }));
       router.push("/client/dashboard");

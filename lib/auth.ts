@@ -28,26 +28,20 @@ export async function createCoachToken(coachId: number): Promise<string> {
   return getCoachToken(coachId);
 }
 
-export function verifyCoachAuth(request: NextRequest): number | string | null {
+export function verifyCoachAuth(request: NextRequest): number | null {
   const authHeader = request.headers.get("Authorization");
-  console.log("[verifyCoachAuth] authHeader:", authHeader);
   if (!authHeader?.startsWith("Bearer ")) {
-    console.log("[verifyCoachAuth] missing or invalid Bearer prefix. Returning fallback 1.");
-    return 1; 
+    return null;
   }
   const token = authHeader.slice(7);
   if (!token.startsWith(COACH_TOKEN_PREFIX)) {
-    console.log("[verifyCoachAuth] Token does not start with prefix. token:", token);
     return null;
   }
   
   const idStr = token.slice(COACH_TOKEN_PREFIX.length);
   const idNum = parseInt(idStr);
-  console.log("[verifyCoachAuth] Parsed ID:", idNum, "from string:", idStr);
-  
-  // Update logic: If UUID is used, parseInt might return 0 or NaN.
-  // Instead of relying purely on parseInt, let's just return the idStr.
-  return idStr;
+  if (isNaN(idNum)) return null;
+  return idNum;
 }
 
 // Simple password hashing (for demo — use bcrypt in production)
