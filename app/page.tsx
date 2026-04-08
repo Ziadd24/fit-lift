@@ -8,7 +8,7 @@ import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumCompon
 import { AnnouncementPopup } from "@/components/ui/AnnouncementPopup";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Dumbbell, Calendar, CreditCard, LogOut, Bell, ImageIcon,
+   Dumbbell, Calendar, CreditCard, LogOut, Bell, ImageIcon, LayoutDashboard,
   ChevronRight, ChevronLeft, X, Menu, Check, MapPin, Clock, Star,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -284,278 +284,7 @@ export default function MemberPortal() {
     );
   };
 
-  if (currentMember) {
-    const isActive = isMembershipActive(currentMember.sub_expiry_date);
-    const daysRemaining = Math.max(0, Math.ceil((new Date(currentMember.sub_expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-    
-    return (
-      <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
-        {/* Member Navbar */}
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-white/5">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-32">
-              <div className="flex items-center gap-0">
-                <img src="/images/logo.png" alt="FIT & LIFT" className="h-[112px] w-auto object-contain" />
-                <span className="text-xl font-black text-primary tracking-widest -ml-4 hidden sm:block">FIT & LIFT</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <Badge variant={isActive ? "success" : "destructive"}>
-                  {isActive ? "Active" : "Expired"}
-                </Badge>
-                <span className="text-sm text-muted-foreground hidden md:block">{currentMember.name}</span>
-                <button
-                  onClick={logoutMember}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-white transition-colors"
-                >
-                  <LogOut className="w-4 h-4" /> <span className="hidden md:inline">Logout</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          {/* Welcome banner */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl overflow-hidden mb-8 h-48">
-            <img src="/images/gym-hero.png" alt="" className="w-full h-full object-cover opacity-30" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-            <div className="absolute inset-0 flex items-center px-8">
-              <div>
-                <p className="text-primary text-sm font-bold uppercase tracking-widest mb-1">Welcome Back</p>
-                <h1 className="text-3xl md:text-4xl font-display text-white font-black uppercase">{currentMember.name}</h1>
-                <div className="flex flex-wrap items-center gap-4 mt-2">
-                  <p className="text-muted-foreground text-sm">Code: <span className="font-mono text-white">{currentMember.membership_code}</span></p>
-                  <div className="w-1 h-1 rounded-full bg-white/20 hidden sm:block" />
-                  <p className="text-primary text-sm font-bold uppercase tracking-tight">{daysRemaining} Days Remaining</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {[
-              {
-                icon: CreditCard, label: "Membership",
-                value: currentMember.membership_type,
-                sub: null, color: "text-primary"
-              },
-              {
-                icon: Calendar, label: "Expires",
-                value: format(new Date(currentMember.sub_expiry_date), "MMM dd, yyyy"),
-                sub: null, color: isActive ? "text-green-400" : "text-destructive"
-              },
-              {
-                icon: Dumbbell, label: "Status",
-                value: isActive ? "Active Member" : "Membership Expired",
-                sub: null, color: isActive ? "text-green-400" : "text-destructive"
-              },
-            ].map((s) => (
-              <Card key={s.label} className="p-5 flex items-center gap-4">
-                <div className={`p-3 rounded-xl bg-white/5 border border-white/5 ${s.color}`}>
-                  <s.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</p>
-                  <p className={`font-bold text-base ${s.color}`}>{s.value}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 bg-card/50 rounded-xl border border-white/5 mb-6 w-fit">
-            {(["overview", "announcements", "photos"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium uppercase tracking-wider transition-all",
-                  activeTab === tab
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-white"
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-white/[0.03] to-transparent">
-                <div className="mb-6 p-4 bg-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                   <img 
-                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${currentMember.membership_code}`} 
-                     alt="Access QR Code" 
-                     className="w-32 h-32"
-                   />
-                </div>
-                <h3 className="text-lg font-display text-white mb-2 uppercase tracking-wide">GYM ACCESS QR</h3>
-                <p className="text-xs text-muted-foreground max-w-[200px]">Scan this code at the reception desk to log your entry.</p>
-                <div className="mt-6 pt-6 border-t border-white/5 w-full">
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Validated Access Code</p>
-                  <p className="text-xl font-mono text-white mt-1">{currentMember.membership_code}</p>
-                </div>
-              </Card>
-
-              <div className="lg:col-span-2 space-y-6">
-                <Card className="p-6">
-                  <h3 className="text-lg font-display text-white mb-4 flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-primary" /> Recent Announcements
-                  </h3>
-                  {announcements && announcements.length > 0 ? (
-                    <div className="space-y-3">
-                      {announcements.slice(0, 3).map((a) => (
-                        <div key={a.id} className="p-3 rounded-xl bg-white/5 border border-white/5">
-                          <p className="font-bold text-white text-sm">{a.title}</p>
-                          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">{a.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">No announcements yet.</p>
-                  )}
-                </Card>
-                <Card className="p-6">
-                  <h3 className="text-lg font-display text-white mb-4 flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-primary" /> Recent Photos
-                  </h3>
-                  {photos && photos.length > 0 ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      {photos.slice(0, 8).map((p) => (
-                        <div key={p.id} onClick={() => setZoomedPhoto(p.url)} className="aspect-square rounded-lg overflow-hidden bg-black cursor-pointer group relative">
-                          <img src={p.url} alt={p.caption || ""} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                             <Star className="w-5 h-5 text-primary" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">No photos uploaded yet.</p>
-                  )}
-                </Card>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "announcements" && (
-            <div className="space-y-4">
-              {announcements && announcements.length > 0 ? (
-                announcements.map((a) => (
-                  <Card key={a.id} className="p-6">
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant={a.is_global ? "default" : "outline"}>
-                        {a.is_global ? "Global" : "Personal"}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(a.created_at), "MMM dd, yyyy")}
-                      </span>
-                    </div>
-                    <h4 className="text-xl font-bold text-white mb-2">{a.title}</h4>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{a.content}</p>
-                  </Card>
-                ))
-              ) : (
-                <p className="text-muted-foreground">No announcements yet.</p>
-              )}
-            </div>
-          )}
-
-          {activeTab === "photos" && (
-            <div>
-              {photos && photos.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {photos.map((p) => (
-                    <Card key={p.id} className="overflow-hidden group">
-                      <div className="h-48 overflow-hidden bg-black relative cursor-pointer" onClick={() => setZoomedPhoto(p.url)}>
-                        <img src={p.url} alt={p.caption || ""} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                           <span className="text-white text-xs font-bold uppercase tracking-widest border border-white/20 px-3 py-1 rounded-full">Click to Zoom</span>
-                        </div>
-                      </div>
-                      <div className="p-3 flex justify-between items-end">
-                        <div className="flex-1">
-                          {p.caption && <p className="text-sm text-white line-clamp-1">{p.caption}</p>}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(p.created_at), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                        <button 
-                          onClick={() => handleDownload(p.url, `photo-${p.id}.jpg`)}
-                          className="p-2 rounded-lg bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                        </button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card className="p-12 text-center border-dashed border-white/10 bg-transparent">
-                  <ImageIcon className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                  <p className="text-muted-foreground">No photos for your profile yet.</p>
-                </Card>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Login modal backdrop close */}
-        <AnimatePresence>
-          {isLoginModalOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 py-6 sm:py-4"
-              onClick={() => setIsLoginModalOpen(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="w-full max-w-md"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Card className="p-6 sm:p-10">
-                  <button onClick={() => setIsLoginModalOpen(false)} className="absolute top-5 right-5 text-muted-foreground hover:text-white transition-colors">
-                    <X className="w-5 h-5" />
-                  </button>
-                  <div className="mb-8">
-                    <h2 className="text-2xl sm:text-3xl font-display text-white mb-3">{t.modal.title}</h2>
-                    <p className="text-sm sm:text-base text-muted-foreground">{t.modal.desc}</p>
-                  </div>
-                  <form onSubmit={handleLogin} className="space-y-5">
-                    <div>
-                      <Label className="text-xs sm:text-sm">{t.modal.code}</Label>
-                      <Input
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        placeholder={t.modal.placeholder}
-                        autoFocus
-                        className="text-base"
-                      />
-                    </div>
-                    {error && <p className="text-xs sm:text-sm text-destructive font-medium">{error}</p>}
-                    <Button type="submit" className="w-full text-base py-3 h-auto sm:py-3" disabled={lookupMutation.isPending}>
-                      {lookupMutation.isPending ? t.modal.loading : t.modal.btn}
-                    </Button>
-                  </form>
-                </Card>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-
-  // ─── Landing Page (not logged in) ─────────────────────────────────────────
+  // ─── Landing Page (always visible) ──────────────────────────────────────
   return (
     <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
       <AnnouncementPopup />
@@ -581,16 +310,29 @@ export default function MemberPortal() {
               <a href="#contact" className="nav-link-hero text-sm font-medium text-white/90 hover:text-white">{t.nav.contact}</a>
             </div>
 
-            {/* Right: Language Toggle + Login (desktop) */}
+            {/* Right: Language Toggle + Auth buttons (desktop) */}
             <div className="hidden lg:flex items-center gap-4">
               <div className="flex items-center bg-white/5 rounded-full p-1" dir="ltr">
                 <button onClick={() => setLang("en")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "en" ? "bg-[#7CFC00] text-black" : "text-white/60 hover:text-white"}`}>EN</button>
                 <button onClick={() => setLang("ar")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "ar" ? "bg-[#7CFC00] text-black" : "text-white/60 hover:text-white"}`}>عربي</button>
               </div>
-              <Button onClick={() => router.push("/client/login")} className="bg-[#7CFC00] text-black rounded-full px-6 font-bold text-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                {t.nav.login}
-              </Button>
+              {currentMember ? (
+                <>
+                  <span className="text-sm text-white/80 font-medium">{currentMember.name}</span>
+                  <Button onClick={() => router.push("/client/dashboard")} className="bg-[#7CFC00] text-black rounded-full px-5 font-bold text-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </Button>
+                  <button onClick={() => { logoutMember(); router.push("/"); }} className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors px-2">
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <Button onClick={() => router.push("/client/login")} className="bg-[#7CFC00] text-black rounded-full px-6 font-bold text-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                  {t.nav.login}
+                </Button>
+              )}
             </div>
 
             {/* Mobile hamburger */}
@@ -619,6 +361,18 @@ export default function MemberPortal() {
                   <button onClick={() => { setLang("ar"); setIsMobileMenuOpen(false); }} className={`px-4 py-2 rounded-full text-sm font-bold ${lang === "ar" ? "bg-[#7CFC00] text-black" : "border border-white/10 text-white/60 hover:text-white"}`}>عربي</button>
                 </div>
                 <Button onClick={() => { router.push("/client/login"); setIsMobileMenuOpen(false); }} className="bg-[#7CFC00] text-black w-full mt-2 font-bold">{t.nav.login}</Button>
+                {currentMember && (
+                  <>
+                    <Button onClick={() => { router.push("/client/dashboard"); setIsMobileMenuOpen(false); }} className="bg-white/10 text-white w-full font-bold flex items-center gap-2 justify-center">
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Button>
+                    <Button onClick={() => { logoutMember(); setIsMobileMenuOpen(false); }} className="bg-white/5 text-white/60 w-full font-bold flex items-center gap-2 justify-center hover:text-red-400">
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </Button>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

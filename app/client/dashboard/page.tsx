@@ -9,6 +9,7 @@ import ProgressTab from "./ProgressTab";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListMessages, useSendMessage, useListTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -813,11 +814,18 @@ export default function ClientDashboard() {
   const [dateRange, setDateRange] = useState("");
   const [taskPeriod, setTaskPeriod] = useState("Week");
   const [mounted, setMounted] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [memberId, setMemberId] = useState<number | null>(null);
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
+  const { currentMember, logoutMember } = useAuth();
   const isPrivate = CLIENT_DATA.isPrivate;
-  const daysRemaining = CLIENT_DATA.subscription.daysRemaining;
-  const totalDays = CLIENT_DATA.subscription.totalDays;
+  const memberName = currentMember?.name ?? CLIENT_DATA.name;
+  const memberCode = currentMember?.membership_code ?? CLIENT_DATA.id;
+  const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
+  // Calculate subscription days from real expiry date
+  const expiryDate = currentMember?.sub_expiry_date ? new Date(currentMember.sub_expiry_date) : null;
+  const daysRemaining = expiryDate ? Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : CLIENT_DATA.subscription.daysRemaining;
+  const totalDays = 30; // Default display
   const daysLow = daysRemaining < 7;
 
   // Stat count-up values
@@ -852,34 +860,42 @@ export default function ClientDashboard() {
   // Auth check + mount guard + data load
   useEffect(() => {
     setMounted(true);
-    const sessionStr = localStorage.getItem("client_session");
-    if (!sessionStr) {
+    // Wait for Zustand persist to hydrate before checking auth
+    const t = setTimeout(() => setHydrated(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!currentMember) {
       router.push("/client/login");
       return;
     }
-
-    try {
-      const session = JSON.parse(sessionStr);
-      // Try to get real member ID from session, default to 13 (Ziad) if not found
-      setMemberId(session.member?.id || 13);
-    } catch (e) {
-      setMemberId(13);
-    }
-
+    setMemberId(currentMember.id);
     const d = new Date();
     setDateRange(`${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${d.getFullYear()}`);
-  }, [router]);
+  }, [currentMember, router, hydrated]);
 
-  if (!mounted) return null;
+  // Show loading skeleton while checking auth
+  if (!mounted || !hydrated || (!currentMember && mounted && hydrated)) {
+    return (
+      <div className="min-h-screen bg-[#0D0D10] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-[rgba(124,252,0,0.3)] border-t-[#7CFC00] rounded-full animate-spin" />
+          <span className="text-sm text-[#8B8B8B]">Loading your dashboard...</span>
+        </div>
+      </div>
+    );
+  }
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(CLIENT_DATA.id);
+    navigator.clipboard.writeText(memberCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("client_session");
+    logoutMember();
     router.push("/client/login");
   };
 
@@ -1094,7 +1110,7 @@ export default function ClientDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div className="flex flex-col">
                 <div className="text-xl lg:text-2xl font-bold text-white leading-tight">
-                  Hello, {CLIENT_DATA.name} 👋
+                  Hello, {memberName} 👋
                 </div>
                 <div className="text-xs lg:text-sm text-gray-500 mt-1">
                   Track your progress. <span className="text-[#7CFC00] font-semibold">7 days</span> to goal.
@@ -1217,7 +1233,7 @@ export default function ClientDashboard() {
                     fontFamily: "monospace",
                   }}
                 >
-                  {CLIENT_DATA.id}
+                  {memberCode}
                 </span>
                 <button
                   onClick={handleCopy}
@@ -1707,12 +1723,12 @@ export default function ClientDashboard() {
                   boxShadow: "0 0 20px rgba(124,252,0,0.3)",
                 }}
               >
-                {CLIENT_DATA.name.slice(0, 2).toUpperCase()}
+                {memberName.slice(0, 2).toUpperCase()}
               </div>
             </div>
 
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{CLIENT_DATA.name}</div>
-            <div style={{ fontSize: 14, color: "#8B8B8B", marginTop: 2 }}>{CLIENT_DATA.username}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
+            <div style={{ fontSize: 14, color: "#8B8B8B", marginTop: 2 }}>{memberType}</div>
 
             {/* Private badge */}
             {isPrivate && (
