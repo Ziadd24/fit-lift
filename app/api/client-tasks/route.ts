@@ -3,10 +3,6 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeaders = req.headers;
-    const tokenStr = authHeaders.get("authorization");
-    if (!tokenStr) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
 
@@ -18,7 +14,7 @@ export async function GET(req: NextRequest) {
     const { data: tasks, error } = await query;
     if (error) throw error;
 
-    return NextResponse.json(tasks);
+    return NextResponse.json(tasks ?? []);
   } catch (error) {
     console.error("GET /api/client-tasks Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -27,9 +23,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeaders = req.headers;
-    if (!authHeaders.get("authorization")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const body = await req.json();
     const supabase = getSupabaseAdmin();
     const { data: inserted, error } = await supabase
@@ -53,3 +46,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

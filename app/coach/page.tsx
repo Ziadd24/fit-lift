@@ -344,7 +344,7 @@ export default function CoachDashboard() {
 
           <div className="flex items-center gap-3 flex-wrap">
             {/* Period Toggle */}
-            <div className="flex items-center p-1 gap-1 rounded-full" style={{ background: "#1A1A1F" }}>
+            <div className="flex items-center p-1 gap-1 rounded-full overflow-x-auto no-scrollbar max-w-full" style={{ background: "#1A1A1F" }}>
               {(["Day","Week","Month"] as TimePeriod[]).map((p) => (
                 <button
                   key={p}
@@ -616,7 +616,7 @@ export default function CoachDashboard() {
             <div
               ref={carouselRef}
               className="flex gap-4 overflow-x-auto no-scrollbar h-full items-center px-4"
-              style={{ scrollSnapType: "x mandatory" }}
+              style={{ scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
             >
               {filteredMembers.map((member, idx) => {
                 const selected = idx === safeIdx;

@@ -30,9 +30,10 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
     queryKey: ["bundles"],
     queryFn: async () => {
       const res = await fetch("/api/bundles");
-      if (!res.ok) throw new Error("Failed to fetch bundles");
+      if (!res.ok) return [];
       return res.json();
     },
+    retry: false,
   });
 
   // Fallback plans from translations if DB is empty or loading
@@ -45,11 +46,11 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 md:pb-0 hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-5 gap-4 px-4 md:px-0 -mx-4 md:mx-0">
       {displayBundles.map((bundle: any, i: number) => (
         <motion.div
           key={i}
-          className="w-full"
+          className="shrink-0 snap-center w-[85vw] md:w-full"
           initial={{ opacity: 0, y: 50, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           whileHover={{ y: -6, boxShadow: "0 0 35px hsla(128, 49%, 48%, 0.4)" }}
@@ -795,13 +796,13 @@ export default function MemberPortal() {
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.services.tag}</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.services.title}</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 md:pb-0 hide-scrollbar md:grid md:grid-cols-3 gap-8 px-4 md:px-0 -mx-4 md:mx-0">
             {[
               { icon: Dumbbell, title: t.services.items[0].title, desc: t.services.items[0].desc },
               { icon: Calendar, title: t.services.items[1].title, desc: t.services.items[1].desc },
               { icon: CreditCard, title: t.services.items[2].title, desc: t.services.items[2].desc },
             ].map((s, i) => (
-              <motion.div key={s.title} initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18, delay: i * 0.12 }} viewport={{ once: true, margin: "-50px" }}>
+              <motion.div key={s.title} className="shrink-0 snap-center w-[85vw] md:w-auto" initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18, delay: i * 0.12 }} viewport={{ once: true, margin: "-50px" }}>
                 <Card className="p-8 h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(62,182,76,0.4)] active:scale-[0.98] cursor-pointer">
                   <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-6">
                     <s.icon className="w-7 h-7 text-primary" />
@@ -828,9 +829,9 @@ export default function MemberPortal() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 md:pb-0 hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-0 -mx-4 md:mx-0">
             {scheduleData.map((day, i) => (
-              <motion.div key={day.id} initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} whileHover={{ y: -4, boxShadow: "0 0 30px hsla(128, 49%, 48%, 0.35)" }} whileTap={{ scale: 0.96 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} viewport={{ once: true, margin: "-50px" }}>
+              <motion.div key={day.id} className="shrink-0 snap-center w-[85vw] md:w-auto" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} whileHover={{ y: -4, boxShadow: "0 0 30px hsla(128, 49%, 48%, 0.35)" }} whileTap={{ scale: 0.96 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} viewport={{ once: true, margin: "-50px" }}>
                 <Card className="p-6 h-full flex flex-col border border-white/5 bg-white/5 cursor-pointer">
                   <h4 className="text-xl font-display text-white font-bold mb-6 text-center pb-4 border-b border-white/10">{day.day}</h4>
                   <div className="space-y-4 flex-1 flex flex-col justify-center">
@@ -867,9 +868,9 @@ export default function MemberPortal() {
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.coaches.tag}</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.coaches.title}</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 sm:pb-0 hide-scrollbar sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 sm:px-0 -mx-4 sm:mx-0">
             {t.coaches.coaches.map((coach, i) => (
-              <motion.div key={coach.name} initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 120, damping: 16, delay: i * 0.1 }} viewport={{ once: true, margin: "-50px" }}>
+              <motion.div key={coach.name} className="shrink-0 snap-center w-[75vw] sm:w-auto" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 120, damping: 16, delay: i * 0.1 }} viewport={{ once: true, margin: "-50px" }}>
                 <Card className="group border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(62,182,76,0.4)] active:scale-[0.98] cursor-pointer">
                   <div className="aspect-[3/4] overflow-hidden bg-black/40 relative rounded-t-xl">
                     <img 

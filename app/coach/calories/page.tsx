@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame, Zap, Wheat, Droplets, Plus, Trash2, Clock,
   Sparkles, Target, RotateCcw, CheckCircle,
-  AlertCircle, Loader2, UtensilsCrossed, TrendingUp, Camera, X, Users, Bell
+  AlertCircle, Loader2, UtensilsCrossed, TrendingUp, Camera, X, Users, Bell, ShieldAlert, ChevronDown, Brain
 } from "lucide-react";
-import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCalorieLog, CalorieLog } from "@/lib/api-hooks";
+import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCalorieLog, CalorieLog, useListMembers } from "@/lib/api-hooks";
 import { useNutritionRealtime } from "@/lib/use-nutrition-realtime";
 import { CalorieMarkerCard } from "@/components/ui/CalorieMarkerCard";
 
@@ -22,7 +22,7 @@ interface MacroTotals {
 
 interface FoodItem {
   name: string;
-  amount: string;
+  grams: number;
   calories: number;
   protein: number;
   carbs: number;
@@ -144,13 +144,79 @@ export default function CaloriesPage() {
 
   const { mutate: saveCalorieLog } = useSaveCalorieLog();
   const { mutate: deleteCalorieLog } = useDeleteCalorieLog();
-  const { mutate: verifyLog, isLoading: isVerifying } = useVerifyCalorieLog();
+  const { mutate: verifyLog, isPending: isVerifying } = useVerifyCalorieLog();
   const [goals, setGoals] = useState({ calories: 2500, protein: 150, carbs: 300, fat: 80 });
   const [showGoals, setShowGoals] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+
+  // Client Selection & Assessment State
+  const { data: membersPage } = useListMembers();
+  const members = membersPage?.members || [];
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [assessment, setAssessment] = useState<any>(null);
+  const [isAssessing, setIsAssessing] = useState(false);
+  const [clientGoals, setClientGoals] = useState<Record<number, MacroTotals>>({});
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("fitgym_client_goals");
+    if(stored) {
+      try { setClientGoals(JSON.parse(stored)); } catch(e){}
+    }
+  }, []);
+
+  const saveClientGoal = (id: number, key: keyof MacroTotals, value: number) => {
+    const current = clientGoals[id] || { calories: 2500, protein: 150, carbs: 300, fat: 80 };
+    const updated = { ...clientGoals, [id]: { ...current, [key]: value } };
+    setClientGoals(updated);
+    localStorage.setItem("fitgym_client_goals", JSON.stringify(updated));
+  };
+
+  const getClientGoals = (id: number) => clientGoals[id] || { calories: 2500, protein: 150, carbs: 300, fat: 80 };
+
+  const selectedClientLogs = selectedClientId 
+    ? allClientLogs.filter(l => l.member_id === selectedClientId)
+    : allClientLogs;
+  
+  const selectedMember = members.find(m => m.id === selectedClientId);
+
+  const runAssessment = async () => {
+    if(!selectedClientId || !selectedMember) return;
+    setIsAssessing(true);
+    setAssessment(null);
+    try {
+      const cGoals = getClientGoals(selectedClientId);
+      const cTotals: MacroTotals = selectedClientLogs.reduce(
+        (acc, e) => ({
+          calories: acc.calories + (e.result?.totals?.calories || 0),
+          protein:  acc.protein  + (e.result?.totals?.protein || 0),
+          carbs:    acc.carbs    + (e.result?.totals?.carbs || 0),
+          fat:      acc.fat      + (e.result?.totals?.fat || 0),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+
+      const res = await fetch("/api/calories/assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          memberName: selectedMember.name, 
+          logs: selectedClientLogs, 
+          dailyTotals: cTotals, 
+          goals: cGoals 
+        }),
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error);
+      setAssessment(data);
+    } catch (err: any) {
+      alert("Assessment failed: " + err.message);
+    } finally {
+      setIsAssessing(false);
+    }
+  };
 
   // Real-time subscription — coach sees client logs appear instantly
   useNutritionRealtime();
@@ -310,19 +376,105 @@ export default function CaloriesPage() {
 
         {/* ── CLIENT LOGS TAB ── */}
         {activeTab === "clients" && (
-          <div className="flex flex-col gap-4">
-            {allClientLogs.length === 0 ? (
+          <div className="flex flex-col gap-6">
+            
+            {/* ── Client Selection & Threat Assessment Panel ── */}
+            <div style={cardStyle} className="p-6">
+              <div className="flex flex-col xl:flex-row gap-6">
+                
+                {/* Client List */}
+                <div className="w-full xl:w-1/3 flex flex-col gap-2 xl:border-r border-white/10 pr-0 xl:pr-4">
+                  <h3 className="font-bold text-white text-sm uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-primary" /> Select Client
+                  </h3>
+                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
+                    {members.map(m => {
+                      const mLogs = allClientLogs.filter(l => l.member_id === m.id);
+                      const isSelected = selectedClientId === m.id;
+                      return (
+                        <button key={m.id} onClick={() => setSelectedClientId(m.id)}
+                          className={`flex items-center justify-between p-3 rounded-xl transition-all ${isSelected ? 'bg-[#7CFC00]/20 border-[#7CFC00] border' : 'bg-white/5 border border-transparent hover:bg-white/10'}`}>
+                          <span className={`font-bold ${isSelected ? 'text-[#7CFC00]' : 'text-white'}`}>{m.name}</span>
+                          {mLogs.length > 0 && <span className="bg-[#7CFC00] text-black text-[10px] font-black px-2 py-0.5 rounded-full">{mLogs.length} logs</span>}
+                        </button>
+                      );
+                    })}
+                    {members.length === 0 && <span className="text-sm text-gray-500">No clients registered.</span>}
+                  </div>
+                </div>
+
+                {/* Selected Client Assessment */}
+                <div className="w-full xl:w-2/3 pl-0 xl:pl-4">
+                  {!selectedClientId ? (
+                     <div className="flex flex-col items-center justify-center h-[200px] text-center p-8 opacity-50">
+                       <ShieldAlert className="w-12 h-12 mb-3 text-white" />
+                       <p className="text-white font-bold">Select a client to view threat assessment</p>
+                     </div>
+                  ) : (
+                     <div className="flex flex-col h-full gap-5">
+                       {/* Top Row: Info & Button */}
+                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                         <div className="flex items-center gap-2">
+                           <Brain className="w-6 h-6 text-[#7CFC00]" />
+                           <h2 className="text-xl font-black text-white">{selectedMember?.name}'s Assessment</h2>
+                         </div>
+                         <button onClick={runAssessment} disabled={isAssessing}
+                           className="bg-[#7CFC00] text-black font-black text-sm px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-[#7CFC00]/80 transition-colors disabled:opacity-50">
+                           {isAssessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                           Run Threat Assessment
+                         </button>
+                       </div>
+
+                       {/* Threat Details */}
+                       {assessment && (
+                         <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1,y:0}} 
+                           className="p-5 rounded-2xl border" style={{ background: `${assessment.threat_level_color}10`, borderColor: assessment.threat_level_color }}>
+                           <div className="flex items-center gap-2 mb-3">
+                              <span className="font-black px-3 py-1 rounded-full text-xs uppercase" style={{ background: assessment.threat_level_color, color: "#000" }}>
+                                {assessment.threat_level}
+                              </span>
+                              <span className="text-white font-medium text-sm">{assessment.summary}</span>
+                           </div>
+                           <ul className="text-sm text-gray-300 space-y-1 mb-3 list-disc pl-5">
+                             {assessment.key_observations.map((obs: string, i: number) => <li key={i}>{obs}</li>)}
+                           </ul>
+                           <div className="text-sm font-bold text-white bg-black/30 p-3 rounded-xl border border-white/10">
+                              💡 Action: <span className="text-[#7CFC00]">{assessment.coach_recommendation}</span>
+                           </div>
+                         </motion.div>
+                       )}
+
+                       {/* Quick Goals Edit */}
+                       <div className="mt-auto grid grid-cols-2 md:grid-cols-4 gap-2">
+                         {(['calories', 'protein', 'carbs', 'fat'] as const).map(k => (
+                           <div key={k} className="bg-black/30 p-2 rounded-lg border border-white/5 flex items-center justify-between">
+                              <span className="text-[10px] text-gray-400 uppercase font-bold">{k}</span>
+                              <input type="number" 
+                                value={getClientGoals(selectedClientId)[k]} 
+                                onChange={e => saveClientGoal(selectedClientId, k, Number(e.target.value))}
+                                className="w-12 bg-transparent text-white font-bold text-right text-xs outline-none" />
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Client Logs Grid ── */}
+            {selectedClientId && selectedClientLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24"
                 style={{ border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 20 }}>
                 <Users className="w-12 h-12 mb-4 opacity-20 text-white" />
-                <p className="font-bold text-white mb-1">No client meals logged today</p>
+                <p className="font-bold text-white mb-1">No meals logged by this client today</p>
                 <p className="text-sm" style={{ color: "#5A5A5A" }}>
-                  When clients log meals, they appear here in real-time
+                  Select another client or check back later
                 </p>
               </div>
-            ) : (
+            ) : selectedClientId ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {allClientLogs.map((entry) => (
+                {selectedClientLogs.map((entry) => (
                   <CalorieMarkerCard
                     key={entry.id}
                     log={entry}
@@ -336,7 +488,7 @@ export default function CaloriesPage() {
                   />
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -522,7 +674,7 @@ export default function CaloriesPage() {
                         style={{ background: "rgba(255,255,255,0.03)" }}>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-white truncate">{item.name}</p>
-                          <p className="text-[11px]" style={{ color: "#5A5A5A" }}>{item.amount}</p>
+                          <p className="text-[11px]" style={{ color: "#5A5A5A" }}>{item.grams}g</p>
                         </div>
                         <div className="flex items-center gap-3 ml-3">
                           <span className="text-xs font-bold" style={{ color: "#7CFC00" }}>{item.calories} kcal</span>
@@ -706,7 +858,7 @@ export default function CaloriesPage() {
                         </span>
                       </div>
 
-                      <ConfidenceBadge level={entry.result.confidence} />
+                      <ConfidenceBadge level={entry.result?.confidence || "medium"} />
 
                       {/* Delete */}
                       <button onClick={() => deleteEntry(entry.id)}

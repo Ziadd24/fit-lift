@@ -243,3 +243,200 @@
   transform: scale(1.05);
   box-shadow: 0 6px 30px rgba(124, 252, 0, 0.5);
 }
+
+/* ── Mobile-First Utilities ─────────────────────────────── */
+
+/* Snap-scroll horizontal carousel */
+.snap-carousel {
+  display: flex;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 0;
+}
+.snap-carousel::-webkit-scrollbar { display: none; }
+.snap-card {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* 48px minimum touch targets */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Safe area bottom padding for bottom nav on iOS */
+.pb-safe-nav {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Pull-to-refresh spinner */
+@keyframes pullSpin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.pull-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid rgba(124,252,0,0.2);
+  border-top-color: #7CFC00;
+  border-radius: 50%;
+  animation: pullSpin 0.7s linear infinite;
+}
+
+/* Set completion button (workout tracker) */
+.set-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  color: #8B8B8B;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.set-btn.done {
+  border-color: #7CFC00;
+  background: rgba(124,252,0,0.12);
+  color: #7CFC00;
+}
+.set-btn:active {
+  transform: scale(0.93);
+}
+
+/* Horizontal macro progress bar */
+.macro-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+  flex: 1;
+}
+.macro-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  z-index: 110;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,252,0,0.3);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.fab:active { transform: scale(0.93); }
+
+/* Bottom sheet overlay */
+.bottom-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 300;
+  border-radius: 24px 24px 0 0;
+  background: #1A1A1F;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  padding: 0 20px 32px;
+}
+
+/* Quick-log chip row */
+.food-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: #8B8B8B;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+}
+.food-chip:active, .food-chip:hover {
+  border-color: rgba(124,252,0,0.4);
+  color: #7CFC00;
+  background: rgba(124,252,0,0.07);
+}
+
+/* Daily score bar */
+.daily-score-track {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+  position: relative;
+}
+.daily-score-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #39FF14, #7CFC00, #ADFF2F);
+  background-size: 200% 100%;
+  animation: scoreShimmer 2s ease infinite;
+}
+@keyframes scoreShimmer {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 0%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Desaturate lime on mobile OLED screens */
+@media (max-width: 768px) {
+  :root {
+    --color-lime: #6EE600;
+    --color-lime-glow: rgba(110,230,0,0.28);
+  }
+}
+
+/* Collapsible section toggle */
+.collapsible-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 0;
+  background: none;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Swipe hint fade for carousels */
+.swipe-hint::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(13,13,16,0.7));
+  pointer-events: none;
+  border-radius: 0 16px 16px 0;
+}
+

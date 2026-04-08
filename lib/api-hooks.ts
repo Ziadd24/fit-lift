@@ -133,9 +133,10 @@ export function useListPhotos(params?: { memberId?: number; global?: boolean }) 
       const res = await fetch(`/api/photos${qs}`, {
         headers: getAuthHeaders(adminToken || memberCode),
       });
-      if (!res.ok) throw new Error("Failed to fetch photos");
+      if (!res.ok) return [];
       return res.json();
     },
+    retry: false,
   });
 }
 
@@ -191,9 +192,10 @@ export function useListAnnouncements(params?: { memberId?: number }) {
       const res = await fetch(`/api/announcements${qs}`, {
         headers: getAuthHeaders(adminToken),
       });
-      if (!res.ok) throw new Error("Failed to fetch announcements");
+      if (!res.ok) return [];
       return res.json();
     },
+    retry: false,
   });
 }
 
@@ -319,35 +321,36 @@ export function useListConversations() {
 }
 
 export function useListMessages(memberId: number | null) {
-  const { coachToken } = useAuth();
   return useQuery<Message[]>({
     queryKey: ["messages", memberId],
     queryFn: async () => {
-      const res = await fetch(`/api/messages?memberId=${memberId}`, {
-        headers: getAuthHeaders(coachToken),
-      });
+      if (!memberId) return [];
+      const res = await fetch(`/api/messages?memberId=${memberId}`);
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
-    enabled: !!coachToken && !!memberId,
+    enabled: !!memberId,
     refetchInterval: 5000, // Poll every 5s
   });
 }
 
 export function useSendMessage() {
   const { coachToken } = useAuth();
-  return useMutation<Message, Error, { memberId: number; content: string }>({
-    mutationFn: async ({ memberId, content }) => {
+  const queryClient = useQueryClient();
+  return useMutation<Message, Error, { memberId: number; content: string; senderType?: string }>({
+    mutationFn: async ({ memberId, content, senderType = "member" }) => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (coachToken) headers["Authorization"] = `Bearer ${coachToken}`;
       const res = await fetch("/api/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(coachToken),
-        },
-        body: JSON.stringify({ memberId, content, senderType: "coach" }),
+        headers,
+        body: JSON.stringify({ memberId, content, senderType }),
       });
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["messages", vars.memberId] });
     },
   });
 }
@@ -564,18 +567,15 @@ export interface ClientTask {
 }
 
 export function useListTasks(memberId?: number) {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
   return useQuery<ClientTask[]>({
     queryKey: ["client_tasks", memberId],
     queryFn: async () => {
       const qs = memberId ? `?memberId=${memberId}` : "";
-      const res = await fetch(`/api/client-tasks${qs}`, {
-        headers: getAuthHeaders(token),
-      });
+      const res = await fetch(`/api/client-tasks${qs}`);
       if (!res.ok) throw new Error("Failed to fetch tasks");
       return res.json();
     },
+    enabled: !!memberId,
     refetchInterval: 5000,
   });
 }
@@ -661,18 +661,15 @@ export interface ClientWorkout {
 }
 
 export function useListWorkouts(memberId?: number) {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
   return useQuery<ClientWorkout[]>({
     queryKey: ["client_workouts", memberId],
     queryFn: async () => {
       const qs = memberId ? `?memberId=${memberId}` : "";
-      const res = await fetch(`/api/client-workouts${qs}`, {
-        headers: getAuthHeaders(token),
-      });
+      const res = await fetch(`/api/client-workouts${qs}`);
       if (!res.ok) throw new Error("Failed to fetch workouts");
       return res.json();
     },
+    enabled: !!memberId,
     refetchInterval: 5000,
   });
 }

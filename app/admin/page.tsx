@@ -80,7 +80,7 @@ export default function AdminDashboard() {
             <img src="/images/logo-mark.png" alt="" className="w-64 h-64 -mb-10 -mr-10" />
           </div>
           <h3 className="text-xl font-display text-white mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-4 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
             <Link
               href="/admin/members"
               className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors flex flex-col items-center text-center gap-2"
