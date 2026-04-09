@@ -596,6 +596,214 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
         </div>
       </div>
 
+      {/* Today's Workout Resume Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        style={{
+          background: "#16161A",
+          border: "1px solid rgba(124,252,0,0.2)",
+          borderLeft: "3px solid #7CFC00",
+          borderRadius: 16,
+          padding: "18px 20px"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "rgba(124,252,0,0.1)",
+            border: "1px solid rgba(124,252,0,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <Dumbbell size={18} color="#7CFC00" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 11,
+              color: "#8B8B8B",
+              textTransform: "uppercase",
+              letterSpacing: "0.6px",
+              marginBottom: 2
+            }}>
+              Today's Workout
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>
+              Leg Day — Heavy Squats
+            </div>
+          </div>
+          <div style={{
+            background: "rgba(139,92,246,0.2)",
+            color: "#8B5CF6",
+            borderRadius: 20,
+            padding: "4px 12px",
+            fontSize: 11,
+            fontWeight: 700
+          }}>
+            In Progress
+          </div>
+        </div>
+        <div style={{
+          height: 6,
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: 4,
+          overflow: "hidden",
+          marginBottom: 14
+        }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: "50%" }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            style={{
+              height: "100%",
+              background: "linear-gradient(90deg, #7CFC00, #39FF14)",
+              borderRadius: 4
+            }}
+          />
+        </div>
+        <div style={{ fontSize: 12, color: "#8B8B8B", marginBottom: 14 }}>
+          2 of 4 exercises completed · 50%
+        </div>
+        <button
+          style={{
+            width: "100%",
+            height: 50,
+            borderRadius: 12,
+            background: "linear-gradient(135deg, #7CFC00, #39FF14)",
+            border: "none",
+            color: "#000",
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8
+          }}
+        >
+          <Play size={16} fill="#000" /> RESUME WORKOUT
+        </button>
+      </motion.div>
+
+      {/* Current Tasks Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{
+          background: "#16161A",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 16,
+          padding: 24
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <Target size={20} color="#7CFC00" />
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
+          <span style={{ fontSize: 14, color: "#8B8B8B" }}>
+            Done 50%
+          </span>
+        </div>
+
+        {/* Task Filter */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          {["all", "pending", "completed"].map((filter) => (
+            <button
+              key={filter}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.05)",
+                color: "#8B8B8B",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                textTransform: "capitalize"
+              }}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+
+        {/* Sample Tasks */}
+        {[
+          { id: 1, title: "Complete leg day workout", completed: true, priority: "high" },
+          { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
+          { id: 3, title: "Update body measurements", completed: false, priority: "low" },
+          { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
+        ].map((task, i) => (
+          <motion.div
+            key={task.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 + 0.3 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 0",
+              borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.04)" : "none"
+            }}
+          >
+            <button
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                border: `2px solid ${task.completed ? "#7CFC00" : "rgba(255,255,255,0.2)"}`,
+                background: task.completed ? "#7CFC00" : "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              {task.completed && <CheckCircle2 size={12} color="#000" />}
+            </button>
+            <span style={{
+              flex: 1,
+              fontSize: 14,
+              color: task.completed ? "#8B8B8B" : "#FFFFFF",
+              textDecoration: task.completed ? "line-through" : "none"
+            }}>
+              {task.title}
+            </span>
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: task.priority === "high" ? "#EF4444" : task.priority === "medium" ? "#F59E0B" : "#7CFC00"
+            }} />
+          </motion.div>
+        ))}
+
+        <button
+          style={{
+            width: "100%",
+            marginTop: 16,
+            height: 40,
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "#8B8B8B",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontSize: 14
+          }}
+        >
+          <Plus size={16} /> Add New Task
+        </button>
+      </motion.div>
+
       {/* Workout cards */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>

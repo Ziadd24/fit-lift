@@ -8,7 +8,7 @@ import WorkoutsTab from "./WorkoutsTab";
 import ProgressTab from "./ProgressTab";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useListMessages, useSendMessage, useListTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/api-hooks";
+import { useListMessages, useSendMessage, useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 import {
@@ -54,7 +54,31 @@ import {
   Star,
   Flame,
   Play,
+  Filter,
+  Target,
+  Timer,
+  Trophy,
+  Activity,
 } from "lucide-react";
+
+// ─── Motion Sensitivity Hook ─────────────────────────────────────────────────
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  return prefersReducedMotion;
+}
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const CLIENT_DATA = {
@@ -275,7 +299,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
         }}
         onMouseLeave={() => setTooltip(null)}
       >
-        {/* Horizontal grid lines */}
         {yVals.map((v, i) => (
           <g key={v}>
             <line
@@ -298,7 +321,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
           </g>
         ))}
 
-        {/* X-axis labels */}
         {CHART_DATA.labels.map((label, i) => (
           <text
             key={label}
@@ -312,7 +334,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
           </text>
         ))}
 
-        {/* Previous period line (dashed, gray) */}
         <path
           d={buildPath(CHART_DATA.previous)}
           fill="none"
@@ -322,7 +343,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
           opacity={0.5}
         />
 
-        {/* Current period line (lime) */}
         <path
           d={buildPath(CHART_DATA.current)}
           fill="none"
@@ -332,7 +352,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
           strokeLinejoin="round"
         />
 
-        {/* Dots on current line */}
         {CHART_DATA.current.map((v, i) => (
           <circle
             key={i}
@@ -345,7 +364,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
           />
         ))}
 
-        {/* Tooltip */}
         {tooltip?.visible && (
           <g>
             <line
@@ -361,7 +379,6 @@ function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
         )}
       </svg>
 
-      {/* HTML Tooltip overlay */}
       {tooltip?.visible && (() => {
         const svgEl = svgRef.current;
         if (!svgEl) return null;
@@ -411,7 +428,7 @@ function useCountUp(target: number, duration = 1000) {
     const startTime = performance.now();
     const tick = (now: number) => {
       const progress = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 4); // easeOutQuart
+      const eased = 1 - Math.pow(1 - progress, 4);
       setValue(Math.round(eased * target));
       if (progress < 1) requestAnimationFrame(tick);
     };
@@ -470,7 +487,6 @@ function TaskItem({ task, isPrivate, delay, onEdit, onDelete }: { task: any; isP
         boxShadow: hovered ? "0 4px 20px rgba(0,0,0,0.3)" : "none",
       }}
     >
-      {/* Coach assigned tag */}
       {task.coachAssigned && isPrivate && (
         <div
           style={{
@@ -495,7 +511,6 @@ function TaskItem({ task, isPrivate, delay, onEdit, onDelete }: { task: any; isP
         </div>
       )}
 
-      {/* Type icon circle */}
       <div
         style={{
           width: 48,
@@ -511,7 +526,6 @@ function TaskItem({ task, isPrivate, delay, onEdit, onDelete }: { task: any; isP
         {typeIcon[task.type]}
       </div>
 
-      {/* Text */}
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>
           {task.title}
@@ -523,13 +537,11 @@ function TaskItem({ task, isPrivate, delay, onEdit, onDelete }: { task: any; isP
         )}
       </div>
 
-      {/* Duration */}
       <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#8B8B8B" }}>
         <Clock size={13} />
         <span style={{ fontSize: 13 }}>{task.duration}</span>
       </div>
 
-      {/* Status badge */}
       <div
         style={{
           background: sc.bg,
@@ -555,7 +567,6 @@ function TaskItem({ task, isPrivate, delay, onEdit, onDelete }: { task: any; isP
         {sc.label}
       </div>
 
-      {/* Three-dot menu */}
       <div style={{ position: "relative" }}>
         <button
           onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
@@ -756,6 +767,41 @@ function DailyScore({ score }: { score: number }) {
   );
 }
 
+// ─── Mobile Bottom Navigation ──────────────────────────────────────────────
+function MobileBottomNav({ activeNav, setActiveNav }: { activeNav: string; setActiveNav: (nav: string) => void }) {
+  const navItems = [
+    { key: "home", label: "Home", icon: <LayoutDashboard size={20} />, activeIcon: <LayoutDashboard size={20} color="#7CFC00" /> },
+    { key: "workouts", label: "Workouts", icon: <Dumbbell size={20} />, activeIcon: <Dumbbell size={20} color="#7CFC00" /> },
+    { key: "nutrition", label: "Nutrition", icon: <Utensils size={20} />, activeIcon: <Utensils size={20} color="#7CFC00" /> },
+    { key: "progress", label: "Progress", icon: <TrendingUp size={20} />, activeIcon: <TrendingUp size={20} color="#7CFC00" /> },
+    { key: "coach", label: "Coach", icon: <UserCircle size={20} />, activeIcon: <UserCircle size={20} color="#7CFC00" /> },
+  ];
+
+  return (
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#16161A] border-t border-white/5 z-50">
+      <div className="flex items-center justify-around px-2 py-2">
+        {navItems.map((item) => {
+          const isActive = activeNav === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => setActiveNav(item.key)}
+              className="flex flex-col items-center justify-center p-2 min-w-0 flex-1"
+            >
+              <div className={`mb-1 ${isActive ? 'text-[#7CFC00]' : 'text-[#8B8B8B]'}`}>
+                {isActive ? item.activeIcon : item.icon}
+              </div>
+              <span className={`text-xs font-medium ${isActive ? 'text-[#7CFC00]' : 'text-[#8B8B8B]'}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Quick Log Bottom Sheet ───────────────────────────────────────────────────
 function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigate: (tab: string) => void }) {
   const options = [
@@ -804,9 +850,49 @@ function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigat
   );
 }
 
+// ─── Task Filter Component ──────────────────────────────────────────────────
+function TaskFilter({ activeFilter, setActiveFilter, taskStats }: {
+  activeFilter: string;
+  setActiveFilter: (filter: string) => void;
+  taskStats: { total: number; completed: number; coach: number; personal: number }
+}) {
+  const filters = [
+    { key: "all", label: "All", count: taskStats.total },
+    { key: "coach", label: "Coach", count: taskStats.coach },
+    { key: "personal", label: "Personal", count: taskStats.personal },
+    { key: "completed", label: "Done", count: taskStats.completed },
+  ];
+
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+      {filters.map((filter) => (
+        <button
+          key={filter.key}
+          onClick={() => setActiveFilter(filter.key)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeFilter === filter.key
+              ? 'bg-[#7CFC00] text-black'
+              : 'bg-white/5 text-[#8B8B8B] hover:bg-white/10'
+          }`}
+        >
+          {filter.label}
+          <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+            activeFilter === filter.key
+              ? 'bg-black/20 text-black'
+              : 'bg-white/10 text-[#8B8B8B]'
+          }`}>
+            {filter.count}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function ClientDashboard() {
   const router = useRouter();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [activeNav, setActiveNav] = useState("home");
   const [copied, setCopied] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
@@ -817,25 +903,29 @@ export default function ClientDashboard() {
   const [hydrated, setHydrated] = useState(false);
   const [memberId, setMemberId] = useState<number | null>(null);
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
+  const [taskFilter, setTaskFilter] = useState("all");
   const { currentMember, logoutMember } = useAuth();
   const isPrivate = CLIENT_DATA.isPrivate;
   const memberName = currentMember?.name ?? CLIENT_DATA.name;
   const memberCode = currentMember?.membership_code ?? CLIENT_DATA.id;
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
-  // Calculate subscription days from real expiry date
+
   const expiryDate = currentMember?.sub_expiry_date ? new Date(currentMember.sub_expiry_date) : null;
   const daysRemaining = expiryDate ? Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : CLIENT_DATA.subscription.daysRemaining;
-  const totalDays = 30; // Default display
+  const totalDays = 30;
   const daysLow = daysRemaining < 7;
 
-  // Stat count-up values
   const finishedCount = useCountUp(CLIENT_DATA.stats.finished, 1100);
   const effCount = useCountUp(93, 1200);
 
-  // Messaging hooks
   const { data: messages } = useListMessages(memberId);
   const sendMutation = useSendMessage();
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: announcements } = useListAnnouncements({ memberId: memberId ?? undefined });
+  const { data: photos } = useListPhotos({ global: true });
+
+  const unreadMessages = messages ? messages.filter((msg: any) => !msg.read && msg.sender_type === 'coach').length : 0;
 
   const { data: dbTasks } = useListTasks(memberId || undefined);
 
@@ -846,6 +936,7 @@ export default function ClientDashboard() {
     { key: "progress",  label: "Progress",  icon: <TrendingUp size={20} /> },
     { key: "coach",     label: "Coach",     icon: <UserCircle size={20} /> },
   ];
+
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
@@ -854,13 +945,27 @@ export default function ClientDashboard() {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   const displayTasks = dbTasks && dbTasks.length > 0 ? dbTasks : CLIENT_DATA.tasks;
 
-  // Auth check + mount guard + data load
+  const taskStats = {
+    total: displayTasks.length,
+    completed: displayTasks.filter((t: any) => t.status === 'done').length,
+    coach: displayTasks.filter((t: any) => t.coach_assigned || t.coachAssigned).length,
+    personal: displayTasks.filter((t: any) => !t.coach_assigned && !t.coachAssigned).length,
+  };
+
+  const filteredTasks = displayTasks.filter((task: any) => {
+    switch (taskFilter) {
+      case 'coach': return task.coach_assigned || task.coachAssigned;
+      case 'personal': return !task.coach_assigned && !task.coachAssigned;
+      case 'completed': return task.status === 'done';
+      default: return true;
+    }
+  });
+
   useEffect(() => {
     setMounted(true);
-    // Wait for Zustand persist to hydrate before checking auth
     const t = setTimeout(() => setHydrated(true), 150);
     return () => clearTimeout(t);
   }, []);
@@ -876,7 +981,6 @@ export default function ClientDashboard() {
     setDateRange(`${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, ${d.getFullYear()}`);
   }, [currentMember, router, hydrated]);
 
-  // Show loading skeleton while checking auth
   if (!mounted || !hydrated || (!currentMember && mounted && hydrated)) {
     return (
       <div className="min-h-screen bg-[#0D0D10] flex items-center justify-center">
@@ -901,15 +1005,9 @@ export default function ClientDashboard() {
 
   const handleSendMessage = () => {
     if (!message.trim() || !memberId) return;
-    
-    sendMutation.mutate({ 
-      memberId, 
-      content: message 
-    });
+    sendMutation.mutate({ memberId, content: message });
     setMessage("");
   };
-
-
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -922,7 +1020,7 @@ export default function ClientDashboard() {
 
   return (
     <div
-      className="min-h-screen bg-[#0D0D10] text-[#FFFFFF] flex flex-col overflow-hidden"
+      className="cd-root min-h-screen bg-[#0D0D10] text-[#FFFFFF] flex flex-col overflow-hidden"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
       {/* Private Client Banner */}
@@ -975,7 +1073,8 @@ export default function ClientDashboard() {
 
       {/* Main layout */}
       <div className="flex flex-1 overflow-hidden relative" style={{ minWidth: 0 }}>
-        {/* ─── Left Sidebar (Desktop Only) ──────────────────────────────────── */}
+
+        {/* ─── Left Sidebar (Desktop Only) ─────────────────────────────────── */}
         <aside
           className="hidden lg:flex w-[240px] bg-[#16161A] border-r border-white/5 flex-col flex-shrink-0 sticky top-0 overflow-y-auto"
           style={{
@@ -1088,401 +1187,268 @@ export default function ClientDashboard() {
           </div>
         </aside>
 
-        {/* ─── Main Content ────────────────────────────────────────────────────── */}
-        <main
-          className="flex-1 min-w-0 w-full overflow-y-auto pb-32 lg:pb-8 px-4 lg:px-8"
-        >
-          {/* Header */}
+        {/* ─── Main Content ──────────────────────────────────────────────────── */}
+        <main className="flex-1 min-w-0 w-full overflow-y-auto pb-32 lg:pb-8 px-4 lg:px-8">
+
+          {/* ── Header (date + icons only, no greeting) ── */}
           <motion.div
             custom={0}
             initial="hidden"
             animate="visible"
             variants={cardVariants}
             style={{
-              height: 80,
+              height: 64,
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
               marginBottom: 24,
+              gap: 12,
             }}
           >
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex flex-col">
-                <div className="text-xl lg:text-2xl font-bold text-white leading-tight">
-                  Hello, {memberName} 👋
-                </div>
-                <div className="text-xs lg:text-sm text-gray-500 mt-1">
-                  Track your progress. <span className="text-[#7CFC00] font-semibold">7 days</span> to goal.
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 14, color: "#8B8B8B" }}>{dateRange}</div>
-              <button
+            <div style={{ fontSize: 14, color: "#8B8B8B" }}>{dateRange}</div>
+            <button
+              style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", color: "#8B8B8B",
+              }}
+            >
+              <Calendar size={16} />
+            </button>
+            <button
+              style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", color: "#8B8B8B", position: "relative",
+              }}
+            >
+              <Bell size={16} />
+              <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#8B8B8B",
+                  position: "absolute", top: 6, right: 6,
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "#7CFC00", border: "1px solid #0D0D10",
                 }}
-              >
-                <Calendar size={16} />
-              </button>
-              <button
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: "#8B8B8B",
-                  position: "relative",
-                }}
-              >
-                <Bell size={16} />
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "#7CFC00",
-                    border: "1px solid #0D0D10",
-                  }}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </motion.div>
 
-          {/* ── Coach Presence Indicator ── */}
-          {activeNav === "home" && isPrivate && (
+          {/* ── Unified Member Card ───────────────────────────────────────────── */}
+          {activeNav === "home" && (
             <motion.div
               custom={1}
               initial="hidden"
               animate="visible"
               variants={cardVariants}
-              style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 13, color: "#7CFC00" }}
+              style={{
+                background: "#16161A",
+                border: `1px solid ${isPrivate ? "rgba(124,252,0,0.25)" : "rgba(255,255,255,0.06)"}`,
+                borderRadius: 20,
+                padding: 24,
+                marginBottom: 24,
+              }}
             >
-              <motion.div
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                style={{ width: 6, height: 6, borderRadius: "50%", background: "#7CFC00" }}
-              />
-              Coach is watching your progress
+              {/* Top: Avatar + Greeting + Badges */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                <div
+                  style={{
+                    width: 56, height: 56, borderRadius: "50%",
+                    background: isPrivate
+                      ? "linear-gradient(135deg, #7CFC00, #4CAF50)"
+                      : "linear-gradient(135deg, #8B5CF6, #6D28D9)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 20, fontWeight: 700,
+                    color: isPrivate ? "#000" : "#FFF",
+                    flexShrink: 0,
+                    border: isPrivate ? "2px solid rgba(124,252,0,0.4)" : "none",
+                  }}
+                >
+                  {memberName.slice(0, 2).toUpperCase()}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2 }}>
+                        Hello, {memberName}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#8B8B8B", marginTop: 3 }}>
+                        {isPrivate ? "Private coaching active — keep pushing" : "Track your progress. 7 days to goal."}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {/* Active badge */}
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        background: "rgba(16,185,129,0.15)", color: "#10B981",
+                        borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600,
+                      }}>
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#10B981" }} />
+                        Active
+                      </div>
+                      {/* Plan badge */}
+                      {isPrivate ? (
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          background: "#7CFC00", color: "#000",
+                          borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 700,
+                        }}>
+                          <Crown size={10} color="#000" />
+                          Premium
+                        </div>
+                      ) : (
+                        <div style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          background: "rgba(139,92,246,0.15)", color: "#8B5CF6",
+                          borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600,
+                        }}>
+                          <Crown size={10} color="#8B5CF6" />
+                          {memberType}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 20 }} />
+
+              {/* Member ID + Join Date row */}
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
+                    Member ID
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#7CFC00", fontFamily: "monospace" }}>
+                      {memberCode}
+                    </span>
+                    <button
+                      onClick={handleCopy}
+                      style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: copied ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)",
+                        border: `1px solid ${copied ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.08)"}`,
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                        color: copied ? "#7CFC00" : "#5A5A5A", transition: "all 0.2s",
+                      }}
+                    >
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
+                    Member Since
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>
+                    {currentMember?.created_at
+                      ? new Date(currentMember.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
+                      : "Jan 2024"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscription Bar */}
+              <div style={{ marginBottom: isPrivate ? 20 : 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    Subscription
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {daysLow && <AlertTriangle size={12} color="#EF4444" />}
+                    <span style={{ fontSize: 13, color: daysLow ? "#EF4444" : "#8B8B8B", fontWeight: daysLow ? 600 : 400 }}>
+                      {daysRemaining} / {totalDays} days
+                    </span>
+                  </div>
+                </div>
+                <div style={{ height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(daysRemaining / totalDays) * 100}%` }}
+                    transition={{ duration: 1, delay: 0.4 }}
+                    style={{ height: "100%", background: daysLow ? "#EF4444" : "#7CFC00", borderRadius: 4 }}
+                  />
+                </div>
+                {daysLow && (
+                  <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
+                    Renew soon to keep premium features
+                  </div>
+                )}
+              </div>
+
+              {/* Coach Row (private only) */}
+              {isPrivate && (
+                <>
+                  <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 20 }} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ position: "relative" }}>
+                        <Avatar
+                          name={CLIENT_DATA.coach.name}
+                          size={40}
+                          isCoach
+                          ring
+                          ringColor="#7CFC00"
+                          fontSize={14}
+                        />
+                        <div style={{
+                          position: "absolute", bottom: 1, right: 1,
+                          width: 9, height: 9, borderRadius: "50%",
+                          background: CLIENT_DATA.coach.isOnline ? "#7CFC00" : "#5A5A5A",
+                          border: "2px solid #16161A",
+                        }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF" }}>
+                          {CLIENT_DATA.coach.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#7CFC00", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                          <motion.div
+                            animate={{ opacity: [1, 0.3, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                            style={{ width: 5, height: 5, borderRadius: "50%", background: "#7CFC00" }}
+                          />
+                          Online · Watching your progress
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (window.innerWidth < 1024) setIsChatOpen(true);
+                        else {
+                          const input = document.querySelector('input[placeholder="Type to coach..."]') as HTMLInputElement;
+                          if (input) input.focus();
+                        }
+                      }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        background: "rgba(124,252,0,0.1)",
+                        border: "1px solid rgba(124,252,0,0.25)",
+                        borderRadius: 10, padding: "8px 14px",
+                        color: "#7CFC00", fontSize: 13, fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <MessageCircle size={14} color="#7CFC00" />
+                      Message
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
 
-          {/* ── Daily Score (mobile) ── */}
-          {activeNav === "home" && (
-            <div className="block lg:hidden">
-              <DailyScore score={72} />
-            </div>
-          )}
-
-          {/* ── Client Identity Bar ───────────────────────────────────────────── */}
+          {/* ── Gym Updates & Announcements ──────────────────────────────────── */}
           {activeNav === "home" && (
             <motion.div
               custom={2}
-              initial="hidden"
-              animate="visible"
-              variants={cardVariants}
-              style={{
-                background: "rgba(124,252,0,0.05)",
-                border: `1px solid ${isPrivate ? "rgba(124,252,0,0.3)" : "rgba(124,252,0,0.2)"}`,
-                borderRadius: 16,
-                padding: 24,
-                marginBottom: 24,
-                display: "flex",
-                gap: 32,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-            {/* Member ID */}
-            <div style={{ flex: "1 1 150px" }}>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#8B8B8B",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  marginBottom: 6,
-                }}
-              >
-                MEMBER ID
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: "#7CFC00",
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {memberCode}
-                </span>
-                <button
-                  onClick={handleCopy}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: copied ? "#7CFC00" : "#5A5A5A",
-                    transition: "color 0.2s",
-                    display: "flex",
-                    padding: 0,
-                  }}
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div style={{ flex: "1 1 150px" }}>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#8B8B8B",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  marginBottom: 6,
-                }}
-              >
-                STATUS
-              </div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: isPrivate ? "#7CFC00" : "rgba(16,185,129,0.2)",
-                  color: isPrivate ? "#000000" : "#10B981",
-                  borderRadius: 20,
-                  padding: "4px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {isPrivate && <Crown size={12} />}
-                {isPrivate ? "PRIVATE TRAINING" : "ACTIVE"}
-              </div>
-            </div>
-
-            {/* Days Remaining */}
-            <div style={{ flex: "2 1 200px" }}>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#8B8B8B",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  marginBottom: 6,
-                }}
-              >
-                DAYS REMAINING
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 8,
-                }}
-              >
-                {daysLow && <AlertTriangle size={14} color="#EF4444" />}
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: daysLow ? "#EF4444" : "#FFFFFF",
-                  }}
-                >
-                  {daysRemaining} DAYS
-                </span>
-              </div>
-              <div
-                style={{
-                  height: 4,
-                  background: "rgba(255,255,255,0.1)",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(daysRemaining / totalDays) * 100}%` }}
-                  transition={{ duration: 1, delay: 0.5 }}
-                  style={{
-                    height: "100%",
-                    background: daysLow ? "#EF4444" : "#7CFC00",
-                    borderRadius: 4,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Coach (private only) */}
-            {isPrivate && (
-              <div style={{ flex: "1 1 150px", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ position: "relative" }}>
-                  <Avatar
-                    name={CLIENT_DATA.coach.name}
-                    size={48}
-                    isCoach
-                    ring
-                    ringColor="#7CFC00"
-                    fontSize={16}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 1,
-                      right: 1,
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: CLIENT_DATA.coach.isOnline ? "#7CFC00" : "#5A5A5A",
-                      border: "2px solid #16161A",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: "#8B8B8B",
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
-                      marginBottom: 4,
-                    }}
-                  >
-                    YOUR COACH
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF" }}>
-                    {CLIENT_DATA.coach.name}
-                  </div>
-                </div>
-              </div>
-            )}
-          </motion.div>
-          )}
-
-          {/* ── Stats Carousel ── */}
-          {activeNav === "home" && (
-            <div style={{ marginBottom: 20 }}>
-              {/* Mobile: snap carousel */}
-              <div className="block lg:hidden" style={{ position: "relative" }}>
-                <div
-                  className="snap-carousel"
-                  style={{ borderRadius: 16, width: "100%" }}
-                >
-                  {[
-                    { icon: <CheckCircle size={24} color="#7CFC00" />, iconBg: "rgba(124,252,0,0.1)", label: "Workouts Done", value: `${finishedCount}`, change: `+${CLIENT_DATA.stats.finishedChange} this week`, up: true },
-                    { icon: <Clock size={24} color="#8B5CF6" />, iconBg: "rgba(139,92,246,0.1)", label: "Hours Tracked", value: CLIENT_DATA.stats.tracked, change: `-${Math.abs(CLIENT_DATA.stats.trackedChange)} hours`, up: false },
-                    { icon: <Zap size={24} color="#F59E0B" />, iconBg: "rgba(245,158,11,0.1)", label: "Efficiency", value: `${effCount}%`, change: `+${CLIENT_DATA.stats.efficiencyChange}%`, up: true },
-                    { icon: <Flame size={24} color="#EF4444" />, iconBg: "rgba(239,68,68,0.1)", label: "Day Streak", value: "5", change: "Keep it up!", up: true },
-                  ].map((stat, i) => (
-                    <div
-                      key={stat.label}
-                      className="snap-card"
-                      style={{ width: "100%", minWidth: "100%", background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "24px 20px" }}
-                    >
-                      <div style={{ width: 52, height: 52, borderRadius: 14, background: stat.iconBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-                        {stat.icon}
-                      </div>
-                      <div style={{ fontSize: 13, color: "#8B8B8B", marginBottom: 6 }}>{stat.label}</div>
-                      <div style={{ fontSize: 44, fontWeight: 800, color: "#FFFFFF", lineHeight: 1, marginBottom: 8 }}>{stat.value}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                        {stat.up ? <TrendingUp size={14} color="#7CFC00" /> : <TrendingDown size={14} color="#EF4444" />}
-                        <span style={{ color: stat.up ? "#7CFC00" : "#EF4444", fontWeight: 600 }}>{stat.change}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Swipe hint dots */}
-                <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 10 }}>
-                  {[0,1,2,3].map(i => (
-                    <div key={i} style={{ width: i === 0 ? 16 : 5, height: 5, borderRadius: 3, background: i === 0 ? "#7CFC00" : "rgba(255,255,255,0.15)", transition: "all 0.25s" }} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Desktop: grid */}
-
-              <div className="hidden lg:grid grid-cols-3 gap-4">
-                {[
-                  { icon: <CheckCircle size={22} color="#7CFC00" />, iconBg: "rgba(124,252,0,0.1)", label: "Finished", value: `${finishedCount}`, change: `+${CLIENT_DATA.stats.finishedChange} this week`, up: true },
-                  { icon: <Clock size={22} color="#8B5CF6" />, iconBg: "rgba(139,92,246,0.1)", label: "Tracked", value: CLIENT_DATA.stats.tracked, change: `-${Math.abs(CLIENT_DATA.stats.trackedChange)} hours`, up: false },
-                  { icon: <Zap size={22} color="#F59E0B" />, iconBg: "rgba(245,158,11,0.1)", label: "Efficiency", value: `${effCount}%`, change: `+${CLIENT_DATA.stats.efficiencyChange}%`, up: true },
-                ].map(stat => (
-                  <div key={stat.label} className="bg-[#16161A] border border-white/5 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: stat.iconBg }}>{stat.icon}</div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">{stat.label}</div>
-                      <div className="text-2xl font-bold text-white leading-none mb-1">{stat.value}</div>
-                      <div className={cn("text-[10px] flex items-center gap-1", stat.up ? "text-[#7CFC00]" : "text-red-500")}>
-                        {stat.up ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                        {stat.change}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Today's Workout (mobile home) ── */}
-          {activeNav === "home" && (
-            <div className="block mb-5">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-                style={{ background: "#16161A", border: "1px solid rgba(124,252,0,0.2)", borderLeft: "3px solid #7CFC00", borderRadius: 16, padding: "18px 20px" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Dumbbell size={18} color="#7CFC00" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 2 }}>Today&apos;s Workout</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>Leg Day — Heavy Squats</div>
-                  </div>
-                  <div style={{ background: "rgba(139,92,246,0.2)", color: "#8B5CF6", borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 700 }}>In Progress</div>
-                </div>
-                <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden", marginBottom: 14 }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: "50%" }} transition={{ duration: 0.8, delay: 0.4 }}
-                    style={{ height: "100%", background: "linear-gradient(90deg, #7CFC00, #39FF14)", borderRadius: 4 }} />
-                </div>
-                <div style={{ fontSize: 12, color: "#8B8B8B", marginBottom: 14 }}>2 of 4 exercises completed · 50%</div>
-                <button
-                  onClick={() => setActiveNav("workouts")}
-                  style={{ width: "100%", height: 50, borderRadius: 12, background: "linear-gradient(135deg, #7CFC00, #39FF14)", border: "none", color: "#000", fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                >
-                  <Play size={16} fill="#000" /> RESUME WORKOUT
-                </button>
-              </motion.div>
-            </div>
-          )}
-
-          {/* ── Performance Chart ──────────────────────────────────────────────── */}
-          {activeNav === "home" && (
-            <>
-            <motion.div
-              custom={6}
               initial="hidden"
               animate="visible"
               variants={cardVariants}
@@ -1492,183 +1458,151 @@ export default function ClientDashboard() {
                 borderRadius: 16,
                 padding: 24,
                 marginBottom: 24,
-                position: "relative",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 24,
-                }}
-              >
-                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Performance</span>
-                <button
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 10,
-                    padding: "8px 14px",
-                    color: "#8B8B8B",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontFamily: "'Inter', sans-serif",
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#7CFC00")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#8B8B8B")}
-                >
-                  {dateRange}
-                  <ChevronDown size={14} />
-                </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <Bell size={24} color="#7CFC00" />
+                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Gym Updates</span>
               </div>
 
-              {/* Legend */}
-              <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 20, height: 3, background: "#7CFC00", borderRadius: 2 }} />
-                  <span style={{ fontSize: 12, color: "#8B8B8B" }}>This Month</span>
+              {announcements && announcements.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
+                    Latest Announcements
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {announcements.slice(0, 3).map((announcement: any) => (
+                      <motion.div
+                        key={announcement.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.04)",
+                          borderRadius: 12,
+                          padding: 16,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                          <div style={{
+                            width: 8, height: 8, borderRadius: "50%",
+                            background: "#7CFC00", marginTop: 6, flexShrink: 0,
+                          }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>
+                              {announcement.title}
+                            </div>
+                            <div style={{ fontSize: 13, color: "#8B8B8B", lineHeight: 1.4 }}>
+                              {announcement.content}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#666", marginTop: 8 }}>
+                              {new Date(announcement.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div
-                    style={{
-                      width: 20,
-                      height: 2,
-                      background: "#8B8B8B",
-                      borderRadius: 2,
-                      opacity: 0.5,
-                      backgroundImage: "repeating-linear-gradient(90deg, #8B8B8B 0, #8B8B8B 4px, transparent 4px, transparent 8px)",
-                    }}
-                  />
-                  <span style={{ fontSize: 12, color: "#8B8B8B" }}>Last Month</span>
-                </div>
-              </div>
+              )}
 
-              <PerformanceChart isPrivate={isPrivate} />
+              {photos && photos.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
+                    Recent Photos
+                  </div>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                    gap: 12,
+                  }}>
+                    {photos.slice(0, 6).map((photo: any) => (
+                      <motion.div
+                        key={photo.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.05 }}
+                        style={{
+                          aspectRatio: "1",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.04)",
+                        }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || "Gym photo"}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
+                <div style={{ textAlign: "center", padding: 40, color: "#8B8B8B", fontSize: 14 }}>
+                  No updates available at the moment. Check back later!
+                </div>
+              )}
             </motion.div>
-
-            {/* ── Current Tasks ──────────────────────────────────────────────────── */}
-            <motion.div
-              custom={7}
-              initial="hidden"
-              animate="visible"
-              variants={cardVariants}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 16,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
-                  <span style={{ fontSize: 14, color: "#8B8B8B" }}>Done 30%</span>
-                </div>
-                <button
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: 10,
-                    padding: "6px 12px",
-                    color: "#8B8B8B",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  {taskPeriod}
-                  <ChevronDown size={13} />
-                </button>
-                <button
-                  onClick={() => { setEditingTask(null); setIsTaskModalOpen(true); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: "#7CFC00", border: "none", borderRadius: 10,
-                    padding: "6px 12px", color: "#000", cursor: "pointer",
-                    fontSize: 13, fontWeight: 600, fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  <Plus size={14} /> Add
-                </button>
-              </div>
-
-              {displayTasks.map((task: any, i: number) => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task} 
-                  isPrivate={isPrivate} 
-                  delay={i + 8} 
-                  onEdit={() => { setEditingTask(task); setIsTaskModalOpen(true); }}
-                  onDelete={() => { if(confirm("Delete this task?")) deleteTaskMutation.mutate({ id: task.id }); }}
-                />
-              ))}
-            </motion.div>
-            </>
           )}
 
-            {/* ── Tabs Content ─────────────────────────────────────────────────── */}
-              {activeNav === "workouts" && <WorkoutsTab isPrivate={isPrivate} memberId={memberId!} />}
+          {/* ── Tabs Content ─────────────────────────────────────────────────── */}
+          {activeNav === "workouts" && <WorkoutsTab isPrivate={isPrivate} memberId={memberId!} />}
 
-              {activeNav === "nutrition" && (
-                <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <NutritionTab isPrivate={isPrivate} />
-                </motion.div>
-              )}
+          {activeNav === "nutrition" && (
+            <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <NutritionTab isPrivate={isPrivate} />
+            </motion.div>
+          )}
 
-              {activeNav === "progress" && <ProgressTab isPrivate={isPrivate} />}
+          {activeNav === "progress" && <ProgressTab isPrivate={isPrivate} />}
 
-              {activeNav === "coach" && (
-                <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                    <Star size={24} color="#7CFC00" />
-                    <span style={{ fontSize: 24, fontWeight: 700, color: "#FFFFFF" }}>My Coach</span>
+          {activeNav === "coach" && (
+            <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <Star size={24} color="#7CFC00" />
+                <span style={{ fontSize: 24, fontWeight: 700, color: "#FFFFFF" }}>My Coach</span>
+              </div>
+              <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                  <div style={{ position: "relative" }}>
+                    <Avatar name={CLIENT_DATA.coach.name} size={72} isCoach ring ringColor="#7CFC00" fontSize={24} />
+                    <div style={{ position: "absolute", bottom: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#7CFC00", border: "2px solid #16161A" }} />
                   </div>
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 24 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-                      <div style={{ position: "relative" }}>
-                        <Avatar name={CLIENT_DATA.coach.name} size={72} isCoach ring ringColor="#7CFC00" fontSize={24} />
-                        <div style={{ position: "absolute", bottom: 3, right: 3, width: 14, height: 14, borderRadius: "50%", background: "#7CFC00", border: "2px solid #16161A" }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>{CLIENT_DATA.coach.name}</div>
-                        <div style={{ fontSize: 13, color: "#7CFC00", display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7CFC00" }} />
-                          Online Now
-                        </div>
-                        <div style={{ fontSize: 13, color: "#8B8B8B", marginTop: 4 }}>Certified Personal Trainer · 5+ years exp.</div>
-                      </div>
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>{CLIENT_DATA.coach.name}</div>
+                    <div style={{ fontSize: 13, color: "#7CFC00", display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7CFC00" }} />
+                      Online Now
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
-                      {[
-                        { label: "Clients", value: "24" },
-                        { label: "Sessions", value: "340+" },
-                        { label: "Rating", value: "4.9 ★" },
-                      ].map(s => (
-                        <div key={s.label} style={{ background: "rgba(124,252,0,0.05)", border: "1px solid rgba(124,252,0,0.15)", borderRadius: 12, padding: 16, textAlign: "center" }}>
-                          <div style={{ fontSize: 22, fontWeight: 700, color: "#7CFC00" }}>{s.value}</div>
-                          <div style={{ fontSize: 12, color: "#8B8B8B", marginTop: 2 }}>{s.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ color: "#8B8B8B", fontSize: 14, lineHeight: 1.6, borderLeft: "3px solid #7CFC00", paddingLeft: 16 }}>
-                      Specializes in strength & hypertrophy training. Use the chat on the right to send a message directly to your coach anytime.
-                    </div>
+                    <div style={{ fontSize: 13, color: "#8B8B8B", marginTop: 4 }}>Certified Personal Trainer · 5+ years exp.</div>
                   </div>
-                </motion.div>
-              )}
-            </main>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+                  {[
+                    { label: "Clients", value: "24" },
+                    { label: "Sessions", value: "340+" },
+                    { label: "Rating", value: "4.9 ★" },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: "rgba(124,252,0,0.05)", border: "1px solid rgba(124,252,0,0.15)", borderRadius: 12, padding: 16, textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "#7CFC00" }}>{s.value}</div>
+                      <div style={{ fontSize: 12, color: "#8B8B8B", marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ color: "#8B8B8B", fontSize: 14, lineHeight: 1.6, borderLeft: "3px solid #7CFC00", paddingLeft: 16 }}>
+                  Specializes in strength & hypertrophy training. Use the chat on the right to send a message directly to your coach anytime.
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </main>
 
-        {/* ─── Right Sidebar / Chat Panel ────────────────────────────────────────── */}
-        {/* Desktop: visible, Mobile: Hidden/Portal */}
+        {/* ─── Right Sidebar / Chat Panel ──────────────────────────────────────── */}
         <aside
           style={{
             background: "#16161A",
@@ -1690,6 +1624,7 @@ export default function ClientDashboard() {
               <X size={20} /> Close Chat
             </button>
           </div>
+
           {/* Profile Card */}
           <motion.div
             custom={8}
@@ -1705,20 +1640,13 @@ export default function ClientDashboard() {
               textAlign: "center",
             }}
           >
-            {/* Avatar */}
             <div style={{ position: "relative", marginBottom: 12 }}>
               <div
                 style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
+                  width: 80, height: 80, borderRadius: "50%",
                   background: "linear-gradient(135deg, #7CFC00, #4CAF50)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: "#000",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 28, fontWeight: 700, color: "#000",
                   border: "3px solid #7CFC00",
                   boxShadow: "0 0 20px rgba(124,252,0,0.3)",
                 }}
@@ -1730,7 +1658,6 @@ export default function ClientDashboard() {
             <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
             <div style={{ fontSize: 14, color: "#8B8B8B", marginTop: 2 }}>{memberType}</div>
 
-            {/* Private badge */}
             {isPrivate && (
               <motion.div
                 animate={{
@@ -1754,28 +1681,13 @@ export default function ClientDashboard() {
                 }}
               >
                 <Crown size={14} color="#000" />
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#000",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   PRIVATE TRAINING CLIENT
                 </span>
               </motion.div>
             )}
 
-            {/* Quick actions */}
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                marginTop: 16,
-              }}
-            >
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
               {[
                 { icon: <Phone size={16} />, label: "Call" },
                 { icon: <Video size={16} />, label: "Video" },
@@ -1785,17 +1697,11 @@ export default function ClientDashboard() {
                   key={btn.label}
                   title={btn.label}
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
+                    width: 40, height: 40, borderRadius: "50%",
                     background: "#16161A",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    color: "#8B8B8B",
-                    transition: "all 0.2s ease",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: "#8B8B8B", transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = "rgba(124,252,0,0.4)";
@@ -1814,42 +1720,16 @@ export default function ClientDashboard() {
 
           {/* Activity Feed */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div
-              style={{
-                padding: "16px 24px",
-                borderBottom: "1px solid rgba(255,255,255,0.06)",
-                flexShrink: 0,
-              }}
-            >
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
               <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Activity</span>
             </div>
 
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                padding: "0 24px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 12,
-                paddingTop: 16,
-              }}
-            >
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 12, paddingTop: 16 }}>
               {(messages || []).map((msg) => {
                 const isCoach = msg.sender_type === "coach";
                 return (
-                  <div key={msg.id} style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: isCoach ? "flex-start" : "flex-end",
-                  }}>
-                    <div style={{
-                      fontSize: 11,
-                      color: "#5A5A5A",
-                      marginBottom: 4,
-                      marginLeft: isCoach ? 4 : 0,
-                      marginRight: isCoach ? 0 : 4,
-                    }}>
+                  <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isCoach ? "flex-start" : "flex-end" }}>
+                    <div style={{ fontSize: 11, color: "#5A5A5A", marginBottom: 4, marginLeft: isCoach ? 4 : 0, marginRight: isCoach ? 0 : 4 }}>
                       {isCoach ? (CLIENT_DATA.coach.name || "Coach") : "You"} • {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
                     </div>
                     <div style={{
@@ -1877,24 +1757,14 @@ export default function ClientDashboard() {
             </div>
 
             {/* Message Input */}
-            <div
-              style={{
-                padding: "16px 24px",
-                borderTop: "1px solid rgba(255,255,255,0.06)",
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  padding: "10px 14px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
+            <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+              <div style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
                 <Paperclip size={18} color="#5A5A5A" style={{ flexShrink: 0 }} />
                 <input
                   type="text"
@@ -1903,13 +1773,8 @@ export default function ClientDashboard() {
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
                   placeholder="Type to coach..."
                   style={{
-                    flex: 1,
-                    background: "none",
-                    border: "none",
-                    outline: "none",
-                    fontSize: 14,
-                    color: "#FFFFFF",
-                    fontFamily: "'Inter', sans-serif",
+                    flex: 1, background: "none", border: "none", outline: "none",
+                    fontSize: 14, color: "#FFFFFF", fontFamily: "'Inter', sans-serif",
                   }}
                 />
                 <Smile size={18} color="#5A5A5A" style={{ flexShrink: 0, cursor: "pointer" }} />
@@ -2026,7 +1891,6 @@ export default function ClientDashboard() {
         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent h-20 -top-20 pointer-events-none opacity-50" />
         <div className="bg-[#16161A]/97 backdrop-blur-xl border-t border-white/5 pb-safe-nav pt-1 px-2">
           <div className="flex items-end justify-around max-w-md mx-auto">
-            {/* Home */}
             {[navItems[0], navItems[1]].map((item) => {
               const isActive = activeNav === item.key;
               return (
@@ -2058,8 +1922,7 @@ export default function ClientDashboard() {
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsQuickLogOpen(true)}
                 style={{
-                  width: 58, height: 58,
-                  borderRadius: "50%",
+                  width: 58, height: 58, borderRadius: "50%",
                   background: "linear-gradient(135deg, #7CFC00, #39FF14)",
                   border: "none", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -2073,9 +1936,9 @@ export default function ClientDashboard() {
               <span style={{ fontSize: 9, fontWeight: 700, color: "#7CFC00", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>Log</span>
             </div>
 
-            {/* Nutrition + Progress */}
-            {[navItems[2], navItems[3]].map((item) => {
+            {[navItems[2], navItems[3], navItems[4]].map((item) => {
               const isActive = activeNav === item.key;
+              const hasUnread = item.key === 'coach' && unreadMessages > 0;
               return (
                 <button
                   key={item.key}
@@ -2091,6 +1954,11 @@ export default function ClientDashboard() {
                       <motion.div layoutId="nav-bg2" className="absolute inset-0 bg-[#7CFC00]/10 rounded-xl"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} />
                     )}
+                    {hasUnread && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+                      </div>
+                    )}
                     <div className="relative z-10">{item.icon}</div>
                   </div>
                   <span className={cn("text-[9px] font-bold uppercase tracking-tight",
@@ -2102,19 +1970,7 @@ export default function ClientDashboard() {
         </div>
       </nav>
 
-      {/* Google Font */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(124,252,0,0.3); }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .pb-safe-nav { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-      `}</style>
+    
     </div>
   );
 }
-

@@ -35,6 +35,62 @@ function MacroBar({ label, value, max, color, unit = "g" }: { label: string; val
   );
 }
 
+// Meal Section Component
+function MealSection({ title, icon, meals, color }: { title: string; icon: React.ReactNode; meals: any[]; color: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (meals.length === 0) return null;
+
+  const totalCalories = meals.reduce((sum, meal) => sum + (meal.result?.totals?.calories || 0), 0);
+
+  return (
+    <div className="bg-[#16161A] border border-white/5 rounded-xl p-4 mb-4">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between mb-3"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center`} style={{ backgroundColor: `${color}20` }}>
+            {icon}
+          </div>
+          <div>
+            <h3 className="text-white font-medium text-left">{title}</h3>
+            <p className="text-[#8B8B8B] text-sm">{meals.length} meals • {totalCalories} kcal</p>
+          </div>
+        </div>
+        {expanded ? <ChevronUp size={20} color="#8B8B8B" /> : <ChevronDown size={20} color="#8B8B8B" />}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="space-y-3"
+          >
+            {meals.map((meal, index) => (
+              <div key={index} className="bg-white/5 rounded-lg p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="text-white text-sm font-medium">{meal.meal}</p>
+                  <span className="text-[#7CFC00] text-sm font-bold">
+                    {meal.result?.totals?.calories || 0} kcal
+                  </span>
+                </div>
+                <div className="flex gap-4 text-xs text-[#8B8B8B]">
+                  <span>P: {meal.result?.totals?.protein || 0}g</span>
+                  <span>C: {meal.result?.totals?.carbs || 0}g</span>
+                  <span>F: {meal.result?.totals?.fat || 0}g</span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boolean; memberId?: number }) {
   const [meal, setMeal] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +118,14 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
 
   const GOALS = { calories: 2200, protein: 180, carbs: 220, fat: 70 };
   const remaining = Math.max(0, GOALS.calories - totals.calories);
+
+  // Group logs by meal category
+  const mealsByCategory = log.reduce((acc: any, entry: any) => {
+    const category = entry.category || getMealCategory(entry.created_at || Date.now());
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(entry);
+    return acc;
+  }, { breakfast: [], lunch: [], dinner: [], snack: [] });
 
   const getMealCategory = (ts: number) => {
     const h = new Date(ts).getHours();
@@ -257,48 +321,40 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
         )}
       </AnimatePresence>
 
-      {/* ── Today's Food Log (collapsible) ── */}
-      <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, overflow: "hidden" }}>
-        <button
-          className="collapsible-trigger"
-          onClick={() => setLogExpanded(!logExpanded)}
-          style={{ padding: "16px 20px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Apple size={18} color="#7CFC00" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>Today's Food Log</span>
-            {log.length > 0 && (
-              <span style={{ fontSize: 11, background: "rgba(124,252,0,0.15)", color: "#7CFC00", borderRadius: 20, padding: "2px 10px", fontWeight: 700 }}>
-                {log.length}
-              </span>
-            )}
-          </div>
-          {logExpanded ? <ChevronUp size={18} color="#8B8B8B" /> : <ChevronDown size={18} color="#8B8B8B" />}
-        </button>
+      {/* ── Meal Breakdown Sections ── */}
+      <div className="space-y-4">
+        <h2 className="text-white text-lg font-bold mb-4">Today's Meals</h2>
+        <MealSection
+          title="Breakfast"
+          icon={<Apple size={16} color="#F59E0B" />}
+          meals={mealsByCategory.breakfast}
+          color="#F59E0B"
+        />
+        <MealSection
+          title="Lunch"
+          icon={<Apple size={16} color="#7CFC00" />}
+          meals={mealsByCategory.lunch}
+          color="#7CFC00"
+        />
+        <MealSection
+          title="Dinner"
+          icon={<Apple size={16} color="#8B5CF6" />}
+          meals={mealsByCategory.dinner}
+          color="#8B5CF6"
+        />
+        <MealSection
+          title="Snacks"
+          icon={<Apple size={16} color="#10B981" />}
+          meals={mealsByCategory.snack}
+          color="#10B981"
+        />
 
-        <AnimatePresence>
-          {logExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              style={{ overflow: "hidden" }}
-            >
-              <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                {log.length === 0 ? (
-                  <div style={{ color: "#8B8B8B", textAlign: "center", padding: "30px 0", fontSize: 14 }}>
-                    No meals logged yet. Use the form above! 🍽️
-                  </div>
-                ) : (
-                  log.map((entry: any) => (
-                    <CalorieMarkerCard key={entry.id} log={entry} mode="client" />
-                  ))
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {log.length === 0 && (
+          <div className="bg-[#16161A] border border-white/5 rounded-xl p-8 text-center">
+            <Apple size={32} color="#8B8B8B" className="mx-auto mb-3" />
+            <p className="text-[#8B8B8B] text-sm">No meals logged yet. Start by logging your first meal above! 🍽️</p>
+          </div>
+        )}
       </div>
     </div>
   );
