@@ -485,3 +485,23 @@
     width: 100%;
   }
 }
+
+/* Google Font — scoped to dashboard only */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+.cd-root * {
+  box-sizing: border-box;
+}
+
+.cd-root ::-webkit-scrollbar { width: 4px; }
+.cd-root ::-webkit-scrollbar-track { background: transparent; }
+.cd-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+.cd-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 252, 0, 0.3);
+}
+.cd-root .no-scrollbar::-webkit-scrollbar { display: none; }
+.cd-root .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.cd-root .pb-safe-nav { padding-bottom: max(12px, env(safe-area-inset-bottom)); }

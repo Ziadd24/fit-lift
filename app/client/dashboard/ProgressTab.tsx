@@ -44,6 +44,80 @@ const maxVolume = Math.max(...WEEKLY_VOLUME.map(w => w.sets));
 
 const WEIGHT_POINTS = [80.2, 79.8, 79.3, 79.1, 78.7, 78.4];
 
+// ─── Goal Setting Modal ─────────────────────────────────────────────────────
+function GoalSettingModal({ isOpen, onClose, currentGoals, onSave }: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentGoals: Array<{ label: string; current: number; target: number; unit: string; color: string }>;
+  onSave: (goals: Array<{ label: string; current: number; target: number; unit: string; color: string }>) => void;
+}) {
+  const [goals, setGoals] = useState(currentGoals);
+
+  const handleSave = () => {
+    onSave(goals);
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-[#16161A] border border-white/5 rounded-xl p-6 w-full max-w-md"
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="text-white text-xl font-bold mb-4">Set Your Goals</h2>
+            <div className="space-y-4 mb-6">
+              {goals.map((goal, index) => (
+                <div key={goal.label} className="space-y-2">
+                  <label className="text-white text-sm font-medium">{goal.label}</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={goal.target}
+                      onChange={(e) => {
+                        const newGoals = [...goals];
+                        newGoals[index].target = Number(e.target.value);
+                        setGoals(newGoals);
+                      }}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                      placeholder="Target"
+                    />
+                    <span className="text-[#8B8B8B] text-sm self-center">{goal.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 bg-white/5 text-white py-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 bg-[#7CFC00] text-black py-2 rounded-lg font-medium hover:bg-[#65E000] transition-colors"
+              >
+                Save Goals
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── Weight Sparkline ──────────────────────────────────────────────────────────
 function WeightSparkline() {
   const W = 200, H = 56;
@@ -223,6 +297,13 @@ function ActivityBreakdownBars() {
 export default function ProgressTab({ isPrivate }: { isPrivate: boolean }) {
   const [period, setPeriod] = useState<"Week" | "Month" | "All">("Month");
   const [showComparison, setShowComparison] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [userGoals, setUserGoals] = useState([
+    { label: "Daily Calories", current: 1850, target: 2200, unit: "kcal", color: "#7CFC00" },
+    { label: "Protein Goal", current: 145, target: 180, unit: "g", color: "#10B981" },
+    { label: "Weekly Workouts", current: 4, target: 5, unit: "", color: "#8B5CF6" },
+    { label: "Water Intake", current: 6, target: 8, unit: "glasses", color: "#F59E0B" },
+  ]);
 
   return (
     <div className="flex flex-col gap-5 md:gap-8 px-0">
@@ -233,17 +314,32 @@ export default function ProgressTab({ isPrivate }: { isPrivate: boolean }) {
           <BarChart2 size={24} color="#7CFC00" />
           <span style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Your Progress</span>
         </div>
-        {/* Period toggle */}
-        <div style={{ display: "flex", background: "#1A1A1F", borderRadius: 20, padding: 4, gap: 2 }}>
-          {(["Week", "Month", "All"] as const).map(p => (
-            <button key={p} onClick={() => setPeriod(p)} style={{
-              padding: "6px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-              background: period === p ? "#7CFC00" : "transparent",
-              color: period === p ? "#000" : "#8B8B8B",
-              fontSize: 12, fontWeight: 700, fontFamily: "Inter, sans-serif",
-              transition: "all 0.2s ease", minHeight: 32,
-            }}>{p}</button>
-          ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Goal Setting Button */}
+          <button
+            onClick={() => setIsGoalModalOpen(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.3)",
+              borderRadius: 10, padding: "8px 12px", color: "#7CFC00",
+              cursor: "pointer", fontSize: 13, fontWeight: 600,
+            }}
+          >
+            <Target size={14} />
+            Set Goals
+          </button>
+          {/* Period toggle */}
+          <div style={{ display: "flex", background: "#1A1A1F", borderRadius: 20, padding: 4, gap: 2 }}>
+            {(["Week", "Month", "All"] as const).map(p => (
+              <button key={p} onClick={() => setPeriod(p)} style={{
+                padding: "6px 12px", borderRadius: 16, border: "none", cursor: "pointer",
+                background: period === p ? "#7CFC00" : "transparent",
+                color: period === p ? "#000" : "#8B8B8B",
+                fontSize: 12, fontWeight: 700, fontFamily: "Inter, sans-serif",
+                transition: "all 0.2s ease", minHeight: 32,
+              }}>{p}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -268,6 +364,75 @@ export default function ProgressTab({ isPrivate }: { isPrivate: boolean }) {
           </motion.div>
         ))}
       </div>
+
+      {/* Performance Chart from Home Tab */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        style={{
+          background: "#16161A",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 16,
+          padding: 24,
+          position: "relative",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
+          <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Performance</span>
+          <button
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 10,
+              padding: "8px 14px",
+              color: "#8B8B8B",
+              cursor: "pointer",
+              fontSize: 13,
+              fontFamily: "'Inter', sans-serif",
+              transition: "color 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#7CFC00")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#8B8B8B")}
+          >
+            Month
+            <ChevronDown size={14} />
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 20, height: 3, background: "#7CFC00", borderRadius: 2 }} />
+            <span style={{ fontSize: 12, color: "#8B8B8B" }}>This Month</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div
+              style={{
+                width: 20,
+                height: 2,
+                background: "#8B8B8B",
+                borderRadius: 2,
+                opacity: 0.5,
+                backgroundImage: "repeating-linear-gradient(90deg, #8B8B8B 0, #8B8B8B 4px, transparent 4px, transparent 8px)",
+              }}
+            />
+            <span style={{ fontSize: 12, color: "#8B8B8B" }}>Last Month</span>
+          </div>
+        </div>
+
+        <PerformanceChartSVG showComparison={true} />
+      </motion.div>
 
       {/* Performance chart with comparison toggle */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
@@ -441,6 +606,14 @@ export default function ProgressTab({ isPrivate }: { isPrivate: boolean }) {
           </div>
         </motion.div>
       )}
+
+      {/* Goal Setting Modal */}
+      <GoalSettingModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        currentGoals={userGoals}
+        onSave={setUserGoals}
+      />
     </div>
   );
 }
