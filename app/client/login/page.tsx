@@ -192,7 +192,7 @@ export default function ClientLoginPage() {
           {/* Mobile-only compact header */}
           <div className="md:hidden flex items-center gap-3 mb-6" aria-hidden="true">
             <Image
-              src="/images/logo-mark.png"
+              src="/images/logo.png"
               alt=""
               width={40}
               height={40}
