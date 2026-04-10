@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useLookupMember, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
@@ -179,6 +179,20 @@ function PhotoGallery() {
   const { data: photos, isLoading } = useListPhotos({ global: true });
   const [index, setIndex] = useState(0);
 
+  const images = photos && photos.length > 0
+    ? photos.map(p => p.url)
+    : ["/images/gym-hero.png"];
+
+  const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
+
+  // Auto-scroll every 3 seconds
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(next, 3000);
+    return () => clearInterval(timer);
+  }, [next, images.length]);
+
   if (isLoading) {
     return (
       <div className="rounded-2xl overflow-hidden h-80 bg-black/40 animate-pulse flex items-center justify-center border border-white/10">
@@ -187,12 +201,7 @@ function PhotoGallery() {
     );
   }
 
-  const images = photos && photos.length > 0
-    ? photos.map(p => p.url)
-    : ["/images/gym-hero.png"];
 
-  const next = () => setIndex((i) => (i + 1) % images.length);
-  const prev = () => setIndex((i) => (i - 1 + images.length) % images.length);
 
   return (
     <div className="rounded-2xl overflow-hidden h-80 relative group bg-black">
@@ -211,13 +220,13 @@ function PhotoGallery() {
       {images.length > 1 && (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-black hover:scale-110">
+          <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-black hover:scale-110">
+          <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100">
             <ChevronRight className="w-5 h-5" />
           </button>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-50 transition-opacity duration-300">
             {images.map((_, i) => (
               <div key={i} className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-primary" : "w-1.5 bg-white/50"}`} />
             ))}
@@ -236,7 +245,17 @@ export default function MemberPortal() {
   const [error, setError] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "photos">("overview");
-  const [scheduleFilter, setScheduleFilter] = useState<"all" | "men" | "women">("all");
+    // Fetch schedule image from settings
+  const { data: scheduleSetting } = useQuery<{ value: string }>({
+    queryKey: ["setting", "schedule_image_url"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=schedule_image_url");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+  const scheduleImageUrl = scheduleSetting?.value || "";
   const [lang, setLang] = useState<"en" | "ar">("en");
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const t = translations[lang];
@@ -574,48 +593,35 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      {/* Schedule Section */}
+            {/* Schedule Section — displays uploaded schedule image */}
       <section id="schedule" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="mb-12">
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="mb-10">
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.schedule.tag}</h2>
-            <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase mb-8">{t.schedule.title1} <span className="text-primary text-glow">{t.schedule.title2}</span></h3>
-            <div className="flex flex-wrap gap-4">
-              <Button className={`rounded-full px-6 font-bold tracking-widest uppercase transition-all duration-300 ${scheduleFilter !== "all" ? "border border-white/10 text-muted-foreground hover:text-white bg-transparent" : "bg-primary text-black hover:bg-primary/90"} hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(62,182,76,0.4)] active:scale-95`} onClick={() => setScheduleFilter("all")}>{t.schedule.filters.all}</Button>
-              <Button className={`rounded-full px-6 font-bold tracking-widest uppercase transition-all duration-300 ${scheduleFilter !== "men" ? "border border-white/10 text-muted-foreground hover:text-white bg-transparent" : "bg-primary text-black hover:bg-primary/90"} hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(62,182,76,0.4)] active:scale-95`} onClick={() => setScheduleFilter("men")}>{t.schedule.filters.men}</Button>
-              <Button className={`rounded-full px-6 font-bold tracking-widest uppercase transition-all duration-300 ${scheduleFilter !== "women" ? "border border-white/10 text-muted-foreground hover:text-white bg-transparent" : "bg-primary text-black hover:bg-primary/90"} hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(62,182,76,0.4)] active:scale-95`} onClick={() => setScheduleFilter("women")}>{t.schedule.filters.women}</Button>
-            </div>
+            <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.schedule.title1} <span className="text-primary text-glow">{t.schedule.title2}</span></h3>
           </motion.div>
 
-          <div className="flex overflow-x-auto snap-x snap-mandatory pb-6 md:pb-0 hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-0 -mx-4 md:mx-0 max-w-full">
-            {scheduleData.map((day, i) => (
-              <motion.div key={day.id} className="shrink-0 snap-center w-[min(85vw,calc(100vw-32px))] md:w-auto" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} whileHover={{ y: -4, boxShadow: "0 0 30px hsla(128, 49%, 48%, 0.35)" }} whileTap={{ scale: 0.96 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} viewport={{ once: true, margin: "-50px" }}>
-                <Card className="p-6 h-full flex flex-col border border-white/5 bg-white/5 cursor-pointer">
-                  <h4 className="text-xl font-display text-white font-bold mb-6 text-center pb-4 border-b border-white/10">{day.day}</h4>
-                  <div className="space-y-4 flex-1 flex flex-col justify-center">
-                    {(scheduleFilter === "all" || scheduleFilter === "men") && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-primary font-bold">{t.schedule.labels.menMorn}</span>
-                        <span className="text-white font-bold" dir="ltr">{day.men_morn}</span>
-                      </div>
-                    )}
-                    {(scheduleFilter === "all" || scheduleFilter === "women") && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-[#f472b6] font-bold">{t.schedule.labels.women}</span>
-                        <span className="text-white font-bold" dir="ltr">{day.women}</span>
-                      </div>
-                    )}
-                    {(scheduleFilter === "all" || scheduleFilter === "men") && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-primary font-bold">{t.schedule.labels.menEve}</span>
-                        <span className="text-white font-bold" dir="ltr">{day.men_eve}</span>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 18 }}
+            viewport={{ once: true, margin: "-50px" }}
+            className="rounded-2xl overflow-hidden border border-white/10 bg-black/40"
+          >
+            {scheduleImageUrl ? (
+              <img
+                src={scheduleImageUrl}
+                alt="Gym Schedule"
+                className="w-full h-auto object-contain"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <Calendar className="w-16 h-16 text-white/10 mb-4" />
+                <p className="text-muted-foreground text-lg">{lang === "ar" ? "مفيش جدول متاح حالياً" : "No schedule uploaded yet"}</p>
+                <p className="text-muted-foreground text-sm mt-1">{lang === "ar" ? "الجدول هيتحمل من لوحة التحكم" : "Schedule image will appear here once uploaded from admin panel"}</p>
+              </div>
+            )}
+          </motion.div>
         </div>
       </section>
 

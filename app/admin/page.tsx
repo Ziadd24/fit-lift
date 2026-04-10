@@ -4,7 +4,7 @@ import React from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useListMembers, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
 import { Card } from "@/components/ui/PremiumComponents";
-import { Users, Megaphone, Image as ImageIcon, Activity } from "lucide-react";
+import { Users, Megaphone, Image as ImageIcon, Activity, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { isMembershipActive } from "@/lib/utils";
 import Link from "next/link";
@@ -94,6 +94,20 @@ export default function AdminDashboard() {
             >
               <Megaphone className="w-6 h-6" />
               <span className="font-medium text-sm">Post Update</span>
+            </Link>
+            <Link
+              href="/admin/photos"
+              className="p-4 rounded-xl bg-secondary hover:bg-white/10 border border-white/5 transition-colors flex flex-col items-center text-center gap-2 text-white"
+            >
+              <ImageIcon className="w-6 h-6" />
+              <span className="font-medium text-sm">Media Gallery</span>
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="p-4 rounded-xl bg-secondary hover:bg-white/10 border border-white/5 transition-colors flex flex-col items-center text-center gap-2 text-white"
+            >
+              <Settings className="w-6 h-6" />
+              <span className="font-medium text-sm">Site Settings</span>
             </Link>
           </div>
         </Card>
