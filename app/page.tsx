@@ -547,7 +547,7 @@ export default function MemberPortal() {
                 {t.about.p2}
               </p>
               <div className="flex gap-8 mt-8">
-                {[{ n: "15+", l: t.about.years }, { n: "5K+", l: t.about.members }, { n: "25", l: t.about.coaches }].map((s) => (
+                {[{ n: "5+", l: t.about.years }, { n: "10K+", l: t.about.members }, { n: "12", l: t.about.coaches }].map((s) => (
                   <div key={s.l}>
                     <p className="text-3xl font-black text-primary">{s.n}</p>
                     <p className="text-xs text-muted-foreground uppercase tracking-widest">{s.l}</p>

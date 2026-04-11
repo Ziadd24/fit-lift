@@ -1,50 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { verifyCoachAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const coachId = verifyCoachAuth(req);
+    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
-
     const supabase = getSupabaseAdmin();
     let query = supabase.from("client_workouts").select("*").order("created_at", { ascending: true });
-
     if (memberId) query = query.eq("member_id", parseInt(memberId));
-
-    const { data: workouts, error } = await query;
+    const { data, error } = await query;
     if (error) throw error;
-
-    return NextResponse.json(workouts ?? []);
+    return NextResponse.json(data ?? []);
   } catch (error) {
-    console.error("GET /api/client-workouts Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const coachId = verifyCoachAuth(req);
+    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
+    const title = (body.title || "").slice(0, 200);
+    if (!title) return NextResponse.json({ error: "title is required" }, { status: 400 });
+    if (!body.member_id || typeof body.member_id !== "number") {
+      return NextResponse.json({ error: "Valid member_id is required" }, { status: 400 });
+    }
     const supabase = getSupabaseAdmin();
-    const { data: inserted, error } = await supabase
-      .from("client_workouts")
-      .insert({
-        member_id: body.member_id,
-        title: body.title,
-        coach_assigned: body.coach_assigned || false,
-        status: body.status || "todo",
-        duration: body.duration || "45 min",
-        calories: body.calories || 300,
-        muscles: body.muscles || [],
-        difficulty: body.difficulty || "Medium",
-        sets: body.sets || [],
-      })
-      .select("*")
-      .single();
-
+    const { data, error } = await supabase.from("client_workouts").insert({
+      member_id: body.member_id, title,
+      coach_assigned: body.coach_assigned || false,
+      status: body.status || "todo",
+      duration: (body.duration || "45 min").slice(0, 50),
+      calories: typeof body.calories === "number" ? Math.min(body.calories, 99999) : 300,
+      muscles: Array.isArray(body.muscles) ? body.muscles.slice(0, 20).map((m: string) => String(m).slice(0, 50)) : [],
+      difficulty: (body.difficulty || "Medium").slice(0, 50),
+      sets: Array.isArray(body.sets) ? body.sets.slice(0, 50) : [],
+    }).select("*").single();
     if (error) throw error;
-    return NextResponse.json(inserted);
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("POST /api/client-workouts Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
