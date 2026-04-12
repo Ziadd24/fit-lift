@@ -1,54 +1,83 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 
-const ADMIN_TOKEN = "fitgym-admin-token-v1";
-const COACH_TOKEN_PREFIX = "fitgym-coach-";
+function getJwtSecret(): string {
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "ADMIN_JWT_SECRET is not set or too short (min 32 chars). " +
+        "Generate one with: node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\""
+    );
+  }
+  return secret;
+}
+
+const ADMIN_TOKEN_EXPIRY = "8h";
+const COACH_TOKEN_EXPIRY = "24h";
+
+// ─── Admin ────────────────────────────────────────────
+
+export async function createAdminToken(): Promise<string> {
+  return jwt.sign(
+    { role: "admin", iat: Math.floor(Date.now() / 1000) },
+    getJwtSecret(),
+    { expiresIn: ADMIN_TOKEN_EXPIRY }
+  );
+}
 
 export function verifyAdminAuth(request: NextRequest): boolean {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return false;
   const token = authHeader.slice(7);
-  return token === ADMIN_TOKEN;
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as { role?: string };
+    return decoded.role === "admin";
+  } catch { return false; }
 }
 
-export function getAdminToken(): string {
-  return ADMIN_TOKEN;
-}
+// ─── Coach ────────────────────────────────────────────
 
-export async function createAdminToken(): Promise<string> {
-  return ADMIN_TOKEN;
-}
-
-export function getCoachToken(coachId: number): string {
-  return `${COACH_TOKEN_PREFIX}${coachId}`;
-}
-
-// Alias used by coach login/register routes
 export async function createCoachToken(coachId: number): Promise<string> {
-  return getCoachToken(coachId);
+  return jwt.sign(
+    { role: "coach", sub: coachId, iat: Math.floor(Date.now() / 1000) },
+    getJwtSecret(),
+    { expiresIn: COACH_TOKEN_EXPIRY }
+  );
 }
 
 export function verifyCoachAuth(request: NextRequest): number | null {
   const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
-  }
+  if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
-  if (!token.startsWith(COACH_TOKEN_PREFIX)) {
-    return null;
-  }
-  
-  const idStr = token.slice(COACH_TOKEN_PREFIX.length);
-  const idNum = parseInt(idStr);
-  if (isNaN(idNum)) return null;
-  return idNum;
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
+      role?: string;
+      sub?: number;
+    };
+    if (decoded.role !== "coach" || typeof decoded.sub !== "number") return null;
+    return decoded.sub;
+  } catch { return null; }
 }
 
-// Simple password hashing (for demo — use bcrypt in production)
+// ─── Timing-safe compare ──────────────────────────────
+
+export function timingSafeCompare(a: string, b: string): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// ─── Password hashing (backward-compatible) ───────────
+
+const PASSWORD_SALT = process.env.PASSWORD_SALT || "fitgym-salt-v1";
+
 export async function hashPassword(password: string): Promise<string> {
   return crypto
     .createHash("sha256")
-    .update(password + "fitgym-salt-v1")
+    .update(password + PASSWORD_SALT)
     .digest("hex");
 }
 
@@ -57,5 +86,5 @@ export async function verifyPassword(
   hash: string
 ): Promise<boolean> {
   const computedHash = await hashPassword(password);
-  return computedHash === hash;
+  return timingSafeCompare(computedHash, hash);
 }

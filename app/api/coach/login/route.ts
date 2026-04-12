@@ -1,67 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyPassword, createCoachToken } from "@/lib/auth";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, password } = await req.json();
-
-    if (!name || !password) {
+    const ip = getClientIp(req);
+    const limit = rateLimit(`coach-login:${ip}`, {
+      limit: 10, windowMs: 15 * 60 * 1000,
+    });
+    if (!limit.allowed) {
+      const retryAfterSec = Math.ceil((limit.resetAt - Date.now()) / 1000);
       return NextResponse.json(
-        { error: "Name and password are required" },
-        { status: 400 }
+        { error: "Too many login attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
       );
     }
-    const cleanName = name.trim();
+
+    const { name, password } = await req.json();
+    if (!name || !password) {
+      return NextResponse.json({ error: "Name and password are required" }, { status: 400 });
+    }
+
     const supabase = getSupabaseAdmin();
-    const { data: coach, error } = await supabase
+    const { data: coachRaw, error } = await supabase
       .from("coaches")
-      .select("*")
-      .ilike("name", cleanName)
+      .select("id, name, email, password_hash, created_at")
+      .ilike("name", name.trim())
       .single();
 
-    if (error) {
-      if (error.message.includes("Could not find the table") || error.code === "PGRST205") {
-        console.warn("Table coaches not found, using fallback memory setup");
-        const token = await createCoachToken(999);
-        return NextResponse.json({
-          success: true,
-          token,
-          coach: { id: 999, name, email: "coach_test@fitgym.local" },
-        });
-      }
-      return NextResponse.json(
-        { error: "Invalid name or password" },
-        { status: 401 }
-      );
+    if (error || !coachRaw) {
+      return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
 
-    if (!coach) {
-      return NextResponse.json(
-        { error: "Invalid name or password" },
-        { status: 401 }
-      );
-    }
-
-    const isMatch = await verifyPassword(password, coach.password_hash);
+    const isMatch = await verifyPassword(password, coachRaw.password_hash!);
     if (!isMatch) {
-      return NextResponse.json(
-        { error: "Invalid name or password" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
 
-    const { password_hash, ...safeCoach } = coach;
+    const safeCoach = {
+      id: coachRaw.id, name: coachRaw.name,
+      email: coachRaw.email, created_at: coachRaw.created_at,
+    };
     return NextResponse.json({
-      success: true,
-      token: await createCoachToken(coach.id),
-      coach: safeCoach,
+      success: true, token: await createCoachToken(coachRaw.id), coach: safeCoach,
     });
   } catch (err: any) {
     console.error("Coach Login Error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
