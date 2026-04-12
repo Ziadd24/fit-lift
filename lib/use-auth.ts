@@ -93,10 +93,14 @@ export const useAuth = create<AuthState>()(
     {
       name: "fitgym-auth-storage",
       onRehydrateStorage: () => (state) => {
-        if (state && state.coachToken && !state.coachToken.startsWith("fitgym-coach-")) {
+        if (state && state.coachToken && state.coachToken.length < 20) {
           state.coachToken = null;
           state.currentCoach = null;
           state.coachLoginAt = null;
+        }
+        if (state && state.adminToken && state.adminToken.length < 20) {
+          state.adminToken = null;
+          state.adminLoginAt = null;
         }
       },
       // Only persist what we need — don't persist functions
