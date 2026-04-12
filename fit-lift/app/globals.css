@@ -166,7 +166,7 @@
 .hero-new {
   position: relative;
   min-height: 100vh;
-  background: #000000;
+  background: url('/images/hero_athlete..png') center/cover no-repeat;
   overflow: hidden;
 }
 
@@ -176,7 +176,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.85) 90%);
+  background: transparent;
   z-index: 2; /* Sits above image */
   pointer-events: none;
 }

@@ -397,15 +397,7 @@ export default function MemberPortal() {
           )}
         </AnimatePresence>
 
-        {/* ── Central Athlete Image ── */}
-        <motion.img
-          src="/images/hero_athlete.png"
-          alt="Athlete"
-          className="hero-athlete-img"
-          initial={{ opacity: 0, scale: 1.05, x: "-50%", y: "-50%" }}
-          animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-          transition={{ duration: 1.2, delay: 0.3 }}
-        />
+
         {/* Vignette Overlay */}
         <div className="hero-vignette"></div>
 
@@ -413,21 +405,7 @@ export default function MemberPortal() {
         <div className="relative z-10 max-w-[1440px] mx-auto px-8 lg:px-[120px] h-screen min-h-[600px] flex flex-col justify-center">
 
           {/* Main Headline — centered */}
-          <motion.h1
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }}
-            className="text-center text-white font-extrabold uppercase leading-[1.05] pointer-events-none select-none z-0 relative"
-            style={{
-              fontSize: 'clamp(40px, 7vw, 120px)',
-              letterSpacing: '-2px',
-              fontFamily: "'Montserrat', 'Inter', sans-serif",
-              marginTop: '-5vh',
-            }}
-          >
-            {lang === "ar" ? "حقق أفضل" : "Reach Your Best"}<br />
-            {lang === "ar" ? "شكل في حياتك" : "Shape of Your Life"}
-          </motion.h1>
+
 
           {/* ── Left Sidebar: Social Icons + Line + Social Proof ── */}
           <div className="hidden lg:flex flex-col absolute left-[120px] top-1/2 -translate-y-1/2 items-center gap-0 z-20">
@@ -476,19 +454,7 @@ export default function MemberPortal() {
           </div>
 
           {/* ── Right Side: Subheadline ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7, duration: 0.6 }}
-            className="hidden lg:flex flex-col absolute right-[120px] top-[45%] z-20"
-            style={{ width: '320px' }}
-          >
-            <p className="text-sm font-normal leading-relaxed text-[#E0E0E0] opacity-80" style={{ lineHeight: 1.6 }}>
-              {lang === "ar"
-                ? "اتدرب صح، كل صح، وغيّر حياتك مع كوتشينج مخصص لتمارين وتغذية على مقاسك."
-                : "Get stronger, leaner, and more energized with custom fitness and nutrition coaching that fits your lifestyle"}
-            </p>
-          </motion.div>
+
 
           {/* ── CTA Button (bottom right) ── */}
           <motion.div
@@ -507,11 +473,7 @@ export default function MemberPortal() {
 
           {/* ── Mobile: Subheadline + Social proof (below headline) ── */}
           <div className="lg:hidden mt-8 text-center px-4 z-20 relative">
-            <p className="text-sm text-[#E0E0E0] mb-6 max-w-xs mx-auto leading-relaxed">
-              {lang === "ar"
-                ? "اتدرب صح، كل صح، وغيّر حياتك مع كوتشينج مخصص لتمارين وتغذية على مقاسك."
-                : "Get stronger, leaner, and more energized with custom fitness and nutrition coaching that fits your lifestyle"}
-            </p>
+
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="avatar-stack">
                 <img src="/images/avatar1.png" alt="Client" />
