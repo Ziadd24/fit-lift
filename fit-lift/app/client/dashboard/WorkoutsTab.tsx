@@ -7,7 +7,7 @@ import {
   ChevronUp, Flame, Target, RotateCcw, Plus, Minus, Timer,
   Trophy, Zap, Edit3, Trash2, Mic, MicOff, X, Pause,
 } from "lucide-react";
-import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout, useListTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/lib/api-hooks";
+import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout } from "@/lib/api-hooks";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const WORKOUTS = [
@@ -61,7 +61,7 @@ const WORKOUTS = [
   },
 ];
 
-const DEFAULT_WEEK_PLAN = [
+const WEEK_PLAN = [
   { day: "Mon", label: "Legs", done: true, color: "#7CFC00" },
   { day: "Tue", label: "Rest", done: true, color: "#5A5A5A" },
   { day: "Wed", label: "Upper", done: true, color: "#8B5CF6" },
@@ -273,163 +273,126 @@ function VoiceButton({ onResult }: { onResult: (text: string) => void }) {
 }
 
 // ─── Exercise Card (mobile-first) ─────────────────────────────────────────────
-function ExerciseCard({ ex, idx, onUpdateExercise, onRemove }: {
-  ex: any; idx: number; onUpdateExercise: (newEx: any) => void; onRemove?: () => void;
+function ExerciseCard({ ex, idx, onSetToggle, onWeightChange }: {
+  ex: any; idx: number;
+  onSetToggle: (exIdx: number, setIdx: number) => void;
+  onWeightChange: (exIdx: number, delta: number) => void;
 }) {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const sets = ex.setsDetails || [];
-  
-  const updateSet = (sIdx: number, updates: any) => {
-     const newSets = [...sets];
-     newSets[sIdx] = { ...newSets[sIdx], ...updates };
-     onUpdateExercise({ ...ex, setsDetails: newSets });
-  };
-  
-  const addSet = () => {
-     const prev = sets.length > 0 ? sets[sets.length - 1] : { weight: 0, reps: 0, done: false };
-     onUpdateExercise({ ...ex, setsDetails: [...sets, { weight: prev.weight, reps: prev.reps, done: false }] });
-     if (navigator.vibrate) navigator.vibrate(20);
-  };
-
-  const removeSet = (sIdx: number) => {
-     const newSets = sets.filter((_: any, i: number) => i !== sIdx);
-     onUpdateExercise({ ...ex, setsDetails: newSets });
-  };
+  const completedSets = (ex.completedSets as boolean[]).filter(Boolean).length;
+  const isBodyweight = ex.unit === "—";
 
   return (
-    <div style={{ background: "#16161A", borderRadius: 14, padding: 16, marginBottom: 16, border: "1px solid rgba(255,255,255,0.06)" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, marginRight: 12 }}>
-           {isEditingTitle ? (
-              <input 
-                 autoFocus
-                 type="text" 
-                 value={ex.exercise} 
-                 onChange={(e) => onUpdateExercise({ ...ex, exercise: e.target.value })}
-                 onBlur={() => setIsEditingTitle(false)}
-                 onKeyDown={(e) => e.key === "Enter" && setIsEditingTitle(false)}
-                 style={{ fontSize: 16, fontWeight: 700, color: "#4DA8DA", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(77,168,218,0.5)", borderRadius: 6, padding: "4px 8px", outline: "none", width: "100%" }} 
-              />
-           ) : (
-              <span style={{ fontSize: 16, fontWeight: 700, color: "#4DA8DA", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                 {ex.exercise}
-              </span>
-           )}
-           <button 
-              onClick={() => setIsEditingTitle(!isEditingTitle)} 
-              style={{ background: isEditingTitle ? "#7CFC00" : "rgba(255,255,255,0.05)", border: "none", color: isEditingTitle ? "#000" : "#8B8B8B", borderRadius: 6, padding: "6px 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700 }}
-           >
-              {isEditingTitle ? <CheckCircle2 size={14} /> : <Edit3 size={14} />}
-              {isEditingTitle ? "Save" : "Edit"}
-           </button>
-         </div>
-         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "#4DA8DA", background: "rgba(77,168,218,0.1)", padding: "4px 8px", borderRadius: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-               🎯 {sets.length > 0 ? sets[0].weight : 0} {ex.unit || 'kg'}
-            </span>
-            <button onClick={onRemove} style={{ color: "#EF4444", background: "rgba(239,68,68,0.1)", borderRadius: 6, padding: 6, border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-               <Trash2 size={16} />
-            </button>
-         </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.05 }}
+      style={{
+        background: "#16161A",
+        border: `1px solid ${completedSets === ex.sets ? "rgba(124,252,0,0.25)" : "rgba(255,255,255,0.06)"}`,
+        borderRadius: 14,
+        padding: "16px",
+        marginBottom: 10,
+      }}
+    >
+      {/* Exercise name + voice */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: completedSets === ex.sets ? "#7CFC00" : "#FFFFFF" }}>
+            {ex.exercise}
+          </div>
+          <div style={{ fontSize: 12, color: "#8B8B8B", marginTop: 2 }}>
+            {ex.sets} sets · {ex.reps} reps{!isBodyweight ? ` · ${ex.weight}${ex.unit}` : ""}
+          </div>
+        </div>
+        <VoiceButton onResult={(text) => {
+          // parse spoken weight like "80 kilos" or "3 sets"
+          console.log("Voice input:", text);
+        }} />
       </div>
-      
-      {/* Table Header */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1.5fr 1.5fr 1fr 24px", gap: 8, fontSize: 12, color: "#8B8B8B", fontWeight: 600, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 }}>
-         <div style={{ textAlign: "center" }}>Set</div>
-         <div>Previous</div>
-         <div style={{ textAlign: "center" }}>kg</div>
-         <div style={{ textAlign: "center" }}>Rep</div>
-         <div style={{ textAlign: "center" }}><CheckCircle2 size={14} style={{ margin: "0 auto" }}/></div>
-         <div />
+
+      {/* Set tap buttons */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: isBodyweight ? 0 : 12 }}>
+        {(ex.completedSets as boolean[]).map((done: boolean, si: number) => (
+          <button
+            key={si}
+            className={cn("set-btn", done && "done")}
+            onClick={() => onSetToggle(idx, si)}
+          >
+            {done ? <CheckCircle2 size={16} /> : <span style={{ fontSize: 10 }}>Set</span>}
+            {!done && <span>{si + 1}</span>}
+          </button>
+        ))}
       </div>
-      
-      {/* Rows */}
-      {sets.map((s: any, sIdx: number) => (
-         <div key={sIdx} style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1.5fr 1.5fr 1fr 24px", gap: 8, alignItems: "center", fontSize: 14, color: "#FFF", marginBottom: 8, background: s.done ? "rgba(124,252,0,0.1)" : "transparent", borderRadius: 8, padding: "8px 0" }}>
-           <div style={{ textAlign: "center", fontWeight: 700 }}>{sIdx + 1}</div>
-           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>No Previous</div>
-           
-           <div style={{ textAlign: "center", display: "flex", justifyContent: "center" }}>
-              <input type="number" value={s.weight} onChange={(e) => updateSet(sIdx, { weight: parseFloat(e.target.value)||0 })} style={{ width: 44, background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "4px 0", color: "#FFF", fontWeight: 700, textAlign: "center", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
-           </div>
-           
-           <div style={{ textAlign: "center", display: "flex", justifyContent: "center" }}>
-              <input type="number" value={s.reps} onChange={(e) => updateSet(sIdx, { reps: parseInt(e.target.value)||0 })} style={{ width: 44, background: "rgba(255,255,255,0.05)", borderRadius: 8, padding: "4px 0", color: "#FFF", fontWeight: 700, textAlign: "center", border: "1px solid rgba(255,255,255,0.1)", outline: "none" }} />
-           </div>
-           
-           <div style={{ display: "flex", justifyContent: "center" }}>
-              <button 
-                onClick={() => {
-                  updateSet(sIdx, { done: !s.done });
-                  if (!s.done && navigator.vibrate) navigator.vibrate(30);
-                }} 
-                style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: s.done ? "#7CFC00" : "rgba(255,255,255,0.05)", cursor: "pointer", border: s.done ? "none" : "1px solid rgba(255,255,255,0.1)" }}>
-                 <CheckCircle2 size={16} color={s.done ? "#000" : "#8B8B8B"} />
-              </button>
-           </div>
-           
-           <div style={{ display: "flex", justifyContent: "center" }}>
-              <button 
-                onClick={() => removeSet(sIdx)} 
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }}>
-                 <X size={14} />
-              </button>
-           </div>
-         </div>
-      ))}
-      
-      <button onClick={addSet} style={{ width: "100%", padding: 12, marginTop: 8, background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 10, color: "#FFF", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer" }}>
-         <Plus size={14} /> Add a Set
-      </button>
-    </div>
+
+      {/* Weight adjuster */}
+      {!isBodyweight && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="touch-target"
+            onClick={() => onWeightChange(idx, -2.5)}
+            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B8B8B", cursor: "pointer", fontSize: 18 }}
+          >
+            −
+          </button>
+          <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>
+            {ex.weight} {ex.unit}
+          </div>
+          <button
+            className="touch-target"
+            onClick={() => onWeightChange(idx, +2.5)}
+            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B8B8B", cursor: "pointer", fontSize: 18 }}
+          >
+            +
+          </button>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
 // ─── Workout Card ─────────────────────────────────────────────────────────────
-function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, updateWorkoutMutation }: {
-  workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void; updateWorkoutMutation: any;
+function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
+  workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void;
 }) {
   const [expanded, setExpanded] = useState(workout.status === "in-progress");
 
-  // Format the existing sets into the new detailed structure
-  const [detailedExercises, setDetailedExercises] = useState<any[]>(() => {
-    return (workout.sets || []).map((ex: any) => {
-      if (ex.setsDetails) return ex;
-      return {
-        ...ex,
-        setsDetails: Array.from({ length: Number(ex.sets) || 1 }, () => ({
-          weight: parseFloat(ex.weight) || 0,
-          reps: parseInt(ex.reps) || 0,
-          done: false
-        }))
-      };
-    });
-  });
+  // Per-set completion state (array of booleans per exercise)
+  const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number }[]>(() =>
+    workout.sets.map((s: any) => ({
+      completedSets: Array.from({ length: s.sets }, (_, i) => i < (s.done ? s.sets : 0)),
+      weight: s.weight ?? 0,
+    }))
+  );
 
-  const updateExercise = (eIdx: number, newEx: any) => {
-     const next = [...detailedExercises];
-     next[eIdx] = newEx;
-     setDetailedExercises(next);
-  };
-
-  const removeExercise = (eIdx: number) => {
-     setDetailedExercises(prev => prev.filter((_, i) => i !== eIdx));
-  };
-
-  const totalSets = detailedExercises.reduce((a: number, ex: any) => a + (ex.setsDetails?.length || 0), 0);
-  const completedTotal = detailedExercises.reduce((a: number, ex: any) => a + (ex.setsDetails?.filter((s:any) => s.done).length || 0), 0);
+  const totalSets = workout.sets.reduce((a: number, s: any) => a + s.sets, 0);
+  const completedTotal = exerciseState.reduce((a, e) => a + e.completedSets.filter(Boolean).length, 0);
   const completionPct = totalSets > 0 ? Math.round((completedTotal / totalSets) * 100) : 0;
-  
-  const finishSession = () => {
-     if (workout.id) {
-       updateWorkoutMutation.mutate({ 
-          id: workout.id, 
-          data: { sets: detailedExercises, status: completionPct === 100 ? "done" : workout.status }
-       });
-     }
-     setExpanded(false);
+  const sc = statusConfig[workout.status];
+
+  const handleSetToggle = (exIdx: number, setIdx: number) => {
+    setExerciseState(prev => {
+      const next = prev.map((e, i) => i === exIdx
+        ? { ...e, completedSets: e.completedSets.map((v, j) => j === setIdx ? !v : v) }
+        : e
+      );
+      // Vibrate on mobile
+      if (navigator.vibrate) navigator.vibrate(30);
+      return next;
+    });
   };
+
+  const handleWeightChange = (exIdx: number, delta: number) => {
+    setExerciseState(prev => prev.map((e, i) =>
+      i === exIdx ? { ...e, weight: Math.max(0, +(e.weight + delta).toFixed(1)) } : e
+    ));
+  };
+
+  // Merge state into sets for display
+  const setsWithState = workout.sets.map((s: any, i: number) => ({
+    ...s,
+    completedSets: exerciseState[i]?.completedSets ?? [],
+    weight: exerciseState[i]?.weight ?? s.weight,
+  }));
 
   return (
     <motion.div
@@ -463,6 +426,9 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, updateWorkou
                   <Crown size={8} /> Coach
                 </span>
               )}
+              <span style={{ fontSize: 10, background: `${difficultyColor[workout.difficulty]}20`, color: difficultyColor[workout.difficulty], borderRadius: 6, padding: "2px 8px", fontWeight: 600 }}>
+                {workout.difficulty}
+              </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#8B8B8B", fontSize: 12 }}>
@@ -475,12 +441,18 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, updateWorkou
           </div>
           {/* Completion ring */}
           <div style={{ position: "relative", width: 42, height: 42, flexShrink: 0 }}>
-             <svg width={42} height={42} style={{ transform: "rotate(-90deg)" }}>
-               <circle cx={21} cy={21} r={17} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={4} />
-               <circle cx={21} cy={21} r={17} fill="none" stroke="#7CFC00" strokeWidth={4}
-                 strokeDasharray={2 * Math.PI * 17} strokeDashoffset={(2 * Math.PI * 17) - (completionPct / 100) * (2 * Math.PI * 17)} strokeLinecap="round"
-                 style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-             </svg>
+            {(() => {
+              const r2 = 17, circ2 = 2 * Math.PI * r2;
+              const offset2 = circ2 - (completionPct / 100) * circ2;
+              return (
+                <svg width={42} height={42} style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx={21} cy={21} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={4} />
+                  <circle cx={21} cy={21} r={r2} fill="none" stroke="#7CFC00" strokeWidth={4}
+                    strokeDasharray={circ2} strokeDashoffset={offset2} strokeLinecap="round"
+                    style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+                </svg>
+              );
+            })()}
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#FFFFFF" }}>
               {completionPct}%
             </div>
@@ -536,27 +508,23 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, updateWorkou
                 </div>
 
                 {/* Exercise cards */}
-                {detailedExercises.map((ex: any, i: number) => (
+                {setsWithState.map((ex: any, i: number) => (
                   <ExerciseCard
                     key={i}
                     ex={ex}
                     idx={i}
-                    onUpdateExercise={(newEx) => updateExercise(i, newEx)}
-                    onRemove={() => removeExercise(i)}
+                    onSetToggle={handleSetToggle}
+                    onWeightChange={handleWeightChange}
                   />
                 ))}
 
-                <button onClick={() => setDetailedExercises([...detailedExercises, { exercise: "New Exercise", unit: "kg", setsDetails: [{ weight: 0, reps: 0, done: false }] }])} style={{ width: "100%", padding: 12, marginBottom: 16, background: "transparent", border: "1px dashed rgba(124,252,0,0.4)", borderRadius: 10, color: "#7CFC00", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer" }}>
-                   <Plus size={16} color="#7CFC00"/> Add Exercise
-                </button>
-
                 {/* Action row */}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={onEdit} style={{ flex: 1, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B8B8B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, fontWeight: 600 }}>
-                    <Edit3 size={16} /> Edit Info
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <button onClick={onEdit} style={{ flex: 1, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#8B8B8B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13 }}>
+                    <Edit3 size={14} /> Edit
                   </button>
-                  <button onClick={finishSession} style={{ flex: 1, height: 44, borderRadius: 10, background: "#4DA8DA", border: "none", color: "#FFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, fontWeight: 700 }}>
-                    <CheckCircle2 size={16} /> Finish Saving
+                  <button onClick={onDelete} style={{ flex: 1, height: 40, borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13 }}>
+                    <Trash2 size={14} /> Delete
                   </button>
                 </div>
               </div>
@@ -575,25 +543,11 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
   const updateWorkoutMutation = useUpdateWorkout();
   const deleteWorkoutMutation = useDeleteWorkout();
 
-  const { data: dbTasks } = useListTasks(memberId);
-  const createTaskMutation = useCreateTask();
-  const updateTaskMutation = useUpdateTask();
-  const deleteTaskMutation = useDeleteTask();
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<any>(null);
-  
-  const [weekPlan, setWeekPlan] = useState(DEFAULT_WEEK_PLAN);
-  const [isEditingWeek, setIsEditingWeek] = useState(false);
-  
-  const [taskFilter, setTaskFilter] = useState("all");
-  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
-  const [editingTaskTitle, setEditingTaskTitle] = useState("");
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const displayWorkouts = dbWorkouts && dbWorkouts.length > 0 ? dbWorkouts : WORKOUTS;
-  const todayPlan = weekPlan[TODAY_IDX % weekPlan.length];
+  const todayPlan = WEEK_PLAN[TODAY_IDX % WEEK_PLAN.length];
   const streak = 5;
 
   return (
@@ -616,42 +570,21 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
 
       {/* Weekly strip */}
       <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px" }}>This Week</div>
-          <button 
-            onClick={() => setIsEditingWeek(!isEditingWeek)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: isEditingWeek ? "#7CFC00" : "rgba(255,255,255,0.05)", color: isEditingWeek ? "#000" : "#8B8B8B", border: isEditingWeek ? "none" : "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-          >
-            {isEditingWeek ? <CheckCircle2 size={12}/> : <Edit3 size={12} />} {isEditingWeek ? "Save" : "Edit"}
-          </button>
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>This Week</div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {weekPlan.map((day, i) => {
-            const isToday = i === TODAY_IDX % weekPlan.length;
+          {WEEK_PLAN.map((day, i) => {
+            const isToday = i === TODAY_IDX % WEEK_PLAN.length;
             return (
               <div key={day.day} className="flex-shrink-0 w-[50px] flex flex-col items-center gap-2">
                 <div style={{ fontSize: 11, color: isToday ? "#7CFC00" : "#5A5A5A", fontWeight: isToday ? 700 : 400 }}>{day.day}</div>
                 <div style={{
-                  width: "100%", padding: "10px 0", borderRadius: 10, minHeight: 46,
+                  width: "100%", padding: "10px 0", borderRadius: 10,
                   background: isToday ? "rgba(124,252,0,0.1)" : "rgba(255,255,255,0.03)",
                   border: isToday ? "1px solid rgba(124,252,0,0.3)" : "1px solid rgba(255,255,255,0.04)",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, position: "relative",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative",
                 }}>
                   <div style={{ width: 7, height: 7, borderRadius: "50%", background: day.done ? "#7CFC00" : "rgba(255,255,255,0.15)" }} />
-                  {isEditingWeek ? (
-                     <input 
-                       autoFocus={i === 0}
-                       value={day.label}
-                       onChange={(e) => {
-                          const next = [...weekPlan];
-                          next[i] = { ...next[i], label: e.target.value };
-                          setWeekPlan(next);
-                       }}
-                       style={{ width: "90%", fontSize: 9, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(124,252,0,0.3)", borderRadius: 4, textAlign: "center", outline: "none", color: "#FFF", padding: 2 }} 
-                     />
-                  ) : (
-                     <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : "#5A5A5A", textAlign: "center" }}>{day.label}</span>
-                  )}
+                  <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : "#5A5A5A", textAlign: "center" }}>{day.label}</span>
                 </div>
               </div>
             );
@@ -662,6 +595,214 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
           <span style={{ fontSize: 12, color: "#8B8B8B" }}>Today: <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{todayPlan.label}</span></span>
         </div>
       </div>
+
+      {/* Today's Workout Resume Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        style={{
+          background: "#16161A",
+          border: "1px solid rgba(124,252,0,0.2)",
+          borderLeft: "3px solid #7CFC00",
+          borderRadius: 16,
+          padding: "18px 20px"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "rgba(124,252,0,0.1)",
+            border: "1px solid rgba(124,252,0,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <Dumbbell size={18} color="#7CFC00" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 11,
+              color: "#8B8B8B",
+              textTransform: "uppercase",
+              letterSpacing: "0.6px",
+              marginBottom: 2
+            }}>
+              Today's Workout
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>
+              Leg Day — Heavy Squats
+            </div>
+          </div>
+          <div style={{
+            background: "rgba(139,92,246,0.2)",
+            color: "#8B5CF6",
+            borderRadius: 20,
+            padding: "4px 12px",
+            fontSize: 11,
+            fontWeight: 700
+          }}>
+            In Progress
+          </div>
+        </div>
+        <div style={{
+          height: 6,
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: 4,
+          overflow: "hidden",
+          marginBottom: 14
+        }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: "50%" }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            style={{
+              height: "100%",
+              background: "linear-gradient(90deg, #7CFC00, #39FF14)",
+              borderRadius: 4
+            }}
+          />
+        </div>
+        <div style={{ fontSize: 12, color: "#8B8B8B", marginBottom: 14 }}>
+          2 of 4 exercises completed · 50%
+        </div>
+        <button
+          style={{
+            width: "100%",
+            height: 50,
+            borderRadius: 12,
+            background: "linear-gradient(135deg, #7CFC00, #39FF14)",
+            border: "none",
+            color: "#000",
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8
+          }}
+        >
+          <Play size={16} fill="#000" /> RESUME WORKOUT
+        </button>
+      </motion.div>
+
+      {/* Current Tasks Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{
+          background: "#16161A",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 16,
+          padding: 24
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <Target size={20} color="#7CFC00" />
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
+          <span style={{ fontSize: 14, color: "#8B8B8B" }}>
+            Done 50%
+          </span>
+        </div>
+
+        {/* Task Filter */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          {["all", "pending", "completed"].map((filter) => (
+            <button
+              key={filter}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 20,
+                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(255,255,255,0.05)",
+                color: "#8B8B8B",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                textTransform: "capitalize"
+              }}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+
+        {/* Sample Tasks */}
+        {[
+          { id: 1, title: "Complete leg day workout", completed: true, priority: "high" },
+          { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
+          { id: 3, title: "Update body measurements", completed: false, priority: "low" },
+          { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
+        ].map((task, i) => (
+          <motion.div
+            key={task.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.05 + 0.3 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 0",
+              borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.04)" : "none"
+            }}
+          >
+            <button
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 4,
+                border: `2px solid ${task.completed ? "#7CFC00" : "rgba(255,255,255,0.2)"}`,
+                background: task.completed ? "#7CFC00" : "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              {task.completed && <CheckCircle2 size={12} color="#000" />}
+            </button>
+            <span style={{
+              flex: 1,
+              fontSize: 14,
+              color: task.completed ? "#8B8B8B" : "#FFFFFF",
+              textDecoration: task.completed ? "line-through" : "none"
+            }}>
+              {task.title}
+            </span>
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: task.priority === "high" ? "#EF4444" : task.priority === "medium" ? "#F59E0B" : "#7CFC00"
+            }} />
+          </motion.div>
+        ))}
+
+        <button
+          style={{
+            width: "100%",
+            marginTop: 16,
+            height: 40,
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "#8B8B8B",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontSize: 14
+          }}
+        >
+          <Plus size={16} /> Add New Task
+        </button>
+      </motion.div>
 
       {/* Workout cards */}
       <div>
@@ -680,139 +821,11 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
             workout={w}
             isPrivate={isPrivate}
             delay={i}
-            updateWorkoutMutation={updateWorkoutMutation}
             onEdit={() => { setEditingWorkout(w); setIsModalOpen(true); }}
             onDelete={() => { if (confirm("Delete workout?")) deleteWorkoutMutation.mutate({ id: w.id }); }}
           />
         ))}
       </div>
-
-      {/* Current Tasks Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        style={{
-          background: "#16161A",
-          border: "1px solid rgba(255,255,255,0.06)",
-          borderRadius: 16,
-          padding: 24
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <Target size={20} color="#7CFC00" />
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
-          <span style={{ fontSize: 14, color: "#8B8B8B" }}>
-            Done {dbTasks?.length ? Math.round((dbTasks.filter((t:any) => t.status === "completed").length / dbTasks.length) * 100) : 0}%
-          </span>
-        </div>
-
-        {/* Task Filter */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-          {["all", "pending", "completed"].map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setTaskFilter(filter)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 20,
-                border: `1px solid ${taskFilter === filter ? "#7CFC00" : "rgba(255,255,255,0.08)"}`,
-                background: taskFilter === filter ? "rgba(124,252,0,0.1)" : "rgba(255,255,255,0.05)",
-                color: taskFilter === filter ? "#7CFC00" : "#8B8B8B",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                textTransform: "capitalize"
-              }}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-
-        {/* Dynamic Tasks */}
-        {(dbTasks || []).filter((t: any) => 
-           taskFilter === "all" ? true : taskFilter === "pending" ? t.status !== "completed" : t.status === "completed"
-        ).map((task: any, i: number) => {
-           const isEditingThis = editingTaskId === task.id;
-           const isCompleted = task.status === "completed";
-           return (
-             <motion.div
-               key={task.id}
-               initial={{ opacity: 0, x: -10 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: i * 0.05 + 0.3 }}
-               style={{
-                 display: "flex",
-                 alignItems: "center",
-                 gap: 12,
-                 padding: "16px 0",
-                 borderBottom: "1px solid rgba(255,255,255,0.04)"
-               }}
-             >
-               <button
-                 onClick={() => {
-                   updateTaskMutation.mutate({ id: task.id, data: { status: isCompleted ? "pending" : "completed" } });
-                   if (!isCompleted && navigator.vibrate) navigator.vibrate(40);
-                 }}
-                 style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isCompleted ? "#7CFC00" : "rgba(255,255,255,0.2)"}`, background: isCompleted ? "#7CFC00" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-               >
-                 {isCompleted && <CheckCircle2 size={14} color="#000" />}
-               </button>
-               
-               {isEditingThis ? (
-                  <input autoFocus value={editingTaskTitle} onChange={e => setEditingTaskTitle(e.target.value)} style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid #7CFC00", color: "#FFF", padding: "6px 10px", borderRadius: 8, outline: "none", fontSize: 14 }} />
-               ) : (
-                  <span style={{ flex: 1, fontSize: 14, color: isCompleted ? "#8B8B8B" : "#FFFFFF", textDecoration: isCompleted ? "line-through" : "none" }}>
-                    {task.title}
-                  </span>
-               )}
-               
-               <div style={{ display: "flex", gap: 8 }}>
-                 {isEditingThis ? (
-                    <>
-                       <button onClick={() => { updateTaskMutation.mutate({ id: task.id, data: { title: editingTaskTitle } }); setEditingTaskId(null); }} style={{ background: "#7CFC00", border: "none", borderRadius: 6, padding: "4px 8px", color: "#000", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Save</button>
-                       <button onClick={() => setEditingTaskId(null)} style={{ background: "transparent", border: "1px solid #8B8B8B", borderRadius: 6, padding: "4px 8px", color: "#8B8B8B", fontSize: 12, cursor: "pointer" }}>Cancel</button>
-                    </>
-                 ) : (
-                    <>
-                       <button onClick={() => { setEditingTaskId(task.id); setEditingTaskTitle(task.title); }} style={{ background: "transparent", border: "none", color: "#8B8B8B", cursor: "pointer" }}><Edit3 size={16} /></button>
-                       <button onClick={() => { if(confirm("Remove this task?")) deleteTaskMutation.mutate({ id: task.id }); }} style={{ background: "transparent", border: "none", color: "#EF4444", cursor: "pointer" }}><Trash2 size={16} /></button>
-                    </>
-                 )}
-               </div>
-             </motion.div>
-           );
-        })}
-
-        {isAddingTask ? (
-           <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-              <input autoFocus value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Task description..." style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", padding: "10px 14px", borderRadius: 10, outline: "none", fontSize: 14 }} />
-              <button 
-                onClick={() => { 
-                   if (newTaskTitle.trim()) {
-                      createTaskMutation.mutate({ member_id: memberId, title: newTaskTitle, status: "pending", type: "todo" }, {
-                         onSuccess: () => { setIsAddingTask(false); setNewTaskTitle(""); }
-                      });
-                   }
-                }}
-                disabled={createTaskMutation.isPending}
-                style={{ background: "#7CFC00", border: "none", borderRadius: 10, padding: "0 16px", color: "#000", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
-              >
-                 Add
-              </button>
-           </div>
-        ) : (
-          <button
-            onClick={() => setIsAddingTask(true)}
-            style={{ width: "100%", marginTop: 16, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)", color: "#8B8B8B", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 14, fontWeight: 600 }}
-          >
-            <Plus size={16} /> Add New Task
-          </button>
-        )}
-      </motion.div>
-
-
 
       {/* Workout Modal */}
       <AnimatePresence>
@@ -828,7 +841,7 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
               style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: 28, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}
             >
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 20px" }} />
-              <h2 style={{ color: "#FFF", marginBottom: 20, fontSize: 18, fontWeight: 700 }}>{editingWorkout ? "Edit Session Details" : "Create New Workout Session"}</h2>
+              <h2 style={{ color: "#FFF", marginBottom: 20, fontSize: 18, fontWeight: 700 }}>{editingWorkout ? "Edit Workout" : "Add Workout"}</h2>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
@@ -838,12 +851,12 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
                   calories: parseInt(formData.get("calories") as string),
                   status: "todo", difficulty: "Medium",
                   muscles: ["Unknown"],
-                  sets: editingWorkout ? editingWorkout.sets : [],
+                  sets: [{ exercise: "Sample Exercise", sets: 3, reps: "10", weight: 20, unit: "kg", done: false }],
                 };
                 if (editingWorkout) {
-                  updateWorkoutMutation.mutate({ id: editingWorkout.id, data }, { onSuccess: () => setIsModalOpen(false) });
+                  updateWorkoutMutation.mutate({ id: editingWorkout.id, data }, { onSuccess: () => setIsModalOpen(false), onError: () => alert("Cannot save.") });
                 } else {
-                  createWorkoutMutation.mutate({ member_id: memberId, ...data, coach_assigned: false }, { onSuccess: () => setIsModalOpen(false) });
+                  createWorkoutMutation.mutate({ member_id: memberId, ...data, coach_assigned: false }, { onSuccess: () => setIsModalOpen(false), onError: () => alert("Cannot save.") });
                 }
               }}>
                 {[
