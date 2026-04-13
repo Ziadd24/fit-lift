@@ -68,7 +68,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
             transition={{ delay: i * 0.1 }}
             viewport={{ once: true }}
           >
-            <div className={`relative rounded-2xl p-6 flex flex-col h-full transition-all duration-300 ${bundle.highlight ? "border-2 border-[#7CFC00] bg-[#111827] shadow-[0_0_30px_rgba(124,252,0,0.15)]" : "border border-white/10 bg-[#16161A]"}`}>
+            <div className={`relative rounded-2xl p-6 flex flex-col h-full transition-all duration-300 ${bundle.highlight ? "border-2 border-primary bg-card shadow-[0_0_30px_rgba(124,252,0,0.15)]" : "border border-white/10 bg-card"}`}>
               {/* Badge */}
               {bundle.highlight && (
                 <span className="absolute -top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#7CFC00] text-black text-[10px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full">
@@ -344,9 +344,9 @@ export default function MemberPortal() {
       className="w-full h-full object-cover object-center"
     />
     {/* Dark overlay using website background color (dark navy) */}
-    <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, hsla(240,33%,7%,0.97) 0%, hsla(240,33%,7%,0.85) 55%, hsla(240,33%,7%,0.55) 100%)' }} />
+    <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.55) 100%)' }} />
     {/* Bottom fade into page background */}
-    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, hsl(240,33%,7%) 0%, transparent 40%)' }} />
+    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgb(10,10,10) 0%, transparent 40%)' }} />
     {/* Subtle lime grid overlay */}
     <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(124,252,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,252,0,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
   </div>
@@ -355,7 +355,7 @@ export default function MemberPortal() {
   <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
 
   {/* ── Navbar ── */}
-  <nav className="fixed top-0 left-0 right-0 z-50 h-[80px]" style={{ background: 'linear-gradient(180deg, hsla(240,33%,7%,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
+  <nav className="fixed top-0 left-0 right-0 z-50 h-[80px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
     <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
       {/* Logo */}
       <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
@@ -417,7 +417,7 @@ export default function MemberPortal() {
     {isMobileMenuOpen && (
       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
         className="lg:hidden fixed top-[80px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
-        style={{ background: 'hsla(240,33%,7%,0.97)' }}>
+        style={{ background: 'rgba(0,0,0,0.97)' }}>
         <div className="px-6 py-6 flex flex-col gap-4">
           {[
             { href: '#about', label: t.nav.about },
@@ -570,7 +570,7 @@ export default function MemberPortal() {
               { icon: CreditCard, title: t.services.items[2].title, desc: t.services.items[2].desc },
             ].map((s, i) => (
               <motion.div key={s.title} className="snap-start" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                <Card className="p-6 md:p-8 h-full bg-[#16161A] border-white/10 transition-all active:scale-[0.98]">
+                <Card className="p-6 md:p-8 h-full bg-card border-white/10 transition-all active:scale-[0.98]">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#7CFC00]/10 flex items-center justify-center flex-shrink-0">
                       <s.icon className="w-6 h-6 md:w-7 md:h-7 text-[#7CFC00]" />
@@ -629,7 +629,7 @@ export default function MemberPortal() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0 max-w-full">
             {t.coaches.coaches.map((coach, i) => (
               <motion.div key={coach.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                <Card className="group border border-white/10 bg-[#16161A] overflow-hidden active:scale-[0.98] transition-transform">
+                <Card className="group border border-white/10 bg-card overflow-hidden active:scale-[0.98] transition-transform">
                   <div className="aspect-square md:aspect-[3/4] overflow-hidden bg-black/40 relative">
                     <img
                       src={`/images/coach${i+1}.png`}
@@ -650,7 +650,7 @@ export default function MemberPortal() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 bg-[#0a0e1a]">
+      <section id="pricing" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="text-center mb-16">
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.pricing.tag}</h2>
@@ -678,7 +678,7 @@ export default function MemberPortal() {
                   { icon: WhatsAppIcon, label: t.contact.labels.phone, value: "+20 10 09987771", isLTR: true },
                   { icon: Clock, label: t.contact.labels.hours, value: t.contact.hoursText },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-[#16161A]/50">
+                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-card/50">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-[#7CFC00]/10 flex items-center justify-center flex-shrink-0">
                       <item.icon className="w-5 h-5 text-[#7CFC00]" />
                     </div>
@@ -706,27 +706,27 @@ export default function MemberPortal() {
 
             {/* Right Column (Form) */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }} viewport={{ once: true }}>
-              <div className="bg-[#16161A] border border-white/10 rounded-2xl p-5 md:p-8">
+              <div className="bg-card border border-white/10 rounded-2xl p-5 md:p-8">
                 <form onSubmit={(e) => { e.preventDefault(); alert(t.contact.form.success); }} className="space-y-4 md:space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.name}</Label>
-                      <input type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#121415] text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.phone}</Label>
-                      <input type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#121415] text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.email}</Label>
-                    <input type="email" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#121415] text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                    <input type="email" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.subject}</Label>
-                    <select required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#121415] text-white outline-none focus:border-[#7CFC00] transition-all text-sm appearance-none cursor-pointer">
+                    <select required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm appearance-none cursor-pointer">
                       <option value="membership">{t.contact.form.subj1}</option>
                       <option value="class">{t.contact.form.subj2}</option>
                       <option value="pt">{t.contact.form.subj3}</option>
@@ -736,7 +736,7 @@ export default function MemberPortal() {
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.message}</Label>
-                    <textarea required rows={3} className="w-full px-4 py-3 border border-white/10 rounded-xl bg-[#121415] text-white outline-none focus:border-[#7CFC00] transition-all min-h-[100px] text-sm resize-y"></textarea>
+                    <textarea required rows={3} className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all min-h-[100px] text-sm resize-y"></textarea>
                   </div>
 
                   <button type="submit" className="w-full bg-[#7CFC00] text-black font-bold uppercase tracking-wider text-sm py-4 rounded-xl active:scale-95">

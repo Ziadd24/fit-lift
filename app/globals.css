@@ -6,24 +6,24 @@
 @tailwind utilities;
 
 :root {
-  --background: 240 33% 7%;
+  --background: 0 0% 4%;
   --foreground: 0 0% 95%;
 
-  --card: 240 30% 11%;
+  --card: 0 0% 7%;
   --card-foreground: 0 0% 95%;
 
-  --border: 240 20% 20%;
-  --input: 240 25% 20%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
   --ring: 90 100% 49%;
 
   --primary: 90 100% 49%;
   --primary-foreground: 0 0% 5%;
 
-  --secondary: 240 25% 14%;
+  --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 95%;
 
-  --muted: 240 25% 15%;
-  --muted-foreground: 240 10% 60%;
+  --muted: 0 0% 11%;
+  --muted-foreground: 0 0% 55%;
 
   --accent: 128 49% 20%;
   --accent-foreground: 128 49% 70%;
@@ -102,8 +102,8 @@
 
 /* ── Dashboard Design System ─────────────────────────────── */
 :root {
-  --color-bg: #0D0D10;
-  --color-card: #16161A;
+  --color-bg: #0A0A0A;
+  --color-card: #111111;
   --color-lime: #7CFC00;
   --color-lime-hover: #6BE000;
   --color-lime-glow: rgba(124,252,0,0.3);
@@ -128,7 +128,7 @@
   100% { background-position: -200% 0; }
 }
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #16161A 0%, #1F1F24 50%, #16161A 100%);
+  background: linear-gradient(90deg, #111111 0%, #1A1A1A 50%, #111111 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -381,7 +381,7 @@
   left: 0; right: 0; bottom: 0;
   z-index: 300;
   border-radius: 24px 24px 0 0;
-  background: #1A1A1F;
+  background: #111111;
   border: 1px solid rgba(255,255,255,0.08);
   border-bottom: none;
   padding: 0 20px 32px;

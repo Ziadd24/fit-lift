@@ -34,7 +34,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="overflow-x-hidden">
+      <body className="bg-background text-foreground overflow-x-hidden">
         <Providers>{children}</Providers>
       </body>
     </html>
