@@ -40,15 +40,85 @@ export async function PUT(
   const body = await req.json();
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
+  // Coaches can only update members they own
+  let query = supabase.from("members").update(body).eq("id", parseInt(idParam));
+  if (!isAdmin && coachId) {
+    query = query.eq("coach_id", coachId);
+  }
+
+  const { data, error } = await query.select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "Member not found or not in your roster" }, { status: 404 });
+  return NextResponse.json(data);
+}
+
+/**
+ * PATCH /api/members/:id
+ * Coach assigns an existing (unassigned) member to their roster.
+ * Body: { action: "assign" | "unassign" }
+ */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: idParam } = await params;
+  const isAdmin = await verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  if (!isAdmin && !coachId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const action: "assign" | "unassign" = body.action || "assign";
+  const memberId = parseInt(idParam);
+  if (isNaN(memberId)) return NextResponse.json({ error: "Invalid member id" }, { status: 400 });
+
+  const supabase = getSupabaseAdmin();
+
+  // Verify the member exists and is currently unassigned (or belongs to this coach)
+  const { data: existing } = await supabase
     .from("members")
-    .update(body)
-    .eq("id", parseInt(idParam))
-    .select()
+    .select("id, coach_id, name")
+    .eq("id", memberId)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (!existing) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+
+  if (action === "assign") {
+    // Prevent stealing another coach's client unless admin
+    if (!isAdmin && existing.coach_id !== null && existing.coach_id !== coachId) {
+      return NextResponse.json(
+        { error: "This member is already assigned to another coach" },
+        { status: 409 }
+      );
+    }
+    const newCoachId = isAdmin ? (body.coach_id ?? coachId) : coachId;
+    const { data, error } = await supabase
+      .from("members")
+      .update({ coach_id: newCoachId })
+      .eq("id", memberId)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  if (action === "unassign") {
+    // Coach can only unassign their own client; admin can unassign anyone
+    if (!isAdmin && existing.coach_id !== coachId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    const { data, error } = await supabase
+      .from("members")
+      .update({ coach_id: null })
+      .eq("id", memberId)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }
 
 export async function DELETE(

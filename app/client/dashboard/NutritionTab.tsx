@@ -152,7 +152,7 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
       if (!res.ok) throw new Error(data.error || "Analysis failed");
 
       saveCalorieLog(
-        { meal: trimmed || "Photo Upload", result: data, category: getMealCategory(Date.now()) },
+        { member_id: memberId, meal: trimmed || "Photo Upload", result: data, category: getMealCategory(Date.now()) },
         {
           onSuccess: (saved) => {
             setJustLogged(saved);

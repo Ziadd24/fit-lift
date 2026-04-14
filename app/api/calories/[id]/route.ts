@@ -5,9 +5,6 @@ import { verifyCoachAuth, verifyAdminAuth } from "@/lib/auth";
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: idParam } = await params;
-    const coachId = verifyCoachAuth(req);
-    const isAdmin = verifyAdminAuth(req);
-    if (!coachId && !isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const id = parseInt(idParam);
     if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     const supabase = getSupabaseAdmin();

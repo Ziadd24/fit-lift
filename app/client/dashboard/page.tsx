@@ -1556,7 +1556,7 @@ export default function ClientDashboard() {
 
           {activeNav === "nutrition" && (
             <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-              <NutritionTab isPrivate={isPrivate} />
+              <NutritionTab isPrivate={isPrivate} memberId={memberId!} />
             </motion.div>
           )}
 

@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
+import { useClientContext } from "@/lib/use-client-context";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -29,6 +30,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { coachToken, currentCoach, logoutCoach } = useAuth();
+  const { selectedClientName, clearSelectedClient } = useClientContext();
 
   const [coachPhoto, setCoachPhoto] = useState<string | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -167,6 +169,18 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
 
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
         <div className="relative z-10 p-4 md:p-6 lg:p-10 max-w-7xl mx-auto">
+          {selectedClientName && (
+            <div className="flex items-center gap-2 mb-6 text-sm">
+              <button 
+                onClick={clearSelectedClient}
+                className="text-muted-foreground hover:text-white transition-colors"
+              >
+                ← Back to Clients
+              </button>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-primary font-bold">Viewing: {selectedClientName}</span>
+            </div>
+          )}
           {children}
         </div>
       </main>

@@ -3,9 +3,13 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "FitGym — Premium Fitness Club",
+  title: "FitLift — Premium Fitness Club",
   description:
     "Premium equipment, expert trainers, and a community that pushes you to be your best self.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
   openGraph: {
     images: ["/opengraph.jpg"],
   },

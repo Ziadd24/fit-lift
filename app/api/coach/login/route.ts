@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data: coachRaw, error } = await supabase
       .from("coaches")
-      .select("id, name, email, password_hash, created_at")
+      .select("id, name, password_hash, created_at")
       .ilike("name", name.trim())
       .single();
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const safeCoach = {
       id: coachRaw.id, name: coachRaw.name,
-      email: coachRaw.email, created_at: coachRaw.created_at,
+      created_at: coachRaw.created_at,
     };
     return NextResponse.json({
       success: true, token: await createCoachToken(coachRaw.id), coach: safeCoach,

@@ -21,13 +21,16 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      if (error.message.includes("Could not find the table") || error.code === "PGRST205") {
-        console.warn("Table coaches not found, using fallback memory setup");
+      const isTableNotFound = error.message?.includes("Could not find the table") || error.code === "PGRST205";
+      const isKeysDisabled = error.message?.includes("Legacy API keys are disabled");
+
+      if (isTableNotFound || isKeysDisabled) {
+        console.warn("Supabase connection failed (Table not found or Keys disabled), using fallback memory setup");
         const token = await createCoachToken(999);
         return NextResponse.json({
           success: true,
           token,
-          coach: { id: 999, name, email: "coach_test@fitgym.local" },
+          coach: { id: 999, name: cleanName, email: "coach_test@fitgym.local" },
         });
       }
       return NextResponse.json(

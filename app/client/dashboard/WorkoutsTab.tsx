@@ -8,6 +8,7 @@ import {
   Trophy, Zap, Edit3, Trash2, Mic, MicOff, X, Pause,
 } from "lucide-react";
 import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout } from "@/lib/api-hooks";
+import { WorkoutExerciseCard } from "@/components/ui/WorkoutExerciseCard";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const WORKOUTS = [
@@ -355,17 +356,21 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
   workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void;
 }) {
   const [expanded, setExpanded] = useState(workout.status === "in-progress");
+  const [editingExercise, setEditingExercise] = useState<any>(null);
 
   // Per-set completion state (array of booleans per exercise)
-  const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number }[]>(() =>
+  const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number; nameStr: string; typeStr: string; duration: number }[]>(() =>
     workout.sets.map((s: any) => ({
       completedSets: Array.from({ length: s.sets }, (_, i) => i < (s.done ? s.sets : 0)),
       weight: s.weight ?? 0,
+      nameStr: s.exercise,
+      typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
+      duration: 5,
     }))
   );
 
-  const totalSets = workout.sets.reduce((a: number, s: any) => a + s.sets, 0);
-  const completedTotal = exerciseState.reduce((a, e) => a + e.completedSets.filter(Boolean).length, 0);
+  const totalSets = exerciseState.reduce((a, e) => a + (e ? e.completedSets.length : 0), 0);
+  const completedTotal = exerciseState.reduce((a, e) => a + (e ? e.completedSets.filter(Boolean).length : 0), 0);
   const completionPct = totalSets > 0 ? Math.round((completedTotal / totalSets) * 100) : 0;
   const sc = statusConfig[workout.status];
 
@@ -390,9 +395,13 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
   // Merge state into sets for display
   const setsWithState = workout.sets.map((s: any, i: number) => ({
     ...s,
+    originalIndex: i,
     completedSets: exerciseState[i]?.completedSets ?? [],
     weight: exerciseState[i]?.weight ?? s.weight,
-  }));
+    exercise: exerciseState[i]?.nameStr ?? s.exercise,
+    type: exerciseState[i]?.typeStr ?? "Bilateral",
+    durationMinutes: exerciseState[i]?.duration ?? 5,
+  })).filter((s:any) => exerciseState[s.originalIndex] !== null);
 
   return (
     <motion.div
@@ -507,16 +516,105 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
                   </div>
                 </div>
 
-                {/* Exercise cards */}
-                {setsWithState.map((ex: any, i: number) => (
-                  <ExerciseCard
-                    key={i}
-                    ex={ex}
-                    idx={i}
-                    onSetToggle={handleSetToggle}
-                    onWeightChange={handleWeightChange}
-                  />
-                ))}
+                {/* Exercise cards using the new table format component */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {setsWithState.map((ex: any, i: number) => {
+                    const origIdx = ex.originalIndex;
+                    const exerciseData = {
+                      id: ex.exercise + origIdx,
+                      name: ex.exercise,
+                      durationMinutes: ex.durationMinutes,
+                      type: ex.type,
+                      sets: Array.from({ length: ex.sets }).map((_, si) => ({
+                        id: si + 1,
+                        previous: `${ex.reps} x ${ex.weight}${ex.unit}`,
+                        reps: parseInt(ex.reps) || 0,
+                        kg: ex.weight,
+                        completed: ex.completedSets[si] || false
+                      }))
+                    };
+                    
+                    return (
+                      <WorkoutExerciseCard
+                        key={origIdx}
+                        exercise={exerciseData}
+                        onMenuAction={(action) => {
+                          if (action === "edit") {
+                            setEditingExercise({ index: origIdx, data: exerciseData });
+                          } else if (action === "remove") {
+                            if (confirm("Remove this exercise from your workout?")) {
+                              setExerciseState(prev => {
+                                const next = [...prev];
+                                next[origIdx] = null as any; // filter out nulls in setsWithState
+                                return next;
+                              });
+                            }
+                          }
+                        }}
+                        onChange={(updated) => {
+                          // Allow internal unmanaged state to update the global card state if necessary
+                          updated.sets.forEach((set, setIdx) => {
+                             if (set.completed !== ex.completedSets[setIdx]) {
+                               handleSetToggle(origIdx, setIdx);
+                             }
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Exercise Edit Modal inside WorkoutCard */}
+                <AnimatePresence>
+                  {editingExercise && (
+                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+                      onClick={(e) => { e.stopPropagation(); setEditingExercise(null); }}>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ background: "#1A1A1F", border: "1px solid rgba(124,252,0,0.3)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 400 }}
+                      >
+                        <h3 style={{ color: "#FFF", marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Edit Exercise</h3>
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget);
+                          setExerciseState(prev => {
+                            const next = [...prev];
+                            if(next[editingExercise.index]) {
+                              next[editingExercise.index] = {
+                                ...next[editingExercise.index],
+                                nameStr: formData.get("name") as string,
+                                typeStr: formData.get("type") as string,
+                                duration: parseInt(formData.get("duration") as string),
+                              };
+                            }
+                            return next;
+                          });
+                          setEditingExercise(null);
+                        }}>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ display: "block", color: "#8B8B8B", fontSize: 13, marginBottom: 4 }}>Exercise Name</label>
+                            <input name="name" defaultValue={editingExercise.data.name} required style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={{ display: "block", color: "#8B8B8B", fontSize: 13, marginBottom: 4 }}>Type (e.g. Bilateral)</label>
+                            <input name="type" defaultValue={editingExercise.data.type} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                          </div>
+                          <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: "block", color: "#8B8B8B", fontSize: 13, marginBottom: 4 }}>Duration (mins)</label>
+                            <input name="duration" type="number" defaultValue={editingExercise.data.durationMinutes} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8 }}>Cancel</button>
+                            <button type="submit" style={{ flex: 1, padding: 10, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 8 }}>Save Update</button>
+                          </div>
+                        </form>
+                      </motion.div>
+                    </div>
+                  )}
+                </AnimatePresence>
 
                 {/* Action row */}
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
@@ -545,9 +643,20 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<any>(null);
+  
+  const [isWeeklyPlanModalOpen, setIsWeeklyPlanModalOpen] = useState(false);
+  const [localWeekPlan, setLocalWeekPlan] = useState(WEEK_PLAN);
+
+  const [localTasks, setLocalTasks] = useState([
+    { id: 1, title: "Complete leg day workout", completed: true, priority: "high" },
+    { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
+    { id: 3, title: "Update body measurements", completed: false, priority: "low" },
+    { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
+  ]);
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
 
   const displayWorkouts = dbWorkouts && dbWorkouts.length > 0 ? dbWorkouts : WORKOUTS;
-  const todayPlan = WEEK_PLAN[TODAY_IDX % WEEK_PLAN.length];
+  const todayPlan = localWeekPlan[TODAY_IDX % localWeekPlan.length];
   const streak = 5;
 
   return (
@@ -570,10 +679,20 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
 
       {/* Weekly strip */}
       <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>This Week</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px" }}>This Week</div>
+          <button 
+            onClick={() => setIsWeeklyPlanModalOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 4, color: "#8B8B8B", fontSize: 11, fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", transition: "color 0.2s" }}
+            onMouseOver={(e) => e.currentTarget.style.color = "#7CFC00"}
+            onMouseOut={(e) => e.currentTarget.style.color = "#8B8B8B"}
+          >
+            <Edit3 size={12} /> Edit Plan
+          </button>
+        </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {WEEK_PLAN.map((day, i) => {
-            const isToday = i === TODAY_IDX % WEEK_PLAN.length;
+          {localWeekPlan.map((day, i) => {
+            const isToday = i === TODAY_IDX % localWeekPlan.length;
             return (
               <div key={day.day} className="flex-shrink-0 w-[50px] flex flex-col items-center gap-2">
                 <div style={{ fontSize: 11, color: isToday ? "#7CFC00" : "#5A5A5A", fontWeight: isToday ? 700 : 400 }}>{day.day}</div>
@@ -596,97 +715,33 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
         </div>
       </div>
 
-      {/* Today's Workout Resume Card */}
+      {/* Workout cards (Assigned Workouts) moved up here */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        style={{
-          background: "#16161A",
-          border: "1px solid rgba(124,252,0,0.2)",
-          borderLeft: "3px solid #7CFC00",
-          borderRadius: 16,
-          padding: "18px 20px"
-        }}
+        transition={{ delay: 0.2 }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: "rgba(124,252,0,0.1)",
-            border: "1px solid rgba(124,252,0,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <Dumbbell size={18} color="#7CFC00" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: 11,
-              color: "#8B8B8B",
-              textTransform: "uppercase",
-              letterSpacing: "0.6px",
-              marginBottom: 2
-            }}>
-              Today's Workout
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>
-              Leg Day — Heavy Squats
-            </div>
-          </div>
-          <div style={{
-            background: "rgba(139,92,246,0.2)",
-            color: "#8B5CF6",
-            borderRadius: 20,
-            padding: "4px 12px",
-            fontSize: 11,
-            fontWeight: 700
-          }}>
-            In Progress
-          </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Assigned Workouts</div>
+          <button
+            onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: "8px 14px", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, minHeight: 40 }}
+          >
+            <Plus size={14} /> Add
+          </button>
         </div>
-        <div style={{
-          height: 6,
-          background: "rgba(255,255,255,0.08)",
-          borderRadius: 4,
-          overflow: "hidden",
-          marginBottom: 14
-        }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "50%" }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            style={{
-              height: "100%",
-              background: "linear-gradient(90deg, #7CFC00, #39FF14)",
-              borderRadius: 4
-            }}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {displayWorkouts.map((w: any, i: number) => (
+            <WorkoutCard
+              key={w.id}
+              workout={w}
+              isPrivate={isPrivate}
+              delay={i}
+              onEdit={() => { setEditingWorkout(w); setIsModalOpen(true); }}
+              onDelete={() => { if (confirm("Delete workout?")) deleteWorkoutMutation.mutate({ id: w.id }); }}
+            />
+          ))}
         </div>
-        <div style={{ fontSize: 12, color: "#8B8B8B", marginBottom: 14 }}>
-          2 of 4 exercises completed · 50%
-        </div>
-        <button
-          style={{
-            width: "100%",
-            height: 50,
-            borderRadius: 12,
-            background: "linear-gradient(135deg, #7CFC00, #39FF14)",
-            border: "none",
-            color: "#000",
-            fontWeight: 800,
-            fontSize: 15,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8
-          }}
-        >
-          <Play size={16} fill="#000" /> RESUME WORKOUT
-        </button>
       </motion.div>
 
       {/* Current Tasks Section */}
@@ -701,12 +756,22 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
           padding: 24
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <Target size={20} color="#7CFC00" />
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
-          <span style={{ fontSize: 14, color: "#8B8B8B" }}>
-            Done 50%
-          </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Target size={20} color="#7CFC00" />
+            <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
+            <span style={{ fontSize: 14, color: "#8B8B8B" }}>
+              Done 50%
+            </span>
+          </div>
+          <button 
+            onClick={() => setIsTasksModalOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 4, color: "#8B8B8B", fontSize: 12, fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", transition: "color 0.2s" }}
+            onMouseOver={(e) => e.currentTarget.style.color = "#7CFC00"}
+            onMouseOut={(e) => e.currentTarget.style.color = "#8B8B8B"}
+          >
+            <Edit3 size={14} /> Edit
+          </button>
         </div>
 
         {/* Task Filter */}
@@ -731,13 +796,8 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
           ))}
         </div>
 
-        {/* Sample Tasks */}
-        {[
-          { id: 1, title: "Complete leg day workout", completed: true, priority: "high" },
-          { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
-          { id: 3, title: "Update body measurements", completed: false, priority: "low" },
-          { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
-        ].map((task, i) => (
+        {/* Tasks List */}
+        {localTasks.map((task, i) => (
           <motion.div
             key={task.id}
             initial={{ opacity: 0, x: -10 }}
@@ -748,10 +808,13 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
               alignItems: "center",
               gap: 12,
               padding: "12px 0",
-              borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.04)" : "none"
+              borderBottom: i < localTasks.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"
             }}
           >
             <button
+              onClick={() => {
+                setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+              }}
               style={{
                 width: 20,
                 height: 20,
@@ -784,6 +847,7 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
         ))}
 
         <button
+          onClick={() => setIsTasksModalOpen(true)}
           style={{
             width: "100%",
             marginTop: 16,
@@ -800,32 +864,11 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
             fontSize: 14
           }}
         >
-          <Plus size={16} /> Add New Task
+          <Edit3 size={16} /> Manage Tasks
         </button>
       </motion.div>
 
-      {/* Workout cards */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.8px" }}>Assigned Workouts</div>
-          <button
-            onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: "8px 14px", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, minHeight: 40 }}
-          >
-            <Plus size={14} /> Add
-          </button>
-        </div>
-        {displayWorkouts.map((w: any, i: number) => (
-          <WorkoutCard
-            key={w.id}
-            workout={w}
-            isPrivate={isPrivate}
-            delay={i}
-            onEdit={() => { setEditingWorkout(w); setIsModalOpen(true); }}
-            onDelete={() => { if (confirm("Delete workout?")) deleteWorkoutMutation.mutate({ id: w.id }); }}
-          />
-        ))}
-      </div>
+      {/* Removed old workout cards duplicate block from here */}
 
       {/* Workout Modal */}
       <AnimatePresence>
@@ -872,6 +915,117 @@ export default function WorkoutsTab({ isPrivate, memberId }: { isPrivate: boolea
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: 14, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>Cancel</button>
                   <button type="submit" disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending} style={{ flex: 1, padding: 14, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>Save</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Weekly Plan Editor Modal */}
+      <AnimatePresence>
+        {isWeeklyPlanModalOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+            onClick={() => setIsWeeklyPlanModalOpen(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 400, maxHeight: "90vh", overflowY: "auto" }}
+            >
+              <h3 style={{ color: "#FFF", marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Edit Weekly Plan</h3>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const newPlan = localWeekPlan.map((day) => ({
+                  ...day,
+                  label: formData.get(`label-${day.day}`) as string,
+                  done: formData.get(`done-${day.day}`) === "on",
+                }));
+                // Set the local color logic
+                newPlan.forEach(d => {
+                  if (d.label?.toLowerCase().includes("rest")) d.color = "#5A5A5A";
+                  else if (d.label?.toLowerCase().includes("leg")) d.color = "#7CFC00";
+                  else if (d.label?.toLowerCase().includes("pull") || d.label?.toLowerCase().includes("upper")) d.color = "#8B5CF6";
+                  else d.color = "#F59E0B";
+                });
+                setLocalWeekPlan(newPlan);
+                setIsWeeklyPlanModalOpen(false);
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                  {localWeekPlan.map(day => (
+                    <div key={day.day} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.03)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ width: 40, fontSize: 13, fontWeight: 700, color: day.color }}>{day.day}</div>
+                      <input name={`label-${day.day}`} defaultValue={day.label} style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 13 }} />
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: "#8B8B8B", fontSize: 12 }}>
+                        Done
+                        <input type="checkbox" name={`done-${day.day}`} defaultChecked={day.done} style={{ width: 16, height: 16, accentColor: "#7CFC00" }} />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => setIsWeeklyPlanModalOpen(false)} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: "12px" }}>Cancel</button>
+                  <button type="submit" style={{ flex: 1, padding: "12px", background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: "12px" }}>Save Plan</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Tasks Editor Modal */}
+      <AnimatePresence>
+        {isTasksModalOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+            onClick={() => setIsTasksModalOpen(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 450, maxHeight: "90vh", overflowY: "auto" }}
+            >
+              <h3 style={{ color: "#FFF", marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Edit Tasks</h3>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const updatedTasks = localTasks.map(t => ({
+                  ...t,
+                  title: formData.get(`task-${t.id}-title`) as string,
+                  priority: formData.get(`task-${t.id}-pri`) as string,
+                }));
+                // Filter out any explicitly deleted from a state action if needed
+                // Or just save edits:
+                setLocalTasks(updatedTasks);
+                setIsTasksModalOpen(false);
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                  {localTasks.map(task => (
+                    <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.03)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <button type="button" onClick={() => setLocalTasks(prev => prev.filter(p => p.id !== task.id))} style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                        <Trash2 size={16} />
+                      </button>
+                      <input name={`task-${task.id}-title`} defaultValue={task.title} style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 13 }} />
+                      <select name={`task-${task.id}-pri`} defaultValue={task.priority} style={{ padding: "8px", borderRadius: "6px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 12 }}>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                
+                <button type="button" onClick={() => {
+                  setLocalTasks(prev => [...prev, { id: Date.now(), title: "New Task", completed: false, priority: "medium" }]);
+                }} style={{ width: "100%", padding: "12px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: "12px", color: "#8B8B8B", fontSize: 13, marginBottom: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <Plus size={16} /> Add Task
+                </button>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => setIsTasksModalOpen(false)} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: "12px", cursor: "pointer" }}>Cancel</button>
+                  <button type="submit" style={{ flex: 1, padding: "12px", background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: "12px", cursor: "pointer" }}>Save Tasks</button>
                 </div>
               </form>
             </motion.div>

@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Dumbbell, Eye, EyeOff } from "lucide-react";
 
 export default function CoachLoginPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +17,6 @@ export default function CoachLoginPage() {
   const { setCoachAuth, coachToken } = useAuth();
   const router = useRouter();
   const loginMutation = useCoachLogin();
-  const registerMutation = useCoachRegister();
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -31,40 +29,23 @@ export default function CoachLoginPage() {
     e.preventDefault();
     setError("");
 
-    if (mode === "login") {
-      if (!name.trim()) {
-        setError("Please enter your name");
-        return;
-      }
-      loginMutation.mutate(
-        { name, password },
-        {
-          onSuccess: (res) => {
-            setCoachAuth(res.token, res.coach);
-            router.push("/coach");
-          },
-          onError: (err) => setError(err.message),
-        }
-      );
-    } else {
-      if (!name.trim()) {
-        setError("Please enter your full name");
-        return;
-      }
-      registerMutation.mutate(
-        { name, password },
-        {
-          onSuccess: (res) => {
-            setCoachAuth(res.token, res.coach);
-            router.push("/coach");
-          },
-          onError: (err) => setError(err.message),
-        }
-      );
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
     }
+    loginMutation.mutate(
+      { name, password },
+      {
+        onSuccess: (res) => {
+          setCoachAuth(res.token, res.coach);
+          router.push("/coach");
+        },
+        onError: (err) => setError(err.message),
+      }
+    );
   };
 
-  const isPending = loginMutation.isPending || registerMutation.isPending;
+  const isPending = loginMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
@@ -109,7 +90,6 @@ export default function CoachLoginPage() {
         <div className="flex-1 flex flex-col justify-center p-8 md:p-12">
           <AnimatePresence mode="wait">
             <motion.div
-              key={mode}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -117,12 +97,10 @@ export default function CoachLoginPage() {
             >
               <div className="mb-8">
                 <h2 className="text-2xl font-display text-white mb-2">
-                  {mode === "login" ? "Welcome Back" : "Create Account"}
+                  Welcome Back
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  {mode === "login"
-                    ? "Enter your credentials to access the dashboard."
-                    : "Join the coaching roster to manage your clients."}
+                  Enter your credentials to access the dashboard.
                 </p>
               </div>
 
@@ -138,7 +116,7 @@ export default function CoachLoginPage() {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <Label>{mode === "login" ? "Coach Name" : "Full Name"}</Label>
+                  <Label>Coach Name</Label>
                   <Input
                     type="text"
                     value={name}
@@ -181,45 +159,9 @@ export default function CoachLoginPage() {
                   className="w-full mt-2"
                   disabled={isPending}
                 >
-                  {isPending
-                    ? mode === "login"
-                      ? "Authenticating..."
-                      : "Creating Account..."
-                    : mode === "login"
-                    ? "Sign In"
-                    : "Create Account"}
+                  {isPending ? "Authenticating..." : "Sign In"}
                 </Button>
               </form>
-
-              <p className="text-center text-muted-foreground text-sm mt-6">
-                {mode === "login" ? (
-                  <>
-                    New coach?{" "}
-                    <button
-                      onClick={() => {
-                        setMode("register");
-                        setError("");
-                      }}
-                      className="text-primary font-semibold hover:text-white transition-colors"
-                    >
-                      Create an account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{" "}
-                    <button
-                      onClick={() => {
-                        setMode("login");
-                        setError("");
-                      }}
-                      className="text-primary font-semibold hover:text-white transition-colors"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </p>
             </motion.div>
           </AnimatePresence>
         </div>
