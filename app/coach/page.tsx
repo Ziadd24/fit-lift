@@ -224,6 +224,8 @@ export default function CoachDashboard() {
 
   /* ── Workout exercises — sourced from config ── */
   const [exercises, setExercises] = useState<WorkoutExercise[]>(DEMO_EXERCISES);
+  const [newExTitle, setNewExTitle] = useState("");
+  const [newExSub, setNewExSub] = useState("");
 
   /* ── Search & Assign Unassigned Members ── */
   const [assignSearchQuery, setAssignSearchQuery] = useState("");

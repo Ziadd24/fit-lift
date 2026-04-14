@@ -369,8 +369,8 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
     }))
   );
 
-  const totalSets = workout.sets.reduce((a: number, s: any) => a + s.sets, 0);
-  const completedTotal = exerciseState.reduce((a, e) => a + e.completedSets.filter(Boolean).length, 0);
+  const totalSets = exerciseState.reduce((a, e) => a + (e ? e.completedSets.length : 0), 0);
+  const completedTotal = exerciseState.reduce((a, e) => a + (e ? e.completedSets.filter(Boolean).length : 0), 0);
   const completionPct = totalSets > 0 ? Math.round((completedTotal / totalSets) * 100) : 0;
   const sc = statusConfig[workout.status];
 
@@ -395,12 +395,13 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
   // Merge state into sets for display
   const setsWithState = workout.sets.map((s: any, i: number) => ({
     ...s,
+    originalIndex: i,
     completedSets: exerciseState[i]?.completedSets ?? [],
     weight: exerciseState[i]?.weight ?? s.weight,
     exercise: exerciseState[i]?.nameStr ?? s.exercise,
     type: exerciseState[i]?.typeStr ?? "Bilateral",
     durationMinutes: exerciseState[i]?.duration ?? 5,
-  })).filter((s:any, i:number) => exerciseState[i] !== null);
+  })).filter((s:any) => exerciseState[s.originalIndex] !== null);
 
   return (
     <motion.div
@@ -518,8 +519,9 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
                 {/* Exercise cards using the new table format component */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {setsWithState.map((ex: any, i: number) => {
+                    const origIdx = ex.originalIndex;
                     const exerciseData = {
-                      id: ex.exercise + i,
+                      id: ex.exercise + origIdx,
                       name: ex.exercise,
                       durationMinutes: ex.durationMinutes,
                       type: ex.type,
@@ -534,16 +536,16 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
                     
                     return (
                       <WorkoutExerciseCard
-                        key={i}
+                        key={origIdx}
                         exercise={exerciseData}
                         onMenuAction={(action) => {
                           if (action === "edit") {
-                            setEditingExercise({ index: i, data: exerciseData });
+                            setEditingExercise({ index: origIdx, data: exerciseData });
                           } else if (action === "remove") {
                             if (confirm("Remove this exercise from your workout?")) {
                               setExerciseState(prev => {
                                 const next = [...prev];
-                                next[i] = null as any; // filter out nulls in setsWithState
+                                next[origIdx] = null as any; // filter out nulls in setsWithState
                                 return next;
                               });
                             }
@@ -553,7 +555,7 @@ function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete }: {
                           // Allow internal unmanaged state to update the global card state if necessary
                           updated.sets.forEach((set, setIdx) => {
                              if (set.completed !== ex.completedSets[setIdx]) {
-                               handleSetToggle(i, setIdx);
+                               handleSetToggle(origIdx, setIdx);
                              }
                           });
                         }}
