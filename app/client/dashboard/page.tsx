@@ -923,7 +923,8 @@ export default function ClientDashboard() {
   const chatInputRef = useRef<HTMLInputElement>(null);
 
   const { data: announcements } = useListAnnouncements({ memberId: memberId ?? undefined });
-  const { data: photos } = useListPhotos({ global: true });
+  const { data: photos } = useListPhotos({ global: true, category: "gallery" });
+  const galleryPhotos = Array.isArray(photos) ? photos.filter((p: any) => p.category === "gallery") : [];
 
   const unreadMessages = messages ? messages.filter((msg: any) => !msg.read && msg.sender_type === 'coach').length : 0;
 
@@ -1516,7 +1517,7 @@ export default function ClientDashboard() {
                     gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
                     gap: 12,
                   }}>
-                    {photos.slice(0, 6).map((photo: any) => (
+                    {galleryPhotos.slice(0, 6).map((photo: any) => (
                       <motion.div
                         key={photo.id}
                         initial={{ opacity: 0, scale: 0.9 }}

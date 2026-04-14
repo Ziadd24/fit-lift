@@ -200,6 +200,46 @@ const translations = {
   }
 };
 
+function DynamicPopup() {
+  const { data: popupTitle } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_title"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_title");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const { data: popupMessage } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_message"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_message");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const { data: popupEnabled } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_enabled"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_enabled");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const isEnabled = popupEnabled?.value === "true";
+  const title = popupTitle?.value || "";
+  const message = popupMessage?.value || "";
+
+  if (!isEnabled || !title || !message) return null;
+
+  return <AnnouncementPopup />;
+}
+
 function PhotoGallery() {
   const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
@@ -375,7 +415,7 @@ export default function MemberPortal() {
   // ─── Landing Page (always visible) ──────────────────────────────────────
   return (
     <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <AnnouncementPopup />
+      <DynamicPopup />
 
       {/* ═══ HERO SECTION ═══ */}
 <section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
