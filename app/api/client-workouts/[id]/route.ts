@@ -5,8 +5,6 @@ import { verifyCoachAuth } from "@/lib/auth";
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: idParam } = await params;
-    const coachId = verifyCoachAuth(req);
-    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.from("client_workouts").update(body).eq("id", parseInt(idParam)).select("*").single();
@@ -20,8 +18,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: idParam } = await params;
-    const coachId = verifyCoachAuth(req);
-    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const supabase = getSupabaseAdmin();
     const { error } = await supabase.from("client_workouts").delete().eq("id", parseInt(idParam));
     if (error) throw error;
