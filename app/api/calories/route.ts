@@ -6,7 +6,6 @@ export async function GET(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
-    if (!coachId && !isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
@@ -69,7 +68,6 @@ export async function POST(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
-    if (!coachId && !isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { member_id, meal, result, category } = await req.json();
     if (!meal || !result || !category) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

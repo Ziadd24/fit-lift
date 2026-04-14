@@ -5,21 +5,22 @@ import { verifyCoachAuth } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
-    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const supabase = getSupabaseAdmin();
 
     if (memberId) {
       const parsedId = parseInt(memberId);
-      // Verify member belongs to this coach
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("id", parsedId)
-        .eq("coach_id", coachId)
-        .single();
-      if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+      if (coachId) {
+        // Verify member belongs to this coach
+        const { data: member } = await supabase
+          .from("members")
+          .select("id")
+          .eq("id", parsedId)
+          .eq("coach_id", coachId)
+          .single();
+        if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+      }
 
       const { data, error } = await supabase
         .from("client_tasks")
@@ -29,6 +30,8 @@ export async function GET(req: NextRequest) {
       if (error) throw error;
       return NextResponse.json(data ?? []);
     }
+
+    if (!coachId) return NextResponse.json({ error: "memberId is required for clients" }, { status: 400 });
 
     // No memberId: all tasks for coach's roster
     const { data: coachMembers } = await supabase
@@ -53,7 +56,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
-    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
     const title = (body.title || "").slice(0, 200);
     const type = (body.type || "").slice(0, 50);
