@@ -17,30 +17,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, password, email } = await req.json();
+    const { name, password } = await req.json();
     if (!name || !password) {
-      return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
+      return NextResponse.json({ error: "Name and password are required" }, { status: 400 });
     }
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "A valid email is required" }, { status: 400 });
-    }
 
     const supabase = getSupabaseAdmin();
     const { data: existingCoach } = await supabase
-      .from("coaches").select("id").ilike("email", email.trim()).single();
+      .from("coaches").select("id").ilike("name", name.trim()).single();
     if (existingCoach) {
-      return NextResponse.json({ error: "A coach with this email already exists" }, { status: 409 });
+      return NextResponse.json({ error: "A coach with this name already exists" }, { status: 409 });
     }
 
     const approvalRequired = process.env.COACH_APPROVAL_REQUIRED === "true";
     const password_hash = await hashPassword(password);
     const { data, error } = await supabase
       .from("coaches")
-      .insert({ name: name.trim(), email: email.trim(), password_hash, ...(approvalRequired ? { status: "pending" } : {}) })
-      .select("id, name, email, created_at")
+      .insert({ name: name.trim(), password_hash, ...(approvalRequired ? { status: "pending" } : {}) })
+      .select("id, name, created_at")
       .single();
 
     if (error) {

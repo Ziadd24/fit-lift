@@ -24,6 +24,8 @@ export type Member = {
   membership_type: string;
   sub_expiry_date: string;
   created_at: string;
+  /** ID of the coach this member is assigned to (null = unassigned) */
+  coach_id: number | null;
 };
 
 export type Photo = {

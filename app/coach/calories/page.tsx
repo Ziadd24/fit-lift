@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCalorieLog, CalorieLog, useListMembers } from "@/lib/api-hooks";
 import { useNutritionRealtime } from "@/lib/use-nutrition-realtime";
+import { useClientContext } from "@/lib/use-client-context";
 import { CalorieMarkerCard } from "@/components/ui/CalorieMarkerCard";
 
 /* ─── Types ─── */
@@ -135,10 +136,10 @@ export default function CaloriesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AIResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: myLogs } = useListCalorieLogs();
+  const { data: myLogs } = useListCalorieLogs("null");
   const log = myLogs || [];
-  // Client logs (all members — no memberId filter = coach sees everyone today)
-  const { data: clientLogs } = useListCalorieLogs(undefined);
+  // Client logs (fetch all -> filter locally)
+  const { data: clientLogs } = useListCalorieLogs("all");
   const allClientLogs = (clientLogs || []).filter((l) => l.member_id !== null);
   const pendingCount = allClientLogs.filter((l) => l.verified_status === "pending").length;
 
@@ -155,10 +156,17 @@ export default function CaloriesPage() {
   // Client Selection & Assessment State
   const { data: membersPage } = useListMembers();
   const members = membersPage?.members || [];
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const { selectedClientId, clearSelectedClient } = useClientContext();
   const [assessment, setAssessment] = useState<any>(null);
   const [isAssessing, setIsAssessing] = useState(false);
   const [clientGoals, setClientGoals] = useState<Record<number, MacroTotals>>({});
+
+  React.useEffect(() => {
+    // If a client was pre-selected (e.g. from the Roster drill-down), ensure we are on the clients tab
+    if (selectedClientId && activeTab !== "clients") {
+      setActiveTab("clients");
+    }
+  }, [selectedClientId]);
 
   React.useEffect(() => {
     const stored = localStorage.getItem("fitgym_client_goals");
@@ -378,117 +386,136 @@ export default function CaloriesPage() {
         {activeTab === "clients" && (
           <div className="flex flex-col gap-6">
             
-            {/* ── Client Selection & Threat Assessment Panel ── */}
-            <div style={cardStyle} className="p-6">
-              <div className="flex flex-col xl:flex-row gap-6">
-                
-                {/* Client List */}
-                <div className="w-full xl:w-1/3 flex flex-col gap-2 xl:border-r border-white/10 pr-0 xl:pr-4">
-                  <h3 className="font-bold text-white text-sm uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" /> Select Client
-                  </h3>
-                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
-                    {members.map(m => {
-                      const mLogs = allClientLogs.filter(l => l.member_id === m.id);
-                      const isSelected = selectedClientId === m.id;
-                      return (
-                        <button key={m.id} onClick={() => setSelectedClientId(m.id)}
-                          className={`flex items-center justify-between p-3 rounded-xl transition-all ${isSelected ? 'bg-[#7CFC00]/20 border-[#7CFC00] border' : 'bg-white/5 border border-transparent hover:bg-white/10'}`}>
-                          <span className={`font-bold ${isSelected ? 'text-[#7CFC00]' : 'text-white'}`}>{m.name}</span>
-                          {mLogs.length > 0 && <span className="bg-[#7CFC00] text-black text-[10px] font-black px-2 py-0.5 rounded-full">{mLogs.length} logs</span>}
-                        </button>
-                      );
-                    })}
-                    {members.length === 0 && <span className="text-sm text-gray-500">No clients registered.</span>}
+            {!selectedClientId ? (
+              // Step 1: Client Roster Grid
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {members.map(m => {
+                  const mLogs = allClientLogs.filter(l => l.member_id === m.id);
+                  const latestLog = mLogs.length > 0 ? new Date(Math.max(...mLogs.map(l => new Date(l.created_at).getTime()))) : null;
+                  const cTotals = mLogs.reduce((acc, e) => acc + (e.result?.totals?.calories || 0), 0);
+                  
+                  return (
+                    <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      onClick={() => setSelectedClientId(m.id)}
+                      className="cursor-pointer flex flex-col gap-4 p-5 rounded-3xl transition-all border border-white/5 hover:border-[#7CFC00]/30 hover:bg-[#7CFC00]/5"
+                      style={cardStyle}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full border-2 border-[#7CFC00]/30 flex items-center justify-center font-bold text-[#7CFC00] bg-[#7CFC00]/10 text-lg">
+                            {m.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <h3 className="text-white font-bold text-lg">{m.name}</h3>
+                            <p className="text-xs text-gray-400">
+                              {latestLog ? `Last meal: ${latestLog.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : "No meals today"}
+                            </p>
+                          </div>
+                        </div>
+                        {mLogs.some(l => l.verified_status === "pending") && (
+                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                        )}
+                      </div>
+                      
+                      <div className="flex justify-between items-center bg-black/30 rounded-xl p-3">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Today's kcal</span>
+                          <span className="text-white font-black text-lg">{cTotals} <span className="text-xs text-[#7CFC00]">kcal</span></span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Logged Meals</span>
+                          <span className="text-white font-bold">{mLogs.length}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                {members.length === 0 && <span className="text-sm text-gray-500 col-span-full text-center py-10">No clients registered.</span>}
+              </div>
+            ) : (
+              // Step 2: Client Detail View (Drill-down)
+              <div className="flex flex-col gap-6">
+                {/* Back Button & Header */}
+                <div className="flex items-center gap-4">
+                  <button onClick={clearSelectedClient} 
+                    className="flex items-center justify-center w-10 h-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                    <ChevronDown className="w-5 h-5 text-white rotate-90" />
+                  </button>
+                  <h2 className="text-2xl font-black text-white">{selectedMember?.name}'s Food Log</h2>
+                </div>
+
+                {/* Client Assessment Panel */}
+                <div style={cardStyle} className="p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+                    <div className="flex items-center gap-2">
+                       <Brain className="w-6 h-6 text-[#7CFC00]" />
+                       <h2 className="text-xl font-black text-white">Coach Assessment</h2>
+                    </div>
+                    <button onClick={runAssessment} disabled={isAssessing}
+                       className="bg-[#7CFC00] text-black font-black text-sm px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-[#7CFC00]/80 transition-colors disabled:opacity-50 cursor-pointer">
+                       {isAssessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                       Run Threat Assessment
+                    </button>
+                  </div>
+
+                  {/* Threat Details */}
+                  {assessment && (
+                    <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1,y:0}} 
+                       className="p-5 rounded-xl border mb-5" style={{ background: `${assessment.threat_level_color}10`, borderColor: assessment.threat_level_color }}>
+                       <div className="flex items-center gap-2 mb-3">
+                          <span className="font-black px-3 py-1 rounded-full text-xs uppercase" style={{ background: assessment.threat_level_color, color: "#000" }}>
+                            {assessment.threat_level}
+                          </span>
+                          <span className="text-white font-medium text-sm">{assessment.summary}</span>
+                       </div>
+                       <ul className="text-sm text-gray-300 space-y-1 mb-3 list-disc pl-5">
+                         {assessment.key_observations.map((obs: string, i: number) => <li key={i}>{obs}</li>)}
+                       </ul>
+                       <div className="text-sm font-bold text-white bg-black/30 p-3 rounded-xl border border-white/10">
+                          💡 Action: <span className="text-[#7CFC00]">{assessment.coach_recommendation}</span>
+                       </div>
+                    </motion.div>
+                  )}
+
+                  {/* Quick Goals Edit */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                     {(['calories', 'protein', 'carbs', 'fat'] as const).map(k => (
+                       <div key={k} className="bg-black/30 p-3 rounded-xl border border-white/5 flex flex-col justify-between">
+                          <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{k} Goal</span>
+                          <input type="number" 
+                            value={getClientGoals(selectedClientId)[k]} 
+                            onChange={e => saveClientGoal(selectedClientId, k, Number(e.target.value))}
+                            className="w-full bg-transparent text-white font-bold text-lg outline-none" />
+                       </div>
+                     ))}
                   </div>
                 </div>
 
-                {/* Selected Client Assessment */}
-                <div className="w-full xl:w-2/3 pl-0 xl:pl-4">
-                  {!selectedClientId ? (
-                     <div className="flex flex-col items-center justify-center h-[200px] text-center p-8 opacity-50">
-                       <ShieldAlert className="w-12 h-12 mb-3 text-white" />
-                       <p className="text-white font-bold">Select a client to view threat assessment</p>
-                     </div>
-                  ) : (
-                     <div className="flex flex-col h-full gap-5">
-                       {/* Top Row: Info & Button */}
-                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                         <div className="flex items-center gap-2">
-                           <Brain className="w-6 h-6 text-[#7CFC00]" />
-                           <h2 className="text-xl font-black text-white">{selectedMember?.name}'s Assessment</h2>
-                         </div>
-                         <button onClick={runAssessment} disabled={isAssessing}
-                           className="bg-[#7CFC00] text-black font-black text-sm px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-[#7CFC00]/80 transition-colors disabled:opacity-50">
-                           {isAssessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-                           Run Threat Assessment
-                         </button>
-                       </div>
-
-                       {/* Threat Details */}
-                       {assessment && (
-                         <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1,y:0}} 
-                           className="p-5 rounded-2xl border" style={{ background: `${assessment.threat_level_color}10`, borderColor: assessment.threat_level_color }}>
-                           <div className="flex items-center gap-2 mb-3">
-                              <span className="font-black px-3 py-1 rounded-full text-xs uppercase" style={{ background: assessment.threat_level_color, color: "#000" }}>
-                                {assessment.threat_level}
-                              </span>
-                              <span className="text-white font-medium text-sm">{assessment.summary}</span>
-                           </div>
-                           <ul className="text-sm text-gray-300 space-y-1 mb-3 list-disc pl-5">
-                             {assessment.key_observations.map((obs: string, i: number) => <li key={i}>{obs}</li>)}
-                           </ul>
-                           <div className="text-sm font-bold text-white bg-black/30 p-3 rounded-xl border border-white/10">
-                              💡 Action: <span className="text-[#7CFC00]">{assessment.coach_recommendation}</span>
-                           </div>
-                         </motion.div>
-                       )}
-
-                       {/* Quick Goals Edit */}
-                       <div className="mt-auto grid grid-cols-2 md:grid-cols-4 gap-2">
-                         {(['calories', 'protein', 'carbs', 'fat'] as const).map(k => (
-                           <div key={k} className="bg-black/30 p-2 rounded-lg border border-white/5 flex items-center justify-between">
-                              <span className="text-[10px] text-gray-400 uppercase font-bold">{k}</span>
-                              <input type="number" 
-                                value={getClientGoals(selectedClientId)[k]} 
-                                onChange={e => saveClientGoal(selectedClientId, k, Number(e.target.value))}
-                                className="w-12 bg-transparent text-white font-bold text-right text-xs outline-none" />
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                  )}
-                </div>
+                {/* Client Log Grid */}
+                {selectedClientLogs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24"
+                    style={{ border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 20 }}>
+                    <Users className="w-12 h-12 mb-4 opacity-20 text-white" />
+                    <p className="font-bold text-white mb-1">No meals logged by this client today</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    {selectedClientLogs.map((entry) => (
+                      <CalorieMarkerCard
+                        key={entry.id}
+                        log={entry}
+                        mode="coach"
+                        isVerifying={verifyingId === entry.id && isVerifying}
+                        onVerify={(id, note) => {
+                          setVerifyingId(id);
+                          verifyLog({ id, action: "verified", coach_note: note });
+                        }}
+                        onEdit={(log) => alert(`Edit macros for: \${log.result?.display_title ?? log.meal}`)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* ── Client Logs Grid ── */}
-            {selectedClientId && selectedClientLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24"
-                style={{ border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 20 }}>
-                <Users className="w-12 h-12 mb-4 opacity-20 text-white" />
-                <p className="font-bold text-white mb-1">No meals logged by this client today</p>
-                <p className="text-sm" style={{ color: "#5A5A5A" }}>
-                  Select another client or check back later
-                </p>
-              </div>
-            ) : selectedClientId ? (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {selectedClientLogs.map((entry) => (
-                  <CalorieMarkerCard
-                    key={entry.id}
-                    log={entry}
-                    mode="coach"
-                    isVerifying={verifyingId === entry.id && isVerifying}
-                    onVerify={(id, note) => {
-                      setVerifyingId(id);
-                      verifyLog({ id, action: "verified", coach_note: note });
-                    }}
-                    onEdit={(log) => alert(`Edit macros for: ${log.result?.display_title ?? log.meal}`)}
-                  />
-                ))}
-              </div>
-            ) : null}
+            )}
           </div>
         )}
 

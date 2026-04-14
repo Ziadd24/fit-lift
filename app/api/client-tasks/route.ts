@@ -9,9 +9,40 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const supabase = getSupabaseAdmin();
-    let query = supabase.from("client_tasks").select("*").order("created_at", { ascending: true });
-    if (memberId) query = query.eq("member_id", parseInt(memberId));
-    const { data, error } = await query;
+
+    if (memberId) {
+      const parsedId = parseInt(memberId);
+      // Verify member belongs to this coach
+      const { data: member } = await supabase
+        .from("members")
+        .select("id")
+        .eq("id", parsedId)
+        .eq("coach_id", coachId)
+        .single();
+      if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+
+      const { data, error } = await supabase
+        .from("client_tasks")
+        .select("*")
+        .eq("member_id", parsedId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return NextResponse.json(data ?? []);
+    }
+
+    // No memberId: all tasks for coach's roster
+    const { data: coachMembers } = await supabase
+      .from("members")
+      .select("id")
+      .eq("coach_id", coachId);
+    const memberIds = (coachMembers || []).map((m: any) => m.id);
+    if (memberIds.length === 0) return NextResponse.json([]);
+
+    const { data, error } = await supabase
+      .from("client_tasks")
+      .select("*")
+      .in("member_id", memberIds)
+      .order("created_at", { ascending: true });
     if (error) throw error;
     return NextResponse.json(data ?? []);
   } catch (error) {

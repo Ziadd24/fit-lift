@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoachLayout } from "@/components/layout/CoachLayout";
-import { useListMembers, useListSessions, useCreateMember, useUpdateMember } from "@/lib/api-hooks";
+import { useListMembers, useListSessions, useUpdateMember, useSearchUnassignedMembers, useAssignMember } from "@/lib/api-hooks";
+import { useClientContext } from "@/lib/use-client-context";
 import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
   Users, Activity, CalendarCheck,
@@ -17,6 +18,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/use-auth";
 import type { Member } from "@/lib/supabase";
+import { DEFAULT_ACTIVITIES, FEATURED_ACTIVITY, PERIOD_DATA, DEMO_EXERCISES } from "@/lib/coach-mock-data";
+import type { ActivityItem } from "@/lib/coach-mock-data";
+import { WorkoutExerciseCard } from "@/components/ui/WorkoutExerciseCard";
+import type { WorkoutExercise } from "@/components/ui/WorkoutExerciseCard";
 
 type TimePeriod = "Day" | "Week" | "Month";
 
@@ -170,9 +175,9 @@ function clientStatus(m: Member) {
 export default function CoachDashboard() {
   const router = useRouter();
   const { currentCoach } = useAuth();
+  const { setSelectedClient } = useClientContext();
   const { data: membersPage, refetch: refetchMembers } = useListMembers();
   const { data: sessions } = useListSessions();
-  const createMemberMutation = useCreateMember();
   const updateMemberMutation = useUpdateMember();
 
   const members: Member[] = membersPage?.members || [];
@@ -182,30 +187,7 @@ export default function CoachDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  /* ── Time Period Data ── */
-  const periodData = {
-    Day: {
-      overview: { total: "+5%", calories: "+1.2%", protein: "+0.5%", carbs: "+1.8%", ring: [{ pct: 0.5, color: "#7CFC00" }, { pct: 0.3, color: "#8B5CF6" }, { pct: 0.2, color: "#F59E0B" }] },
-      output: {
-        cal: { val: "-400 kcal", data: [2, 4, 3, 5, 4, 7, 6, 8, 5] },
-        weight: { val: "-0.2 kg", data: [8, 7.9, 7.9, 7.8, 7.8, 7.7, 7.7, 7.6, 7.6] }
-      }
-    },
-    Week: {
-      overview: { total: "+23%", calories: "+1.25%", protein: "+3.43%", carbs: "+2.12%", ring: [{ pct: 0.6, color: "#7CFC00" }, { pct: 0.25, color: "#8B5CF6" }, { pct: 0.15, color: "#F59E0B" }] },
-      output: {
-        cal: { val: "-1,234 kcal", data: [4, 7, 3, 9, 6, 11, 8, 13, 10] },
-        weight: { val: "-1.2 kg", data: [10, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.8] }
-      }
-    },
-    Month: {
-      overview: { total: "+45%", calories: "+5.2%", protein: "+8.1%", carbs: "+6.4%", ring: [{ pct: 0.4, color: "#7CFC00" }, { pct: 0.4, color: "#8B5CF6" }, { pct: 0.2, color: "#F59E0B" }] },
-      output: {
-        cal: { val: "-5,400 kcal", data: [3, 8, 6, 12, 10, 16, 14, 20, 18] },
-        weight: { val: "-3.5 kg", data: [12, 11, 9, 8.5, 7, 6, 5.5, 4, 3] }
-      }
-    }
-  };
+  const periodData = PERIOD_DATA;
   const currentPeriodData = periodData[timePeriod];
 
   /* ── Daily calorie totals from Nutrition Tracker (localStorage) ── */
@@ -237,30 +219,23 @@ export default function CoachDashboard() {
   const [broadcastText, setBroadcastText] = useState("");
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  /* ── Mock activity items ── */
-  const [activities, setActivities] = useState([
-    { id: 1, title: "Squats", sub: "10 sets of squats", icon: Dumbbell, iconBg: "#8B5CF6", pct: 80 },
-    { id: 2, title: "Low Lunges", sub: "3 sets × 12 reps", icon: Activity, iconBg: "#F59E0B", pct: 60 },
-    { id: 3, title: "Battling Rope", sub: "5 min intervals", icon: TrendingUp, iconBg: "#10B981", pct: 45 },
-  ]);
+  /* ── Activity items — sourced from config, not hardcoded ── */
+  const [activities, setActivities] = useState<ActivityItem[]>(DEFAULT_ACTIVITIES);
 
-  /* ── Create Member ── */
-  const [newClient, setNewClient] = useState({
-    name: "", email: "", phone: "",
-    membership_type: "Monthly", membership_code: "",
-    sub_expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0]
-  });
+  /* ── Workout exercises — sourced from config ── */
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(DEMO_EXERCISES);
 
-  const handleCreateMember = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMemberMutation.mutate(newClient, {
-      onSuccess: () => {
-        refetchMembers();
-        setIsAddOpen(false);
-        setNewClient({ name: "", email: "", phone: "", membership_type: "Monthly", membership_code: "", sub_expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0] });
-      }
-    });
-  };
+  /* ── Search & Assign Unassigned Members ── */
+  const [assignSearchQuery, setAssignSearchQuery] = useState("");
+  const [debouncedAssignSearch, setDebouncedAssignSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedAssignSearch(assignSearchQuery), 500);
+    return () => clearTimeout(t);
+  }, [assignSearchQuery]);
+
+  const { data: unassignedPage, isLoading: isSearchingUnassigned } = useSearchUnassignedMembers(debouncedAssignSearch);
+  const unassignedMembers = unassignedPage?.members || [];
+  const assignMemberMutation = useAssignMember();
 
   const handleEditClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -385,127 +360,76 @@ export default function CoachDashboard() {
           </div>
         </div>
 
-        {/* ══ TOP GRID: Overview | Activity | Output | Calories ══ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+        {/* ══ TOP GRID: Activity | Calories ══ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
 
-          {/* 1. Overview Card */}
+          {/* 1. Today's Activity */}
           <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-            <div style={{ ...cardStyle, padding: 24, height: 280 }}>
-              <div className="flex justify-between items-start mb-4">
-                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Overview</span>
-                <button className="flex items-center gap-1 text-xs" style={{ color: "#8B8B8B" }}>
-                  {timePeriod} <ChevronDown className="w-3 h-3" />
-                </button>
-              </div>
-              {isRefreshing ? <div className="skeleton-shimmer rounded-xl flex-1 h-40" /> : (
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-shrink-0">
-                    <OverviewRing size={120} segments={currentPeriodData.overview.ring} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-bold text-white" style={{ fontSize: 22 }}>{currentPeriodData.overview.total}</span>
-                      <span className="text-xs" style={{ color: "#8B8B8B" }}>Total</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3 flex-1">
-                    {[
-                      { label: "Calories", val: currentPeriodData.overview.calories, dot: "#8B5CF6" },
-                      { label: "Protein", val: currentPeriodData.overview.protein, dot: "#F59E0B" },
-                      { label: "Carbs", val: currentPeriodData.overview.carbs, dot: "#10B981" },
-                    ].map(({ label, val, dot }) => (
-                      <div key={label} className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-                        <span className="text-xs flex-1" style={{ color: "#fff", fontFamily: "Inter,sans-serif" }}>{label}</span>
-                        <span className="text-xs font-semibold" style={{ color: "#7CFC00" }}>{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* 2. Today's Activity */}
-          <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-            <div style={{ ...cardStyle, padding: 24, height: 280, overflow: "hidden", position: "relative" }}>
+            <div style={{ ...cardStyle, padding: 24, height: 280, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
               <div className="flex justify-between items-center mb-4">
                 <span className="font-semibold text-white" style={{ fontSize: 18 }}>Today's Activity</span>
                 <button
-                  onClick={() => setEditActivity(!editActivity)}
-                  className="transition-colors"
-                  style={{ color: editActivity ? "#7CFC00" : "#8B8B8B" }}
+                  onClick={() => { setEditActivity(!editActivity); setNewExTitle(""); setNewExSub(""); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border hover:bg-white/5"
+                  style={{ 
+                     color: editActivity ? "#000" : "#fff", 
+                     background: editActivity ? "#7CFC00" : "transparent",
+                     borderColor: editActivity ? "#7CFC00" : "rgba(255,255,255,0.1)"
+                  }}
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
+                  {editActivity ? "Done" : "Customize"}
                 </button>
               </div>
 
-              {/* Featured MMA card */}
-              <div className="rounded-xl p-4 mb-3 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)", height: 100 }}>
-                <div className="font-bold text-white" style={{ fontSize: 28, fontWeight: 700 }}>1,250</div>
-                <div className="text-xs text-white/80">Sets/Week</div>
-                <div className="absolute bottom-3 left-4 px-3 py-1 rounded-xl text-xs font-semibold uppercase text-white" style={{ background: "rgba(0,0,0,0.35)" }}>MMA</div>
+              {/* Featured activity banner — data from config */}
+              <div className="rounded-xl p-4 mb-3 relative overflow-hidden flex-shrink-0" style={{ background: FEATURED_ACTIVITY.gradient, height: 100 }}>
+                <div className="font-bold text-white" style={{ fontSize: 28, fontWeight: 700 }}>{FEATURED_ACTIVITY.value}</div>
+                <div className="text-xs text-white/80">{FEATURED_ACTIVITY.unit}</div>
+                <div className="absolute bottom-3 left-4 px-3 py-1 rounded-xl text-xs font-semibold uppercase text-white" style={{ background: "rgba(0,0,0,0.35)" }}>{FEATURED_ACTIVITY.label}</div>
               </div>
 
               {/* Activity list — only first 1 visible, scrollable */}
-              <div className="overflow-y-auto no-scrollbar" style={{ maxHeight: 90 }}>
+              <div className="overflow-y-auto no-scrollbar flex-1" style={{ minHeight: 0 }}>
                 {activities.map((a) => (
                   <ActivityItem key={a.id} icon={a.icon} iconBg={a.iconBg} title={a.title} sub={a.sub} pct={a.pct}
                     editMode={editActivity} onDelete={() => setActivities(prev => prev.filter((x) => x.id !== a.id))}
                   />
                 ))}
                 {editActivity && (
-                  <button onClick={() => setActivities([...activities, { id: Date.now(), title: "New Exercise", sub: "1 set × 10 reps", icon: Dumbbell, iconBg: "#7CFC00", pct: 0 }])}
-                    className="w-full rounded-xl flex items-center justify-center gap-2 mt-1 transition-colors hover:bg-[#7CFC00]/20"
-                    style={{ height: 44, border: "2px dashed #7CFC00", background: "rgba(124,252,0,0.08)", color: "#7CFC00", fontSize: 13, fontFamily: "Inter,sans-serif" }}>
-                    <Plus className="w-4 h-4" /> Add Exercise
-                  </button>
+                  <div className="mt-2 p-3 rounded-xl border border-dashed border-[#7CFC00] bg-[#7CFC00]/5 flex flex-col gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Exercise Name (e.g. Squat)" 
+                      value={newExTitle}
+                      onChange={e => setNewExTitle(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#7CFC00]" 
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Details (e.g. 3 sets × 10 reps)" 
+                      value={newExSub}
+                      onChange={e => setNewExSub(e.target.value)}
+                      className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#7CFC00]" 
+                    />
+                    <button 
+                      onClick={() => {
+                        if (newExTitle.trim()) {
+                          setActivities([...activities, { id: Date.now(), title: newExTitle, sub: newExSub || "1 set × 10 reps", icon: Dumbbell, iconBg: "#7CFC00", pct: 0 }]);
+                          setNewExTitle(""); setNewExSub("");
+                        }
+                      }}
+                      className="w-full rounded-lg flex items-center justify-center gap-1.5 transition-colors hover:bg-[#7CFC00]/20"
+                      style={{ height: 32, background: "rgba(124,252,0,0.15)", color: "#7CFC00", fontSize: 12, fontWeight: 600, fontFamily: "Inter,sans-serif" }}>
+                      <Plus className="w-3.5 h-3.5" /> Add Custom Activity
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </motion.div>
 
-          {/* 3. Output Card */}
-          <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-            <div style={{ ...cardStyle, padding: 24, height: 280 }}>
-              <span className="font-semibold text-white block mb-4" style={{ fontSize: 18 }}>Output</span>
-              {isRefreshing ? <SkeletonCard height={200} /> : (
-                <div className="flex flex-col gap-4">
-                  {[
-                    { label: "Calorie loss", value: currentPeriodData.output.cal.val, icon: Flame, color: "#F59E0B", sparkData: currentPeriodData.output.cal.data },
-                    { label: "Weight loss", value: currentPeriodData.output.weight.val, icon: TrendingUp, color: "#10B981", sparkData: currentPeriodData.output.weight.data },
-                  ].map(({ label, value, icon: Icon, color, sparkData }) => (
-                    <div key={label} className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color}22`, border: `1px solid ${color}44` }}>
-                        <Icon className="w-5 h-5" style={{ color }} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs mb-0.5" style={{ color: "#8B8B8B", fontFamily: "Inter,sans-serif" }}>{label}</p>
-                        <p className="font-bold text-white" style={{ fontSize: 16, fontFamily: "Inter,sans-serif" }}>{value}</p>
-                      </div>
-                      <Sparkline values={sparkData} color={color} />
-                    </div>
-                  ))}
-
-                  {/* Mini stat */}
-                  <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
-                    <div className="flex items-center gap-2">
-                      <div className="relative w-10 h-10">
-                        <CircleRing percent={progressPct} color="#7CFC00" size={40} thickness={4} />
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{progressPct}%</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-white">Sessions</p>
-                        <p className="text-[10px]" style={{ color: "#8B8B8B" }}>Completion rate</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold" style={{ color: "#7CFC00" }}>{todaySessions.length} today</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* 4. Calories Gauge Card — live from Nutrition Tracker */}
+          {/* 2. Calories Gauge Card — live from Nutrition Tracker */}
           <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
             <div style={{ ...cardStyle, padding: 24, height: 280, display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div className="flex items-center justify-between w-full mb-3">
@@ -870,7 +794,14 @@ export default function CoachDashboard() {
                     </td>
                     <td className="p-4 text-xs" style={{ color: "#8B8B8B" }}>{m.membership_type}</td>
                     <td className="p-4 text-right" style={{ paddingRight: 24 }}>
-                      <button onClick={() => switchClient(filteredMembers.indexOf(m))} className="text-xs font-bold mr-4 transition-colors hover:opacity-80" style={{ color: "#7CFC00" }}>
+                      <button 
+                         onClick={() => {
+                           setSelectedClient(m.id, m.name);
+                           router.push("/coach/calories");
+                         }} 
+                         className="text-xs font-bold mr-4 transition-colors hover:opacity-80" 
+                         style={{ color: "#7CFC00" }}
+                      >
                         Select
                       </button>
                       <button onClick={() => { setEditingClient(m); setIsEditClientOpen(true); }}
@@ -885,45 +816,79 @@ export default function CoachDashboard() {
             </table>
           </div>
         </div>
+
+        {/* ══ WORKOUT TRACKER ══ */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-white" style={{ fontSize: 20, fontFamily: "Inter,sans-serif" }}>Workout Tracker</h2>
+              <p className="text-sm mt-0.5" style={{ color: "#8B8B8B" }}>Track client exercise sets in real-time</p>
+            </div>
+            <button
+              onClick={() => setExercises(DEMO_EXERCISES)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:opacity-80"
+              style={{ background: "rgba(124,252,0,0.1)", color: "#7CFC00", border: "1px solid rgba(124,252,0,0.2)" }}
+            >
+              Reset Demo
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {exercises.map((ex) => (
+              <WorkoutExerciseCard
+                key={ex.id}
+                exercise={ex}
+                onChange={(updated) =>
+                  setExercises((prev) =>
+                    prev.map((e) => (e.id === updated.id ? updated : e))
+                  )
+                }
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* ══ ADD CLIENT MODAL ══ */}
+      {/* ══ ASSIGN CLIENT MODAL ══ */}
       <AnimatePresence>
         {isAddOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddOpen(false)} />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ ...cardStyle, width: "100%", maxWidth: 520, padding: 32, position: "relative" }}>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white uppercase" style={{ fontFamily: "Inter,sans-serif" }}>Add New Member</h2>
+                <h2 className="text-xl font-bold text-white uppercase" style={{ fontFamily: "Inter,sans-serif" }}>Assign Client to Roster</h2>
                 <button onClick={() => setIsAddOpen(false)} style={{ color: "#8B8B8B" }}><X className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={handleCreateMember} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Full Name</Label><Input required value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} placeholder="Mahmoud Ali" /></div>
-                  <div><Label>Membership Code</Label><Input required value={newClient.membership_code} onChange={e => setNewClient({ ...newClient, membership_code: e.target.value })} placeholder="FL-1234" /></div>
+              <div className="space-y-4">
+                <Input
+                  placeholder="Search unassigned members by name or code..."
+                  value={assignSearchQuery}
+                  onChange={(e) => setAssignSearchQuery(e.target.value)}
+                />
+                <div className="max-h-60 overflow-y-auto space-y-2 mt-4 pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#333 transparent" }}>
+                  {isSearchingUnassigned ? (
+                     <div className="text-sm text-gray-400 text-center py-4">Searching...</div>
+                  ) : unassignedMembers.length === 0 ? (
+                     <div className="text-sm text-gray-500 text-center py-4">No unassigned members found.</div>
+                  ) : (
+                    unassignedMembers.map((m: Member) => (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5">
+                        <div>
+                          <div className="text-white font-bold">{m.name}</div>
+                          <div className="text-xs text-gray-400">{m.membership_code}</div>
+                        </div>
+                        <button
+                          onClick={() => assignMemberMutation.mutate({ id: m.id, action: "assign" }, { onSuccess: () => { refetchMembers(); setIsAddOpen(false); setAssignSearchQuery(""); }})}
+                          disabled={assignMemberMutation.isPending}
+                          className="px-4 py-1.5 rounded-lg text-sm font-bold text-black hover:opacity-80 disabled:opacity-50 transition-opacity"
+                          style={{ background: "#7CFC00" }}
+                        >
+                          {assignMemberMutation.isPending ? "Assigning..." : "Assign"}
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Phone</Label><Input value={newClient.phone} onChange={e => setNewClient({ ...newClient, phone: e.target.value })} placeholder="+20 1..." /></div>
-                  <div><Label>Email</Label><Input type="email" value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} placeholder="email@example.com" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Plan Type</Label>
-                    <select value={newClient.membership_type} onChange={e => setNewClient({ ...newClient, membership_type: e.target.value })}
-                      className="w-full rounded-xl h-10 px-3 text-sm text-white" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      <option value="Monthly">Monthly</option>
-                      <option value="Quarterly">Quarterly</option>
-                      <option value="Yearly">Yearly</option>
-                    </select>
-                  </div>
-                  <div><Label>Expiry Date</Label><Input type="date" value={newClient.sub_expiry_date} onChange={e => setNewClient({ ...newClient, sub_expiry_date: e.target.value })} /></div>
-                </div>
-                <button type="submit" disabled={createMemberMutation.isPending}
-                  className="w-full py-3 rounded-xl font-bold text-sm text-black mt-2"
-                  style={{ background: "#7CFC00", opacity: createMemberMutation.isPending ? 0.7 : 1 }}>
-                  {createMemberMutation.isPending ? "Creating..." : "Confirm Membership"}
-                </button>
-              </form>
+              </div>
             </motion.div>
           </div>
         )}

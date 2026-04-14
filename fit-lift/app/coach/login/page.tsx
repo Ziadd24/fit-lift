@@ -143,7 +143,7 @@ export default function CoachLoginPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="E.g. Ahmed Hassan"
+                    placeholder="Ahmad"
                     required
                   />
                 </div>
@@ -159,7 +159,7 @@ export default function CoachLoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      minLength={6}
+
                       className="pr-12"
                     />
                     <button

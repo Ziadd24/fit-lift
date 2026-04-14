@@ -118,6 +118,59 @@ export function useDeleteMember() {
   });
 }
 
+/**
+ * Search members that are not yet assigned to any coach.
+ * Used by the "Add Client" drawer so a coach can claim existing members.
+ */
+export function useSearchUnassignedMembers(search: string) {
+  const { coachToken } = useAuth();
+  return useQuery<MembersPage>({
+    queryKey: ["members", "unassigned", search],
+    queryFn: async () => {
+      const qs = new URLSearchParams({ unassigned: "true" });
+      if (search) qs.set("search", search);
+      const res = await fetch(`/api/members?${qs.toString()}`, {
+        headers: getAuthHeaders(coachToken),
+      });
+      if (!res.ok) throw new Error("Failed to search members");
+      return res.json();
+    },
+    enabled: !!coachToken,
+    // Only re-fetch when search string changes (debounced by caller)
+    staleTime: 5000,
+  });
+}
+
+/**
+ * Assign an existing member to the currently authenticated coach's roster,
+ * or unassign them (remove from roster).
+ */
+export function useAssignMember() {
+  const { coachToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<Member, Error, { id: number; action: "assign" | "unassign" }>({
+    mutationFn: async ({ id, action }) => {
+      const res = await fetch(`/api/members/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(coachToken),
+        },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update member assignment");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refresh both the coach's roster and the unassigned pool
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
 // ─── Photos ────────────────────────────────────────────────────────────────
 
 export function useListPhotos(params?: { memberId?: number; global?: boolean; category?: string }) {
@@ -469,13 +522,13 @@ export interface CalorieLog {
   member_name?: string;
 }
 
-export function useListCalorieLogs(memberId?: number) {
+export function useListCalorieLogs(memberId?: number | "null" | "all") {
   const { adminToken, coachToken, memberCode } = useAuth();
   const token = adminToken || coachToken || memberCode;
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
-      const qs = memberId ? `?memberId=${memberId}` : "";
+      const qs = memberId && memberId !== "all" ? `?memberId=${memberId}` : "";
       const res = await fetch(`/api/calories${qs}`, {
         headers: getAuthHeaders(token || "client-fallback"),
       });
