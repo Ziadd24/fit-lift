@@ -52,6 +52,7 @@ export default function AdminSettings() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("caption", "schedule-image");
+      formData.append("category", "settings");
       const headers: Record<string, string> = {};
       if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
       const uploadRes = await fetch("/api/upload", {

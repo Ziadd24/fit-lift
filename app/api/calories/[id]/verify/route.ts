@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyCoachAuth } from "@/lib/auth";
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = await params;
   const coachId = await verifyCoachAuth(req);
   if (!coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const logId = parseInt(params.id);
+  const logId = parseInt(idParam);
   if (isNaN(logId)) {
     return NextResponse.json({ error: "Invalid log ID" }, { status: 400 });
   }
