@@ -120,7 +120,7 @@ export function useDeleteMember() {
 
 // ─── Photos ────────────────────────────────────────────────────────────────
 
-export function useListPhotos(params?: { memberId?: number; global?: boolean }) {
+export function useListPhotos(params?: { memberId?: number; global?: boolean; category?: string }) {
   const { adminToken, memberCode } = useAuth();
   return useQuery<Photo[]>({
     queryKey: ["photos", params],
@@ -128,6 +128,7 @@ export function useListPhotos(params?: { memberId?: number; global?: boolean }) 
       const queryParams = new URLSearchParams();
       if (params?.memberId) queryParams.append("memberId", String(params.memberId));
       if (params?.global) queryParams.append("global", "true");
+      if (params?.category) queryParams.append("category", params.category);
       
       const qs = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const res = await fetch(`/api/photos${qs}`, {

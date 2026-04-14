@@ -6,12 +6,11 @@ export async function GET(req: NextRequest) {
   const memberIdParam = searchParams.get("memberId");
   const memberId = memberIdParam ? parseInt(memberIdParam) : null;
   const isGlobal = searchParams.get("global") === "true";
-
   const supabase = getSupabaseAdmin();
 
   let query = supabase
     .from("photos")
-    .select("*, members(name)")
+    .select("id, url, caption, category, member_id, coach_id, created_at, members(name)")
     .order("created_at", { ascending: false });
 
   if (memberId) {
@@ -29,9 +28,12 @@ export async function GET(req: NextRequest) {
     id: p.id,
     url: p.url,
     caption: p.caption,
+    category: p.category,
     member_id: p.member_id,
+    coach_id: p.coach_id,
     created_at: p.created_at,
     member_name: p.members?.name ?? null,
+    coach_name: null,
   }));
 
   return NextResponse.json(photos);

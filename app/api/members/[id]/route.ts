@@ -4,8 +4,9 @@ import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: idParam } = await params;
   const isAdmin = await verifyAdminAuth(req);
   const coachId = await verifyCoachAuth(req);
   if (!isAdmin && !coachId) {
@@ -16,7 +17,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("members")
     .select("*")
-    .eq("id", parseInt(params.id))
+    .eq("id", parseInt(idParam))
     .single();
 
   if (error || !data) {
@@ -27,8 +28,9 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: idParam } = await params;
   const isAdmin = await verifyAdminAuth(req);
   const coachId = await verifyCoachAuth(req);
   if (!isAdmin && !coachId) {
@@ -41,7 +43,7 @@ export async function PUT(
   const { data, error } = await supabase
     .from("members")
     .update(body)
-    .eq("id", parseInt(params.id))
+    .eq("id", parseInt(idParam))
     .select()
     .single();
 
@@ -51,15 +53,16 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: idParam } = await params;
   const isAdmin = await verifyAdminAuth(req);
   const coachId = await verifyCoachAuth(req);
   if (!isAdmin && !coachId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = parseInt(params.id);
+  const id = parseInt(idParam);
   const supabase = getSupabaseAdmin();
 
   const { data: photos } = await supabase

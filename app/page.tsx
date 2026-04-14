@@ -200,12 +200,52 @@ const translations = {
   }
 };
 
+function DynamicPopup() {
+  const { data: popupTitle } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_title"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_title");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const { data: popupMessage } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_message"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_message");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const { data: popupEnabled } = useQuery<{ value: string }>({
+    queryKey: ["setting", "popup_enabled"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings?key=popup_enabled");
+      if (!res.ok) return { value: "" };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const isEnabled = popupEnabled?.value === "true";
+  const title = popupTitle?.value || "";
+  const message = popupMessage?.value || "";
+
+  if (!isEnabled || !title || !message) return null;
+
+  return <AnnouncementPopup />;
+}
+
 function PhotoGallery() {
-  const { data: photos, isLoading } = useListPhotos({ global: true });
+  const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
 
   const images = photos && photos.length > 0
-    ? photos.map(p => p.url)
+    ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
     : ["/images/gym-hero.png"];
 
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
@@ -218,6 +258,14 @@ function PhotoGallery() {
     return () => clearInterval(timer);
   }, [next, images.length]);
 
+  // Pre-load images
+  useEffect(() => {
+    images.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [images]);
+
   if (isLoading) {
     return (
       <div className="rounded-2xl overflow-hidden h-80 bg-black/40 animate-pulse flex items-center justify-center border border-white/10">
@@ -226,22 +274,17 @@ function PhotoGallery() {
     );
   }
 
-
-
   return (
     <div className="rounded-2xl overflow-hidden h-80 relative group bg-black">
-      <AnimatePresence initial={false}>
-        <motion.img
-          key={index}
-          src={images[index]}
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
           alt="Gallery photo"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out"
+          style={{ opacity: i === index ? 1 : 0 }}
         />
-      </AnimatePresence>
+      ))}
       {images.length > 1 && (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -291,6 +334,47 @@ export default function MemberPortal() {
     currentMember ? { memberId: currentMember.id } : undefined
   );
 
+  // Fetch coaches from DB
+  const { data: dbCoaches } = useQuery<any[]>({
+    queryKey: ["db-coaches"],
+    queryFn: async () => {
+      const res = await fetch("/api/coaches");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    retry: false,
+  });
+
+  // Fetch coach photos and build map by coach_id
+  const { data: coachPhotos } = useQuery<any[]>({
+    queryKey: ["photos-coach"],
+    queryFn: async () => {
+      const res = await fetch("/api/photos");
+      if (!res.ok) return [];
+      const allPhotos = await res.json();
+      return allPhotos.filter((p: any) => p.category === "coach");
+    },
+    retry: false,
+  });
+
+  // Build lookup: coach_id -> latest photo URL
+  const coachPhotoMapById: Record<number, string> = {};
+  if (coachPhotos) {
+    coachPhotos.forEach((p) => {
+      if (p.coach_id && !coachPhotoMapById[p.coach_id]) coachPhotoMapById[p.coach_id] = p.url;
+    });
+  }
+
+  // Convert to name-based lookup using dbCoaches
+  const coachPhotoMap: Record<string, string> = {};
+  if (dbCoaches) {
+    dbCoaches.forEach((c: any) => {
+      if (coachPhotoMapById[c.id]) {
+        coachPhotoMap[c.name] = coachPhotoMapById[c.id];
+      }
+    });
+  }
+
   const handleDownload = async (url: string, filename: string) => {
     try {
       const response = await fetch(url);
@@ -331,7 +415,7 @@ export default function MemberPortal() {
   // ─── Landing Page (always visible) ──────────────────────────────────────
   return (
     <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <AnnouncementPopup />
+      <DynamicPopup />
 
       {/* ═══ HERO SECTION ═══ */}
 <section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
@@ -627,24 +711,26 @@ export default function MemberPortal() {
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.coaches.title}</h3>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-4 md:px-0 max-w-full">
-            {t.coaches.coaches.map((coach, i) => (
+            {(dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map(c => ({ name: c.name }))).map((coach: any, i: number) => {
+              const uploadedPhoto = coachPhotoMap[coach.name];
+              return (
               <motion.div key={coach.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
                 <Card className="group border border-white/10 bg-card overflow-hidden active:scale-[0.98] transition-transform">
                   <div className="aspect-square md:aspect-[3/4] overflow-hidden bg-black/40 relative">
                     <img
-                      src={`/images/coach${i+1}.png`}
+                      src={uploadedPhoto || `/images/coach${i+1}.png`}
                       alt={coach.name}
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${coach.name}`; }}
                     />
                   </div>
                   <div className="p-3 md:p-4">
-                    <h4 className="text-white font-bold text-sm md:text-lg">{coach.name}</h4>
-                    <p className="text-white/50 text-xs md:text-sm">{coach.role}</p>
+                    <h4 className="text-white font-bold text-sm md:text-lg">{lang === "ar" ? "كابتن " + coach.name : "Coach " + coach.name}</h4>
                   </div>
                 </Card>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

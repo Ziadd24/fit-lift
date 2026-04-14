@@ -5,6 +5,7 @@ import { verifyAdminAuth } from "@/lib/auth";
 const ALLOWED_SETTINGS_KEYS = new Set([
   "schedule_image_url", "gym_name", "gym_phone", "gym_address",
   "gym_email", "opening_hours", "social_media_links",
+  "popup_enabled", "popup_title", "popup_message",
 ]);
 
 export async function GET(req: NextRequest) {

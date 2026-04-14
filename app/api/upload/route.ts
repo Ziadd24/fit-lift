@@ -34,6 +34,19 @@ export async function POST(req: NextRequest) {
   const photoRecord: Record<string, any> = { url, caption, category };
   if (coachId) photoRecord.coach_id = coachId;
   if (memberId) photoRecord.member_id = memberId;
+
+  // Only one photo per coach — delete old photos first
+  if (coachId) {
+    const { data: oldPhotos } = await supabase
+      .from("photos")
+      .select("url, id")
+      .eq("coach_id", coachId);
+    if (oldPhotos && oldPhotos.length > 0) {
+      const paths = oldPhotos.map((p) => p.url.split("/").slice(-1)[0]).filter(Boolean);
+      if (paths.length > 0) await supabase.storage.from(bucket).remove(paths);
+      await supabase.from("photos").delete().eq("coach_id", coachId);
+    }
+  }
   const { data: insertedPhoto, error: dbError } = await (supabase as any)
     .from("photos").insert(photoRecord).select("*, members(name), coaches!photos_coach_id_fkey(name)").single();
   if (dbError) {
