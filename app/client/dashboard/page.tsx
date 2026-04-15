@@ -906,8 +906,8 @@ export default function ClientDashboard() {
   const [taskFilter, setTaskFilter] = useState("all");
   const { currentMember, logoutMember } = useAuth();
   const isPrivate = CLIENT_DATA.isPrivate;
-  const memberName = currentMember?.name ?? CLIENT_DATA.name;
-  const memberCode = currentMember?.membership_code ?? CLIENT_DATA.id;
+  const memberName = currentMember?.name ?? "Member";
+  const memberCode = currentMember?.membership_code ?? "";
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
 
   const expiryDate = currentMember?.sub_expiry_date ? new Date(currentMember.sub_expiry_date) : null;
@@ -947,7 +947,7 @@ export default function ClientDashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const displayTasks = dbTasks && dbTasks.length > 0 ? dbTasks : CLIENT_DATA.tasks;
+  const displayTasks = dbTasks || [];
 
   const taskStats = {
     total: displayTasks.length,

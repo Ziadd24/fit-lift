@@ -17,8 +17,8 @@ type MembersPage = {
 };
 
 export function useListMembers() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   return useQuery<MembersPage>({
     queryKey: ["members"],
     queryFn: async () => {
@@ -83,8 +83,8 @@ export function useCreateMember() {
 }
 
 export function useUpdateMember() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<Member, Error, { id: number; data: Partial<Member> }>({
     mutationFn: async ({ id, data }) => {
@@ -531,7 +531,7 @@ export function useListCalorieLogs(memberId?: number | "null" | "all") {
     queryFn: async () => {
       const qs = memberId && memberId !== "all" ? `?memberId=${memberId}` : "";
       const res = await fetch(`/api/calories${qs}`, {
-        headers: getAuthHeaders(token || "client-fallback"),
+        headers: getAuthHeaders(token || ""),
       });
       if (!res.ok) throw new Error("Failed to fetch calorie logs");
       return res.json();
@@ -567,8 +567,8 @@ export function useVerifyCalorieLog() {
 }
 
 export function useSaveCalorieLog() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
     mutationFn: async (data) => {
@@ -576,7 +576,7 @@ export function useSaveCalorieLog() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeaders(token || "client-fallback"),
+          ...getAuthHeaders(token || ""),
         },
         body: JSON.stringify(data),
       });
@@ -590,14 +590,14 @@ export function useSaveCalorieLog() {
 }
 
 export function useDeleteCalorieLog() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
       const res = await fetch(`/api/calories/${id}`, {
         method: "DELETE",
-        headers: getAuthHeaders(token || "client-fallback"),
+        headers: getAuthHeaders(token || ""),
       });
       if (!res.ok) throw new Error("Failed to delete calorie log");
     },
@@ -636,8 +636,8 @@ export function useListTasks(memberId?: number) {
 }
 
 export function useCreateTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientTask, Error, Partial<ClientTask>>({
     mutationFn: async (data) => {
@@ -659,8 +659,8 @@ export function useCreateTask() {
 }
 
 export function useUpdateTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientTask, Error, { id: number; data: Partial<ClientTask> }>({
     mutationFn: async ({ id, data }) => {
@@ -682,8 +682,8 @@ export function useUpdateTask() {
 }
 
 export function useDeleteTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
@@ -730,8 +730,8 @@ export function useListWorkouts(memberId?: number) {
 }
 
 export function useCreateWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientWorkout, Error, Partial<ClientWorkout>>({
     mutationFn: async (data) => {
@@ -753,8 +753,8 @@ export function useCreateWorkout() {
 }
 
 export function useUpdateWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientWorkout, Error, { id: number; data: Partial<ClientWorkout> }>({
     mutationFn: async ({ id, data }) => {
@@ -776,8 +776,8 @@ export function useUpdateWorkout() {
 }
 
 export function useDeleteWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
