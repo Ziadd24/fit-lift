@@ -389,12 +389,13 @@ export function useListMessages(memberId: number | null) {
 }
 
 export function useSendMessage() {
-  const { coachToken } = useAuth();
+  const { coachToken, currentMember } = useAuth();
   const queryClient = useQueryClient();
   return useMutation<Message, Error, { memberId: number; content: string; senderType?: string }>({
     mutationFn: async ({ memberId, content, senderType = "member" }) => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (coachToken) headers["Authorization"] = `Bearer ${coachToken}`;
+      else if (currentMember?.membership_code) headers["Authorization"] = `Bearer ${currentMember.membership_code}`;
       const res = await fetch("/api/messages", {
         method: "POST",
         headers,
