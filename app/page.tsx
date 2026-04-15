@@ -246,7 +246,7 @@ function PhotoGallery() {
 
   const images = photos && photos.length > 0
     ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
-    : ["/images/gym-hero.png"];
+    : ["/images/gym-hero.jpg"];
 
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
@@ -777,7 +777,7 @@ export default function MemberPortal() {
               </div>
 
               {/* Map Link Container */}
-              <div className="mt-8 rounded-2xl overflow-hidden h-[200px] md:h-[250px] bg-[linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),url('/images/hero_bg.png')] bg-center bg-cover flex flex-col items-center justify-center border border-white/10">
+              <div className="mt-8 rounded-2xl overflow-hidden h-[200px] md:h-[250px] bg-[linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),url('/images/gym-hero.jpg')] bg-center bg-cover flex flex-col items-center justify-center border border-white/10">
                 <MapPin className="w-8 h-8 md:w-10 md:h-10 text-[#7CFC00] mb-3" />
                 <h3 className="text-white font-bold text-lg md:text-xl mb-4">{t.contact.mapTitle}</h3>
                 <a
