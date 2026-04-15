@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function AnnouncementPopup() {
+export function AnnouncementPopup({ title: propTitle, message: propMessage }: { title?: string; message?: string }) {
   const [isVisible, setIsVisible] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [title, setTitle] = useState("");
@@ -11,6 +11,13 @@ export function AnnouncementPopup() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (propTitle && propMessage) {
+      setTitle(propTitle);
+      setMessage(propMessage);
+      setEnabled(true);
+      setLoaded(true);
+      return;
+    }
     async function fetchPopupSettings() {
       try {
         const res = await fetch("/api/settings?key=popup_enabled");
@@ -31,7 +38,7 @@ export function AnnouncementPopup() {
       }
     }
     fetchPopupSettings();
-  }, []);
+  }, [propTitle, propMessage]);
 
   useEffect(() => {
     if (loaded && enabled) {

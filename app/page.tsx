@@ -237,7 +237,7 @@ function DynamicPopup() {
 
   if (!isEnabled || !title || !message) return null;
 
-  return <AnnouncementPopup />;
+  return <AnnouncementPopup title={title} message={message} />;
 }
 
 function PhotoGallery() {
@@ -793,7 +793,7 @@ export default function MemberPortal() {
             {/* Right Column (Form) */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }} viewport={{ once: true }}>
               <div className="bg-card border border-white/10 rounded-2xl p-5 md:p-8">
-                <form onSubmit={(e) => { e.preventDefault(); alert(t.contact.form.success); }} className="space-y-4 md:space-y-5">
+                <form onSubmit={(e) => { e.preventDefault(); fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))}).then(r=>r.ok&&alert(t.contact.form.success)); }} className="space-y-4 md:space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.name}</Label>
