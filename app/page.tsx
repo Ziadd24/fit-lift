@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useLookupMember, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
@@ -244,9 +244,11 @@ function PhotoGallery() {
   const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
 
-  const images = photos && photos.length > 0
-    ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
-    : ["/images/gym-hero.png"];
+  const images = useMemo(() => (
+    photos && photos.length > 0
+      ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
+      : ["/images/gym-hero.png"]
+  ), [photos]);
 
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);

@@ -6,7 +6,7 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app components lib --ext .js,.jsx,.ts,.tsx",
     "db:migrate": "node -r dotenv/config scripts/migrate.mjs"
   },
   "dependencies": {

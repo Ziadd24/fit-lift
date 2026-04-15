@@ -53,10 +53,12 @@ export function verifyCoachAuth(request: NextRequest): number | null {
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as {
       role?: string;
-      sub?: number;
+      sub?: number | string;
     };
-    if (decoded.role !== "coach" || typeof decoded.sub !== "number") return null;
-    return decoded.sub;
+    if (decoded.role !== "coach") return null;
+    const coachId = typeof decoded.sub === "string" ? parseInt(decoded.sub, 10) : decoded.sub;
+    if (typeof coachId !== "number" || Number.isNaN(coachId)) return null;
+    return coachId;
   } catch { return null; }
 }
 

@@ -127,7 +127,7 @@ export function useSearchUnassignedMembers(search: string) {
   return useQuery<MembersPage>({
     queryKey: ["members", "unassigned", search],
     queryFn: async () => {
-      const qs = new URLSearchParams({ unassigned: "true" });
+      const qs = new URLSearchParams({ assignmentSearch: "true" });
       if (search) qs.set("search", search);
       const res = await fetch(`/api/members?${qs.toString()}`, {
         headers: getAuthHeaders(coachToken),
@@ -523,16 +523,23 @@ export interface CalorieLog {
 }
 
 export function useListCalorieLogs(memberId?: number | "null" | "all") {
-  const { adminToken, coachToken, memberCode } = useAuth();
-  const token = adminToken || coachToken || memberCode;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = adminToken || coachToken || memberCode || currentMember?.membership_code;
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
       const qs = memberId && memberId !== "all" ? `?memberId=${memberId}` : "";
       const res = await fetch(`/api/calories${qs}`, {
-        headers: getAuthHeaders(token || "client-fallback"),
+        headers: getAuthHeaders(token),
       });
-      if (!res.ok) throw new Error("Failed to fetch calorie logs");
+      if (!res.ok) {
+        let message = "Failed to fetch calorie logs";
+        try {
+          const err = await res.json();
+          message = err.error || message;
+        } catch {}
+        throw new Error(message);
+      }
       return res.json();
     },
     refetchInterval: 8000, // Realtime hook handles instant updates; polling is fallback
@@ -566,8 +573,8 @@ export function useVerifyCalorieLog() {
 }
 
 export function useSaveCalorieLog() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = adminToken || coachToken || memberCode || currentMember?.membership_code;
   const queryClient = useQueryClient();
   return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
     mutationFn: async (data) => {
@@ -575,11 +582,18 @@ export function useSaveCalorieLog() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeaders(token || "client-fallback"),
+          ...getAuthHeaders(token),
         },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to save calorie log");
+      if (!res.ok) {
+        let message = "Failed to save calorie log";
+        try {
+          const err = await res.json();
+          message = err.error || message;
+        } catch {}
+        throw new Error(message);
+      }
       return res.json();
     },
     onSuccess: () => {

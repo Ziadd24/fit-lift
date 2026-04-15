@@ -238,6 +238,7 @@ export default function CoachDashboard() {
   const { data: unassignedPage, isLoading: isSearchingUnassigned } = useSearchUnassignedMembers(debouncedAssignSearch);
   const unassignedMembers = unassignedPage?.members || [];
   const assignMemberMutation = useAssignMember();
+  const normalizedAssignSearch = assignSearchQuery.trim().toLowerCase();
 
   const handleEditClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,7 +317,7 @@ export default function CoachDashboard() {
             <h1 className="text-3xl font-bold text-white" style={{ fontFamily: "Inter,sans-serif", fontWeight: 700 }}>
               Welcome back, <span style={{ color: "#7CFC00" }}>{currentCoach?.name || "Coach"}</span>
             </h1>
-            <p className="text-sm mt-1" style={{ color: "#8B8B8B" }}>Here's your coaching overview</p>
+            <p className="text-sm mt-1" style={{ color: "#8B8B8B" }}>Here&apos;s your coaching overview</p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -369,7 +370,7 @@ export default function CoachDashboard() {
           <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
             <div style={{ ...cardStyle, padding: 24, height: 280, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
               <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Today's Activity</span>
+                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Today&apos;s Activity</span>
                 <button
                   onClick={() => { setEditActivity(!editActivity); setNewExTitle(""); setNewExSub(""); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border hover:bg-white/5"
@@ -870,22 +871,56 @@ export default function CoachDashboard() {
                   {isSearchingUnassigned ? (
                      <div className="text-sm text-gray-400 text-center py-4">Searching...</div>
                   ) : unassignedMembers.length === 0 ? (
-                     <div className="text-sm text-gray-500 text-center py-4">No unassigned members found.</div>
+                     <div className="text-sm text-gray-500 text-center py-4">
+                       {normalizedAssignSearch
+                         ? "No members found for that name or code."
+                         : "No unassigned members found."}
+                     </div>
                   ) : (
                     unassignedMembers.map((m: Member) => (
                       <div key={m.id} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5">
-                        <div>
-                          <div className="text-white font-bold">{m.name}</div>
-                          <div className="text-xs text-gray-400">{m.membership_code}</div>
-                        </div>
-                        <button
-                          onClick={() => assignMemberMutation.mutate({ id: m.id, action: "assign" }, { onSuccess: () => { refetchMembers(); setIsAddOpen(false); setAssignSearchQuery(""); }})}
-                          disabled={assignMemberMutation.isPending}
-                          className="px-4 py-1.5 rounded-lg text-sm font-bold text-black hover:opacity-80 disabled:opacity-50 transition-opacity"
-                          style={{ background: "#7CFC00" }}
-                        >
-                          {assignMemberMutation.isPending ? "Assigning..." : "Assign"}
-                        </button>
+                        {(() => {
+                          const coachId = m.coach_id == null ? null : Number(m.coach_id);
+                          const currentCoachId = currentCoach?.id == null ? null : Number(currentCoach.id);
+                          const isUnassigned = coachId == null;
+                          const isInMyRoster = currentCoachId != null && coachId === currentCoachId;
+
+                          return (
+                            <>
+                              <div>
+                                <div className="text-white font-bold">{m.name}</div>
+                                <div className="text-xs text-gray-400">{m.membership_code}</div>
+                                <div className="text-[11px] mt-1">
+                                  {isInMyRoster ? (
+                                    <span className="text-[#7CFC00]">Already in your roster</span>
+                                  ) : isUnassigned ? (
+                                    <span className="text-gray-500">Unassigned</span>
+                                  ) : (
+                                    <span className="text-amber-400">Assigned to another coach</span>
+                                  )}
+                                </div>
+                              </div>
+                              {isUnassigned ? (
+                                <button
+                                  onClick={() => assignMemberMutation.mutate({ id: m.id, action: "assign" }, { onSuccess: () => { refetchMembers(); setIsAddOpen(false); setAssignSearchQuery(""); }})}
+                                  disabled={assignMemberMutation.isPending}
+                                  className="px-4 py-1.5 rounded-lg text-sm font-bold text-black hover:opacity-80 disabled:opacity-50 transition-opacity"
+                                  style={{ background: "#7CFC00" }}
+                                >
+                                  {assignMemberMutation.isPending ? "Assigning..." : "Assign"}
+                                </button>
+                              ) : isInMyRoster ? (
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#7CFC00] border border-[#7CFC00]/30 bg-[#7CFC00]/10">
+                                  Added
+                                </span>
+                              ) : (
+                                <span className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-400 border border-amber-400/30 bg-amber-400/10">
+                                  Unavailable
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ))
                   )}

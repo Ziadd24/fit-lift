@@ -156,7 +156,7 @@ export default function CaloriesPage() {
   // Client Selection & Assessment State
   const { data: membersPage } = useListMembers();
   const members = membersPage?.members || [];
-  const { selectedClientId, clearSelectedClient } = useClientContext();
+  const { selectedClientId, setSelectedClient, clearSelectedClient } = useClientContext();
   const [assessment, setAssessment] = useState<any>(null);
   const [isAssessing, setIsAssessing] = useState(false);
   const [clientGoals, setClientGoals] = useState<Record<number, MacroTotals>>({});
@@ -166,7 +166,7 @@ export default function CaloriesPage() {
     if (selectedClientId && activeTab !== "clients") {
       setActiveTab("clients");
     }
-  }, [selectedClientId]);
+  }, [selectedClientId, activeTab, setActiveTab]);
 
   React.useEffect(() => {
     const stored = localStorage.getItem("fitgym_client_goals");
@@ -289,6 +289,9 @@ export default function CaloriesPage() {
         setImage(null);
         setResult(null);
         textareaRef.current?.focus();
+      },
+      onError: (err: any) => {
+        setError(err.message || "Failed to save calorie log.");
       }
     });
   };
@@ -396,7 +399,7 @@ export default function CaloriesPage() {
                   
                   return (
                     <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                      onClick={() => setSelectedClientId(m.id)}
+                      onClick={() => setSelectedClient(m.id, m.name)}
                       className="cursor-pointer flex flex-col gap-4 p-5 rounded-3xl transition-all border border-white/5 hover:border-[#7CFC00]/30 hover:bg-[#7CFC00]/5"
                       style={cardStyle}>
                       <div className="flex justify-between items-start">
@@ -418,7 +421,7 @@ export default function CaloriesPage() {
                       
                       <div className="flex justify-between items-center bg-black/30 rounded-xl p-3">
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Today's kcal</span>
+                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Today&apos;s kcal</span>
                           <span className="text-white font-black text-lg">{cTotals} <span className="text-xs text-[#7CFC00]">kcal</span></span>
                         </div>
                         <div className="flex flex-col items-end">
@@ -440,7 +443,7 @@ export default function CaloriesPage() {
                     className="flex items-center justify-center w-10 h-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                     <ChevronDown className="w-5 h-5 text-white rotate-90" />
                   </button>
-                  <h2 className="text-2xl font-black text-white">{selectedMember?.name}'s Food Log</h2>
+                  <h2 className="text-2xl font-black text-white">{selectedMember?.name}&apos;s Food Log</h2>
                 </div>
 
                 {/* Client Assessment Panel */}

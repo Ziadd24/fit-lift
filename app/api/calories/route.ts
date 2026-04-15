@@ -6,6 +6,8 @@ export async function GET(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
+    const authHeader = req.headers.get("Authorization");
+    const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
@@ -38,7 +40,7 @@ export async function GET(req: NextRequest) {
         const parsedId = parseInt(memberId);
         if (isNaN(parsedId)) return NextResponse.json({ error: "Invalid memberId" }, { status: 400 });
 
-        // Verify this member belongs to the coach (skip check for admin)
+        // Verify this member belongs to the coach or matches the logged-in client
         if (!isAdmin && coachId) {
           const { data: member } = await supabase
             .from("members")
@@ -47,6 +49,15 @@ export async function GET(req: NextRequest) {
             .eq("coach_id", coachId)
             .single();
           if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+        } else if (!isAdmin) {
+          if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          const { data: member } = await supabase
+            .from("members")
+            .select("id")
+            .eq("id", parsedId)
+            .eq("membership_code", memberCode)
+            .single();
+          if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         query = query.eq("member_id", parsedId);
       }
@@ -68,6 +79,8 @@ export async function POST(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
+    const authHeader = req.headers.get("Authorization");
+    const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
     const { member_id, meal, result, category } = await req.json();
     if (!meal || !result || !category) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -83,6 +96,18 @@ export async function POST(req: NextRequest) {
         .eq("coach_id", coachId)
         .single();
       if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+    } else if (member_id && !isAdmin) {
+      if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const supabaseCheck = getSupabaseAdmin();
+      const { data: member } = await supabaseCheck
+        .from("members")
+        .select("id")
+        .eq("id", member_id)
+        .eq("membership_code", memberCode)
+        .single();
+      if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else if (!member_id && !isAdmin && !coachId) {
+      return NextResponse.json({ error: "member_id is required" }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();

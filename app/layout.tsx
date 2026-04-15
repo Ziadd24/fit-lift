@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
+const metadataBase = new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase,
   title: "FitLift — Premium Fitness Club",
   description:
     "Premium equipment, expert trainers, and a community that pushes you to be your best self.",

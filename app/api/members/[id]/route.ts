@@ -93,6 +93,9 @@ export async function PATCH(
       );
     }
     const newCoachId = isAdmin ? (body.coach_id ?? coachId) : coachId;
+    if (newCoachId == null) {
+      return NextResponse.json({ error: "No coach selected for assignment" }, { status: 400 });
+    }
     const { data, error } = await supabase
       .from("members")
       .update({ coach_id: newCoachId })
@@ -100,6 +103,9 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) {
+      return NextResponse.json({ error: "Member could not be assigned" }, { status: 404 });
+    }
     return NextResponse.json(data);
   }
 
@@ -115,6 +121,9 @@ export async function PATCH(
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) {
+      return NextResponse.json({ error: "Member could not be unassigned" }, { status: 404 });
+    }
     return NextResponse.json(data);
   }
 
