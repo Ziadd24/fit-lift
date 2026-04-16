@@ -31,6 +31,59 @@ const HOME_CARD = `${HOME_LIFT} ${HOME_GLOW}`;
 const HOME_BUTTON_PRIMARY = "transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(124,252,0,0.45)] active:scale-95";
 const HOME_BUTTON_SECONDARY = "transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-[0_0_24px_rgba(124,252,0,0.18)] active:scale-95";
 const ARABIC_LANG_LABEL = "\u0639\u0631\u0628\u064a";
+const GYM_PHONE = "201009987771";
+
+function useIsVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.1) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, threshold]);
+
+  return isVisible;
+}
+
+function useCarousel(itemsLength: number, intervalMs = 4000) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isVisible = useIsVisible(containerRef);
+
+  const scrollToIndex = useCallback((index: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const card = container.children[index] as HTMLElement | undefined;
+    if (!card) return;
+    container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    if (itemsLength > 0) scrollToIndex(0);
+  }, [itemsLength, scrollToIndex]);
+
+  useEffect(() => {
+    if (itemsLength <= 1 || !isVisible) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => {
+        const nextIndex = (current + 1) % itemsLength;
+        scrollToIndex(nextIndex);
+        return nextIndex;
+      });
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [itemsLength, scrollToIndex, isVisible, intervalMs]);
+
+  const goNext = useCallback(() => setActiveIndex((c) => { const n = (c + 1) % itemsLength; scrollToIndex(n); return n; }), [itemsLength, scrollToIndex]);
+  const goPrev = useCallback(() => setActiveIndex((c) => { const n = (c - 1 + itemsLength) % itemsLength; scrollToIndex(n); return n; }), [itemsLength, scrollToIndex]);
+
+  return { activeIndex, setActiveIndex, containerRef, isVisible, scrollToIndex, goNext, goPrev };
+}
 
 function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
   const { data: bundles, isLoading } = useQuery<Bundle[]>({
@@ -51,45 +104,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
     { name: t.pricing.plans[4].name, price: 5000, period: t.pricing.plans[4].period, features: t.pricing.plans[4].features, highlight: false },
   ];
 
-  const [activeIndex, setActiveIndex] = React.useState(0);
-  const pricingCarouselRef = useRef<HTMLDivElement>(null);
-  const [pricingVisible, setPricingVisible] = React.useState(false);
-
-  useEffect(() => {
-    const el = pricingCarouselRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setPricingVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollToBundle = useCallback((index: number) => {
-    const container = pricingCarouselRef.current;
-    if (!container) return;
-    const card = container.children[index] as HTMLElement | undefined;
-    if (!card) return;
-    container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
-  }, []);
-
-  useEffect(() => {
-    if (displayBundles.length > 0) scrollToBundle(0);
-  }, [displayBundles.length, scrollToBundle]);
-
-  useEffect(() => {
-    if (displayBundles.length <= 1 || !pricingVisible) return;
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => {
-        const nextIndex = (current + 1) % displayBundles.length;
-        scrollToBundle(nextIndex);
-        return nextIndex;
-      });
-    }, 4000);
-
-    return () => window.clearInterval(timer);
-  }, [displayBundles.length, scrollToBundle, pricingVisible]);
+  const { activeIndex, setActiveIndex, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length);
 
   return (
     <div className="relative">
@@ -119,7 +134,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
               className={`relative overflow-hidden rounded-[28px] p-7 flex flex-col min-h-[620px] transition-all duration-300 ${
                 bundle.highlight
                   ? "border-2 border-[#47D84B] shadow-[0_0_0_1px_rgba(71,216,75,0.14),0_0_38px_rgba(71,216,75,0.22)]"
-                  : "border border-white/8"
+                  : "border border-white/[0.08]"
               }`}
               style={{
                 background: bundle.highlight
@@ -145,7 +160,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
               <div className="relative z-10 flex flex-col items-center text-center flex-1">
                 <div
                   className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${
-                    bundle.highlight ? "bg-[#47D84B]/12 border border-[#47D84B]/25" : "bg-white/[0.03] border border-white/8"
+                    bundle.highlight ? "bg-[#47D84B]/12 border border-[#47D84B]/25" : "bg-white/[0.03] border border-white/[0.08]"
                   }`}
                 >
                   <Calendar className="w-8 h-8 text-[#47D84B]" strokeWidth={2.2} />
@@ -178,7 +193,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
                 </ul>
 
                 <a
-                  href={`https://wa.me/201009987771?text=${encodeURIComponent(t.pricing.msg.replace("{plan}", bundle.name).replace("{price}", bundle.price.toString()))}`}
+                  href={`https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(t.pricing.msg.replace("{plan}", bundle.name).replace("{price}", bundle.price.toString()))}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`mt-auto w-full py-4 rounded-full font-black text-[15px] tracking-wide text-center transition-all active:scale-95 ${
@@ -197,13 +212,13 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
       <div className="flex justify-center gap-2 mt-4 md:hidden">
         {displayBundles.map((_b: any, i: number) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all ${i === activeIndex ? "w-6 bg-[#47D84B]" : "w-1.5 bg-white/20"}`} />
+          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ease-out ${i === activeIndex ? "w-6 scale-y-110 bg-[#47D84B] shadow-[0_0_8px_rgba(71,216,75,0.5)]" : "w-1.5 scale-y-100 bg-white/20"}`} />
         ))}
       </div>
-      <button onClick={() => setActiveIndex((c) => { const n = (c - 1 + displayBundles.length) % displayBundles.length; scrollToBundle(n); return n; })} className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={pricingPrev} aria-label="Previous plan" className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <button onClick={() => setActiveIndex((c) => { const n = (c + 1) % displayBundles.length; scrollToBundle(n); return n; })} className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={pricingNext} aria-label="Next plan" className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronRight className="w-5 h-5" />
       </button>
     </div>
@@ -212,44 +227,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
 function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, string> }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
-  const [activeCoachIndex, setActiveCoachIndex] = React.useState(0);
-  const coachCarouselRef = useRef<HTMLDivElement>(null);
-  const [coachesVisible, setCoachesVisible] = React.useState(false);
-
-  useEffect(() => {
-    const el = coachCarouselRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setCoachesVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollToCoach = useCallback((index: number) => {
-    const container = coachCarouselRef.current;
-    if (!container) return;
-    const card = container.children[index] as HTMLElement | undefined;
-    if (!card) return;
-    container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
-  }, []);
-
-  useEffect(() => {
-    if (allCoaches.length > 0) scrollToCoach(0);
-  }, [allCoaches.length, scrollToCoach]);
-
-  useEffect(() => {
-    if (allCoaches.length <= 1 || !coachesVisible) return;
-    const timer = window.setInterval(() => {
-      setActiveCoachIndex((current) => {
-        const nextIndex = (current + 1) % allCoaches.length;
-        scrollToCoach(nextIndex);
-        return nextIndex;
-      });
-    }, 4000);
-    return () => window.clearInterval(timer);
-  }, [allCoaches.length, scrollToCoach, coachesVisible]);
+  const { activeIndex: activeCoachIndex, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length);
 
   return (
     <div className="relative">
@@ -282,13 +260,13 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
       </div>
       <div className="flex justify-center gap-2 mt-4">
         {allCoaches.map((_coach: any, i: number) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all ${i === activeCoachIndex ? "w-6 bg-[#7CFC00]" : "w-1.5 bg-white/20"}`} />
+          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ease-out ${i === activeCoachIndex ? "w-6 scale-y-110 bg-[#7CFC00] shadow-[0_0_8px_rgba(124,252,0,0.5)]" : "w-1.5 scale-y-100 bg-white/20"}`} />
         ))}
       </div>
-      <button onClick={() => setActiveCoachIndex((c) => { const n = (c - 1 + allCoaches.length) % allCoaches.length; scrollToCoach(n); return n; })} className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={coachPrev} aria-label="Previous coach" className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <button onClick={() => setActiveCoachIndex((c) => { const n = (c + 1) % allCoaches.length; scrollToCoach(n); return n; })} className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={coachNext} aria-label="Next coach" className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronRight className="w-5 h-5" />
       </button>
     </div>
@@ -303,19 +281,9 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-const scheduleData = [
-  { id: 'sat', day: 'Saturday', men_morn: '24 Hours', women: '3PM  9PM', men_eve: '9PM  7AM' },
-  { id: 'sun', day: 'Sunday', men_morn: '24 Hours', women: '9AM  5PM', men_eve: '5PM  7AM' },
-  { id: 'mon', day: 'Monday', men_morn: '24 Hours', women: '3PM  9PM', men_eve: '9PM  7AM' },
-  { id: 'tue', day: 'Tuesday', men_morn: '24 Hours', women: '9AM  5PM', men_eve: '5PM  7AM' },
-  { id: 'wed', day: 'Wednesday', men_morn: '24 Hours', women: '3PM  9PM', men_eve: '9PM  7AM' },
-  { id: 'thu', day: 'Thursday', men_morn: '12AM  3PM', women: '3PM  9PM', men_eve: '9PM  12AM' },
-  { id: 'fri', day: 'Friday', men_morn: '24 Hours', women: '2PM  8PM', men_eve: '8PM  7AM' },
-];
-
 const translations = {
   en: {
-    nav: { about: "About Us", services: "Services", schedule: "Schedule", pricing: "Pricing", coaches: "Coaches", contact: "Contact", login: "Member Login" },
+    nav: { about: "About Us", services: "Services", schedule: "Schedule", pricing: "Pricing", coaches: "Coaches", contact: "Contact", login: "Member Login", dashboard: "Dashboard", logout: "Logout" },
     hero: { title1: "Push Your", title2: "Limits", desc: "Premium equipment, expert trainers, and a community that pushes you to be your best self. Welcome to the next level of fitness.", join: "Join Now", login: "Member Login" },
     about: { tag: "About Us", title: "More Than Just A Gym", p1: "FIT & LIFT was founded on a simple principle: provide the best environment for people who are serious about their fitness journey. We are not just a place with weights; we are a community of dedicated individuals.", p2: "Whether you are a beginner learning the ropes or a seasoned athlete prepping for competition, our state-of-the-art facility and expert staff are here to support your goals.", years: "Years", members: "Members", coaches: "Coaches", active: "Active Members" },
     services: { tag: "What We Offer", title: "World-Class Facilities", items: [
@@ -342,7 +310,7 @@ const translations = {
     modal: { title: "Member Login", desc: "Enter your membership code to access your portal.", code: "Membership Code", placeholder: "e.g. FL-1234", btn: "Access Portal", loading: "Verifying..." }
   },
   ar: {
-    nav: { about: "عنا", services: "الخدمات", schedule: "الجدول", pricing: "الأسعار", coaches: "المدربين", contact: "تواصل معنا", login: "دخول الأعضاء" },
+    nav: { about: "عنا", services: "الخدمات", schedule: "الجدول", pricing: "الأسعار", coaches: "المدربين", contact: "تواصل معنا", login: "دخول الأعضاء", dashboard: "لوحة التحكم", logout: "تسجيل الخروج" },
     hero: { title1: "جاوز", title2: "حدودك", desc: "أفضل معدات، مدربين محترفين، وجيم بيكفلك تكون أحسن نسخة من نفسك. أهلاً بيك في المستوى التالي.", join: "انضم دلوقتي", login: "دخول الأعضاء" },
     about: { tag: "عنا", title: "أكتر من مجرد جيم", p1: "FIT & LIFT اتبنت على فكرة بسيطة: نوفر أحسن مكان للناس اللي جادة في رحلتهم الرياضية. احنا مش مجرد مكان فيه أوزان، احنا مجتمع من ناس ملتزمة وبيحبوا الجيم.", p2: "سواء كنت مبتدئ بتتعلم الأساسيات ولا رياضي محترف بيستعد لبطولات، مرافقنا الحديثة وفريقنا المتخصص هنا عشان يساعدوك تحقق أهدافك.", years: "سنة خبرة", members: "عضو", coaches: "مدرب", active: "عضو نشط" },
     services: { tag: "إيه اللي بنقدمه", title: "مرفقة عالمية", items: [
@@ -371,39 +339,23 @@ const translations = {
 };
 
 function DynamicPopup() {
-  const { data: popupTitle } = useQuery<{ value: string }>({
-    queryKey: ["setting", "popup_title"],
+  const { data } = useQuery<Record<string, string>>({
+    queryKey: ["popup-settings"],
     queryFn: async () => {
-      const res = await fetch("/api/settings?key=popup_title");
-      if (!res.ok) return { value: "" };
+      const res = await fetch("/api/settings/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys: ["popup_enabled", "popup_title", "popup_message"] }),
+      });
+      if (!res.ok) return {};
       return res.json();
     },
     retry: false,
   });
 
-  const { data: popupMessage } = useQuery<{ value: string }>({
-    queryKey: ["setting", "popup_message"],
-    queryFn: async () => {
-      const res = await fetch("/api/settings?key=popup_message");
-      if (!res.ok) return { value: "" };
-      return res.json();
-    },
-    retry: false,
-  });
-
-  const { data: popupEnabled } = useQuery<{ value: string }>({
-    queryKey: ["setting", "popup_enabled"],
-    queryFn: async () => {
-      const res = await fetch("/api/settings?key=popup_enabled");
-      if (!res.ok) return { value: "" };
-      return res.json();
-    },
-    retry: false,
-  });
-
-  const isEnabled = popupEnabled?.value === "true";
-  const title = popupTitle?.value || "";
-  const message = popupMessage?.value || "";
+  const isEnabled = data?.popup_enabled === "true";
+  const title = data?.popup_title || "";
+  const message = data?.popup_message || "";
 
   if (!isEnabled || !title || !message) return null;
 
@@ -414,7 +366,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const isVisible = useIsVisible(galleryRef, 0.15);
 
   const images = photos && photos.length > 0
     ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
@@ -423,22 +375,16 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
 
-  useEffect(() => {
-    const el = galleryRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const imagesLengthRef = useRef(images.length);
+  imagesLengthRef.current = images.length;
 
   useEffect(() => {
-    if (images.length <= 1) return;
-    const timer = setInterval(next, 4000);
+    if (imagesLengthRef.current <= 1 || !isVisible) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % imagesLengthRef.current);
+    }, 3000);
     return () => clearInterval(timer);
-  }, [next, images.length, isVisible]);
+  }, [isVisible]);
 
   // Pre-load ALL images on mount for smooth crossfade
   useEffect(() => {
@@ -470,7 +416,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             opacity: idx === index ? 1 : 0,
-            transition: idx === index ? 'opacity 1s ease-in-out' : 'opacity 0.4s ease-in-out',
+            transition: 'opacity 1.2s ease-in-out',
             willChange: 'opacity',
             zIndex: idx === index ? 1 : 0,
           }}
@@ -479,10 +425,10 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
       {images.length > 1 && (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <button onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
+          <button onClick={prev} aria-label="Previous photo" className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
+          <button onClick={next} aria-label="Next photo" className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
             <ChevronRight className="w-5 h-5" />
           </button>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-50 transition-opacity duration-300 z-10">
@@ -504,6 +450,7 @@ export default function MemberPortal() {
   const [error, setError] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "photos">("overview");
+  const [contactSuccess, setContactSuccess] = useState(false);
     // Fetch schedule image from settings
   const { data: scheduleSetting } = useQuery<{ value: string }>({
     queryKey: ["setting", "schedule_image_url"],
@@ -605,201 +552,196 @@ export default function MemberPortal() {
     <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
       <DynamicPopup />
 
-<section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
-
-  <div className="absolute inset-0 z-0">
-    <img
-      src="/images/gym-hero.jpg"
-      alt={lang === "ar" ? "\u062c\u064a\u0645 FIT & LIFT" : "Fit & Lift Gym Interior"}
-      className="w-full h-full object-cover object-center"
-    />
-    {/* Dark overlay using website background color (dark navy) */}
-    <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.55) 100%)' }} />
-    {/* Bottom fade into page background */}
-    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgb(10,10,10) 0%, transparent 40%)' }} />
-    {/* Subtle lime grid overlay */}
-    <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(124,252,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,252,0,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
-  </div>
-
-  {/* Side accent bars */}
-  <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
-
-  <nav className="fixed top-0 left-0 right-0 z-50 h-[80px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
-    <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
-      {/* Logo */}
-      <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
-        <img src="/images/logo.png" alt="Fit and Lift" className="h-[76px] w-auto object-contain" />
-        <span className="text-base font-black text-primary tracking-widest hidden sm:block">FIT & LIFT</span>
-      </a>
-
-      {/* Nav Links */}
-      <div className="hidden lg:flex items-center gap-10">
-        {[
-          { href: '#about', label: t.nav.about },
-          { href: '#services', label: t.nav.services },
-          { href: '#schedule', label: t.nav.schedule },
-          { href: '#pricing', label: t.nav.pricing },
-          { href: '#coaches', label: t.nav.coaches },
-          { href: '#contact', label: t.nav.contact },
-        ].map((link) => (
-          <a key={link.href} href={link.href} className="nav-link-hero text-xs font-semibold text-white/70 hover:text-white uppercase tracking-widest transition-colors">
-            {link.label}
-          </a>
-        ))}
-      </div>
-
-      {/* Right: Lang + Auth */}
-      <div className="hidden lg:flex items-center gap-4">
-        <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1" dir="ltr">
-          <button onClick={() => setLang("en")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
-          <button onClick={() => setLang("ar")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>{ARABIC_LANG_LABEL}</button>
+      <section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
+      
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/images/gym-hero.jpg"
+            alt={lang === "ar" ? "\u062c\u064a\u0645 FIT & LIFT" : "Fit & Lift Gym Interior"}
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Dark overlay using website background color (dark navy) */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.55) 100%)' }} />
+          {/* Bottom fade into page background */}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgb(10,10,10) 0%, transparent 40%)' }} />
+          {/* Subtle lime grid overlay */}
+          <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(124,252,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,252,0,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
         </div>
-        {currentMember ? (
-          <>
-            <span className="text-sm text-white/70 font-medium">{currentMember.name}</span>
-            <Button onClick={() => router.push("/client/dashboard")} className="bg-primary text-primary-foreground rounded-full px-5 font-bold text-sm hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2 transition-all">
-              <LayoutDashboard className="w-4 h-4" /> Dashboard
-            </Button>
-            <button onClick={() => { logoutMember(); router.push("/"); }} className="text-white/40 hover:text-white transition-colors px-2">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </>
-        ) : (
-          <Button onClick={() => router.push("/client/login")} className="bg-primary text-primary-foreground rounded-full px-6 font-bold text-sm hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2 transition-all">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            {t.nav.login}
-          </Button>
-        )}
-      </div>
-
-      {/* Mobile hamburger */}
-      <div className="lg:hidden">
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-      </div>
-    </div>
-  </nav>
-
-  {/* Mobile Menu */}
-  <AnimatePresence>
-    {isMobileMenuOpen && (
-      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-        className="lg:hidden fixed top-[80px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
-        style={{ background: 'rgba(0,0,0,0.97)' }}>
-        <div className="px-6 py-6 flex flex-col gap-4">
-          {[
-            { href: '#about', label: t.nav.about },
-            { href: '#services', label: t.nav.services },
-            { href: '#schedule', label: t.nav.schedule },
-            { href: '#pricing', label: t.nav.pricing },
-            { href: '#coaches', label: t.nav.coaches },
-            { href: '#contact', label: t.nav.contact },
-          ].map((link) => (
-            <a key={link.href} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-base font-semibold text-white/80 hover:text-primary transition-colors">{link.label}</a>
-          ))}
-          <div className="flex items-center gap-2 mt-2 pt-4 border-t border-white/10" dir="ltr">
-            <button onClick={() => { setLang("en"); setIsMobileMenuOpen(false); }} className={`px-4 py-2 rounded-full text-sm font-bold ${lang === "en" ? "bg-primary text-primary-foreground" : "border border-white/10 text-white/60"}`}>EN</button>
-            <button onClick={() => { setLang("ar"); setIsMobileMenuOpen(false); }} className={`px-4 py-2 rounded-full text-sm font-bold ${lang === "ar" ? "bg-primary text-primary-foreground" : "border border-white/10 text-white/60"}`}>{ARABIC_LANG_LABEL}</button>
+      
+        {/* Side accent bars */}
+        <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
+      
+        <nav className="fixed top-0 left-0 right-0 z-50 h-[80px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
+          <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
+            {/* Logo */}
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
+              <img src="/images/logo.png" alt="Fit and Lift" className="h-[90px] w-auto object-contain" />
+              <span className="text-lg font-black text-primary tracking-widest hidden sm:block">FIT & LIFT</span>
+            </a>
+      
+            {/* Nav Links */}
+            <div className="hidden lg:flex items-center gap-10">
+              {[
+                { href: '#about', label: t.nav.about },
+                { href: '#services', label: t.nav.services },
+                { href: '#schedule', label: t.nav.schedule },
+                { href: '#pricing', label: t.nav.pricing },
+                { href: '#coaches', label: t.nav.coaches },
+                { href: '#contact', label: t.nav.contact },
+              ].map((link) => (
+                <a key={link.href} href={link.href} className="nav-link-hero text-xs font-semibold text-white/70 hover:text-white uppercase tracking-widest transition-colors">
+                  {link.label}
+                </a>
+              ))}
+            </div>
+      
+            {/* Right: Lang + Auth */}
+            <div className="hidden lg:flex items-center gap-4">
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1" dir="ltr">
+                <button onClick={() => setLang("en")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
+                <button onClick={() => setLang("ar")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>{ARABIC_LANG_LABEL}</button>
+              </div>
+              {currentMember ? (
+                <>
+                  <span className="text-sm text-white/70 font-medium">{currentMember.name}</span>
+                  <Button onClick={() => router.push("/client/dashboard")} className="bg-primary text-primary-foreground rounded-full px-5 font-bold text-sm hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2 transition-all">
+                    <LayoutDashboard className="w-4 h-4" /> {t.nav.dashboard}
+                  </Button>
+                  <button onClick={() => { logoutMember(); router.push("/"); }} aria-label={t.nav.logout} className="text-white/40 hover:text-white transition-colors px-2">
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <Button onClick={() => router.push("/client/login")} className="bg-primary text-primary-foreground rounded-full px-6 font-bold text-sm hover:scale-105 hover:shadow-[0_4px_20px_rgba(124,252,0,0.4)] active:scale-95 flex items-center gap-2 transition-all">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  {t.nav.login}
+                </Button>
+              )}
+            </div>
+      
+            {/* Mobile hamburger + Language */}
+            <div className="lg:hidden flex items-center gap-2">
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-0.5" dir="ltr">
+                <button onClick={() => setLang("en")} className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
+                <button onClick={() => setLang("ar")} className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>{ARABIC_LANG_LABEL}</button>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
-          <Button onClick={() => { router.push("/client/login"); setIsMobileMenuOpen(false); }} className="bg-primary text-primary-foreground w-full mt-2 font-bold">{t.nav.login}</Button>
-          {currentMember && (
-            <>
-              <Button onClick={() => { router.push("/client/dashboard"); setIsMobileMenuOpen(false); }} className="bg-white/10 text-white w-full font-bold flex items-center gap-2 justify-center">
-                <LayoutDashboard className="w-4 h-4" /> Dashboard
-              </Button>
-              <Button onClick={() => { logoutMember(); setIsMobileMenuOpen(false); }} className="bg-white/5 text-white/60 w-full font-bold flex items-center gap-2 justify-center hover:text-red-400">
-                <LogOut className="w-4 h-4" /> Logout
-              </Button>
-            </>
+        </nav>
+      
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden fixed top-[80px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
+              style={{ background: 'rgba(0,0,0,0.97)' }}>
+              <div className="px-6 py-6 flex flex-col gap-4">
+                {[
+                  { href: '#about', label: t.nav.about },
+                  { href: '#services', label: t.nav.services },
+                  { href: '#schedule', label: t.nav.schedule },
+                  { href: '#pricing', label: t.nav.pricing },
+                  { href: '#coaches', label: t.nav.coaches },
+                  { href: '#contact', label: t.nav.contact },
+                ].map((link) => (
+                  <a key={link.href} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-base font-semibold text-white/80 hover:text-primary transition-colors">{link.label}</a>
+                ))}
+                <div className="flex items-center gap-2 mt-2 pt-4 border-t border-white/10" dir="ltr">
+                  <button onClick={() => { setLang("en"); setIsMobileMenuOpen(false); }} className={`px-4 py-2 rounded-full text-sm font-bold ${lang === "en" ? "bg-primary text-primary-foreground" : "border border-white/10 text-white/60"}`}>EN</button>
+                  <button onClick={() => { setLang("ar"); setIsMobileMenuOpen(false); }} className={`px-4 py-2 rounded-full text-sm font-bold ${lang === "ar" ? "bg-primary text-primary-foreground" : "border border-white/10 text-white/60"}`}>{ARABIC_LANG_LABEL}</button>
+                </div>
+                <Button onClick={() => { router.push("/client/login"); setIsMobileMenuOpen(false); }} className="bg-primary text-primary-foreground w-full mt-2 font-bold">{t.nav.login}</Button>
+                {currentMember && (
+                  <>
+                    <Button onClick={() => { router.push("/client/dashboard"); setIsMobileMenuOpen(false); }} className="bg-white/10 text-white w-full font-bold flex items-center gap-2 justify-center">
+                      <LayoutDashboard className="w-4 h-4" /> {t.nav.dashboard}
+                    </Button>
+                    <Button onClick={() => { logoutMember(); setIsMobileMenuOpen(false); }} className="bg-white/5 text-white/60 w-full font-bold flex items-center gap-2 justify-center hover:text-red-400">
+                      <LogOut className="w-4 h-4" /> {t.nav.logout}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+      
+        <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[110px] pb-20 sm:pb-24">
+      
+          {/* Tag line */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
+            className="flex items-center gap-3 mb-5 sm:mb-6">
+            <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+            <span className="text-primary text-[12px] sm:text-xs font-bold uppercase tracking-[3px] sm:tracking-[4px]">
+              {lang === "ar" ? "\u0623\u0641\u0636\u0644 \u062c\u064a\u0645 \u0641\u064a \u0628\u0646\u0647\u0627" : "Benha's No.1 Gym"}
+            </span>
+          </motion.div>
+      
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 70, damping: 18 }}
+            className="font-extrabold uppercase leading-[1.1] mb-5 sm:mb-6 max-w-3xl"
+            style={{ fontSize: 'clamp(54px, 14vw, 108px)', letterSpacing: '2px', fontFamily: "'Montserrat', sans-serif" }}
+          >
+            <span className="text-white block">{lang === "ar" ? "\u062c\u0627\u0648\u0632" : "Push Your"}</span>
+            <span className="text-primary block">{lang === "ar" ? "\u062d\u062f\u0648\u062f\u0643." : "Limits."}</span>
+            <span className="block" style={{ color: '#0a0a0a', WebkitTextStroke: '2px rgba(255,255,255,0.5)', paintOrder: 'stroke fill', letterSpacing: '-1px', fontSize: '0.82em', lineHeight: '1.15', marginTop: '0.1em', display: 'block' }}>
+              {lang === "ar" ? "\u0648\u0635\u0644 \u0644\u062d\u062f \u0627\u0644\u0623\u0642\u0635\u0649." : "Reach Your Potential."}
+            </span>
+          </motion.h1>
+      
+          {/* Accent line */}
+          <motion.div
+            initial={{ scaleX: 0, originX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.55, duration: 0.5 }}
+            className="w-14 sm:w-16 h-[3px] bg-primary mb-5 sm:mb-6"
+          />
+      
+          {/* Description */}
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
+            className="text-white/60 text-[15px] sm:text-base leading-relaxed max-w-[90%] sm:max-w-md mb-10 sm:mb-10">
+            {lang === "ar"
+              ? "\u0623\u0641\u0636\u0644 \u0645\u0639\u062f\u0627\u062a\u060c \u0645\u062f\u0631\u0628\u064a\u0646 \u0645\u062d\u062a\u0631\u0641\u064a\u0646\u060c \u0648\u062c\u064a\u0645 \u0628\u064a\u0643\u0641\u0644\u0643 \u062a\u0643\u0648\u0646 \u0623\u062d\u0633\u0646 \u0646\u0633\u062e\u0629 \u0645\u0646 \u0646\u0641\u0633\u0643."
+              : "Premium equipment, expert trainers, and a community that pushes you to be your best self."}
+          </motion.p>
+      
+          {/* CTA Buttons */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+            <a href="#pricing"
+              className={cn("inline-flex items-center justify-center bg-primary text-primary-foreground font-black uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full w-full sm:w-auto", HOME_BUTTON_PRIMARY)}>
+              {lang === "ar" ? "\u0627\u0646\u0636\u0645 \u062f\u0644\u0648\u0642\u062a\u064a" : "Join Now"}
+            </a>
+            <button onClick={() => router.push('/client/login')}
+              className={cn("inline-flex items-center justify-center border border-white/25 text-white font-bold uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full hover:text-primary w-full sm:w-auto", HOME_BUTTON_SECONDARY)}>
+              {t.nav.login}
+            </button>
+          </motion.div>
+      
+
         </div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-
-  <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[110px] pb-20 sm:pb-24">
-
-    {/* Tag line */}
-    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
-      className="flex items-center gap-3 mb-5 sm:mb-6">
-      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-      <span className="text-primary text-[12px] sm:text-xs font-bold uppercase tracking-[3px] sm:tracking-[4px]">
-        {lang === "ar" ? "\u0623\u0641\u0636\u0644 \u062c\u064a\u0645 \u0641\u064a \u0628\u0646\u0647\u0627" : "Benha's No.1 Gym"}
-      </span>
-    </motion.div>
-
-    {/* Headline */}
-    <motion.h1
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, type: "spring", stiffness: 70, damping: 18 }}
-      className="font-extrabold uppercase leading-[1.1] mb-5 sm:mb-6 max-w-3xl"
-      style={{ fontSize: 'clamp(54px, 14vw, 108px)', letterSpacing: '2px', fontFamily: "'Montserrat', sans-serif" }}
-    >
-      <span className="text-white block">{lang === "ar" ? "\u062c\u0627\u0648\u0632" : "Push Your"}</span>
-      <span className="text-primary block">{lang === "ar" ? "\u062d\u062f\u0648\u062f\u0643." : "Limits."}</span>
-      <span className="block" style={{ color: 'transparent', WebkitTextStroke: '2px rgba(255,255,255,0.45)', paintOrder: 'stroke fill', letterSpacing: lang === "ar" ? '0px' : '-1px', fontSize: '0.82em', lineHeight: '1.15', marginTop: '0.1em', display: 'block' }}>
-        {lang === "ar" ? "\u0648\u0635\u0644 \u0644\u062d\u062f \u0627\u0644\u0623\u0642\u0635\u0649." : "Reach Your Potential."}
-      </span>
-    </motion.h1>
-
-    {/* Accent line */}
-    <motion.div
-      initial={{ scaleX: 0, originX: 0 }}
-      animate={{ scaleX: 1 }}
-      transition={{ delay: 0.55, duration: 0.5 }}
-      className="w-14 sm:w-16 h-[3px] bg-primary mb-5 sm:mb-6"
-    />
-
-    {/* Description */}
-    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
-      className="text-white/60 text-[15px] sm:text-base leading-relaxed max-w-[90%] sm:max-w-md mb-10 sm:mb-10">
-      {lang === "ar"
-        ? "\u0623\u0641\u0636\u0644 \u0645\u0639\u062f\u0627\u062a\u060c \u0645\u062f\u0631\u0628\u064a\u0646 \u0645\u062d\u062a\u0631\u0641\u064a\u0646\u060c \u0648\u062c\u064a\u0645 \u0628\u064a\u0643\u0641\u0644\u0643 \u062a\u0643\u0648\u0646 \u0623\u062d\u0633\u0646 \u0646\u0633\u062e\u0629 \u0645\u0646 \u0646\u0641\u0633\u0643."
-        : "Premium equipment, expert trainers, and a community that pushes you to be your best self."}
-    </motion.p>
-
-    {/* CTA Buttons */}
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
-      className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-      <a href="#pricing"
-        className={cn("inline-flex items-center justify-center bg-primary text-primary-foreground font-black uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full w-full sm:w-auto", HOME_BUTTON_PRIMARY)}>
-        {lang === "ar" ? "\u0627\u0646\u0636\u0645 \u062f\u0644\u0648\u0642\u062a\u064a" : "Join Now"}
-      </a>
-      <button onClick={() => router.push('/client/login')}
-        className={cn("inline-flex items-center justify-center border border-white/25 text-white font-bold uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full hover:text-primary w-full sm:w-auto", HOME_BUTTON_SECONDARY)}>
-        {t.nav.login}
-      </button>
-    </motion.div>
-
-    {/* Mobile stats strip */}
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
-      className="flex sm:hidden items-center justify-between mt-12 pt-8 border-t border-white/10">
-      {[{ n: "15+", l: lang === "ar" ? "سنة" : "Years" }, { n: "5K+", l: lang === "ar" ? "عضو" : "Members" }, { n: "25", l: lang === "ar" ? "مدرب" : "Coaches" }].map((s, i) => (
-        <div key={i} className="text-center flex-1">
-          <p className="text-2xl font-black text-primary leading-none">{s.n}</p>
-          <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">{s.l}</p>
-        </div>
-      ))}
-    </motion.div>
-  </div>
-
-  <motion.div
-    initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 }}
-    className="hidden lg:flex flex-col absolute left-8 top-1/2 -translate-y-1/2 items-center gap-5 z-20">
-    <a href="https://www.facebook.com/share/1E86b6Vp3n/" target="_blank" rel="noopener noreferrer"
-      className="text-white/30 hover:text-primary transition-colors">
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-    </a>
-    <div className="w-px h-10 bg-white/10" />
-    <a href="https://www.instagram.com/fit.and.lift.gym" target="_blank" rel="noopener noreferrer"
-      className="text-white/30 hover:text-primary transition-colors">
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-    </a>
-  </motion.div>
-
-</section>
+      
+        <motion.div
+          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 }}
+          className="hidden lg:flex flex-col absolute left-8 top-1/2 -translate-y-1/2 items-center gap-5 z-20">
+          <a href="https://www.facebook.com/share/1E86b6Vp3n/" target="_blank" rel="noopener noreferrer"
+            className="text-white/30 hover:text-primary transition-colors">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <div className="w-px h-10 bg-white/10" />
+          <a href="https://www.instagram.com/fit.and.lift.gym" target="_blank" rel="noopener noreferrer"
+            className="text-white/30 hover:text-primary transition-colors">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+        </motion.div>
+      
+      </section>
 
       {/* About */}
       <section id="about" className="py-24 bg-background">
@@ -825,8 +767,8 @@ export default function MemberPortal() {
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 60 }} whileInView={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.15 }} viewport={{ once: true, margin: "-50px" }} className="relative">
               <PhotoGallery lang={lang} />
-              <div className="absolute -bottom-6 -left-6 bg-primary text-black px-7 py-5 rounded-2xl font-bold rtl:-right-6 rtl:-left-auto z-10 w-[140px]" dir="ltr">
-                <p className="text-4xl font-black">500+</p>
+              <div className="absolute -bottom-6 -left-6 bg-primary text-black px-7 py-5 rounded-2xl font-bold rtl:-right-6 rtl:-left-auto z-10 w-auto min-w-[140px]" dir="ltr">
+                <p className="text-4xl font-black whitespace-nowrap">500+</p>
                 <p className="text-[11px] md:text-sm uppercase tracking-widest whitespace-nowrap">{t.about.active}</p>
               </div>
             </motion.div>
@@ -965,37 +907,46 @@ export default function MemberPortal() {
             {/* Right Column (Form) */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }} viewport={{ once: true }}>
               <div className="bg-card border border-white/10 rounded-2xl p-5 md:p-8">
-                <form onSubmit={(e) => { e.preventDefault(); fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))}).then(r=>r.ok&&alert(t.contact.form.success)); }} className="space-y-4 md:space-y-5">
+                <form onSubmit={(e) => { e.preventDefault(); setContactSuccess(false); fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))}).then(r=>{if(r.ok){setContactSuccess(true);(e.target as HTMLFormElement).reset();}}); }} className="space-y-4 md:space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.name}</Label>
-                      <input type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input name="name" type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.phone}</Label>
-                      <input type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input name="phone" type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.email}</Label>
-                    <input type="email" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                    <input name="email" type="email" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.subject}</Label>
-                    <select required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm appearance-none cursor-pointer">
-                      <option value="membership">{t.contact.form.subj1}</option>
-                      <option value="class">{t.contact.form.subj2}</option>
-                      <option value="pt">{t.contact.form.subj3}</option>
-                      <option value="other">{t.contact.form.subj4}</option>
-                    </select>
+                    <div className="relative">
+                      <select name="subject" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm appearance-none cursor-pointer pr-10">
+                        <option value="membership">{t.contact.form.subj1}</option>
+                        <option value="class">{t.contact.form.subj2}</option>
+                        <option value="pt">{t.contact.form.subj3}</option>
+                        <option value="other">{t.contact.form.subj4}</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.message}</Label>
-                    <textarea required rows={3} className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all min-h-[100px] text-sm resize-y"></textarea>
+                    <textarea name="message" required rows={3} className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all min-h-[100px] text-sm resize-y"></textarea>
                   </div>
+
+                  {contactSuccess && (
+                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-[#47D84B] text-sm font-medium flex items-center gap-2">
+                      <Check className="w-4 h-4" /> {t.contact.form.success}
+                    </motion.p>
+                  )}
 
                   <button type="submit" className={cn("w-full bg-[#7CFC00] text-black font-bold uppercase tracking-wider text-sm py-4 rounded-xl", HOME_BUTTON_PRIMARY)}>
                     {t.contact.form.send}
@@ -1009,7 +960,7 @@ export default function MemberPortal() {
 
       {/* Floating WhatsApp Button */}
       <a
-        href="https://wa.me/201009987771"
+        href={`https://wa.me/${GYM_PHONE}`}
         target="_blank"
         rel="noopener noreferrer"
         className={cn("fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg shadow-[#25D366]/30", HOME_BUTTON_PRIMARY)}
@@ -1025,7 +976,7 @@ export default function MemberPortal() {
             <img src="/images/logo.png" alt="FIT & LIFT" className="h-[128px] w-auto object-contain" />
             <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
           </a>
-          <p className="text-muted-foreground text-sm"> {new Date().getFullYear()} {t.footer.rights}</p>
+          <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} {t.footer.rights}</p>
         </div>
       </footer>
 
