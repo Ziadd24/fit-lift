@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://your-domain.com"),
   title: "FitLift — Premium Fitness Club",
   description:
     "Premium equipment, expert trainers, and a community that pushes you to be your best self.",

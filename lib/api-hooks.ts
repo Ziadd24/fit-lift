@@ -6,7 +6,7 @@ function getAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ─── Members ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type MembersPage = {
   members: Member[];
@@ -17,8 +17,8 @@ type MembersPage = {
 };
 
 export function useListMembers() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   return useQuery<MembersPage>({
     queryKey: ["members"],
     queryFn: async () => {
@@ -83,8 +83,8 @@ export function useCreateMember() {
 }
 
 export function useUpdateMember() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<Member, Error, { id: number; data: Partial<Member> }>({
     mutationFn: async ({ id, data }) => {
@@ -171,7 +171,7 @@ export function useAssignMember() {
   });
 }
 
-// ─── Photos ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListPhotos(params?: { memberId?: number; global?: boolean; category?: string }) {
   const { adminToken, memberCode } = useAuth();
@@ -231,7 +231,7 @@ export function useDeletePhoto() {
   });
 }
 
-// ─── Announcements ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Announcements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListAnnouncements(params?: { memberId?: number }) {
   const { adminToken, currentMember } = useAuth();
@@ -293,7 +293,7 @@ export function useDeleteAnnouncement() {
   });
 }
 
-// ─── Admin Auth ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Admin Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useAdminLogin() {
   return useMutation<
@@ -313,7 +313,7 @@ export function useAdminLogin() {
   });
 }
 
-// ─── Coach Auth ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Coach Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useCoachLogin() {
   return useMutation<
@@ -357,7 +357,7 @@ export function useCoachRegister() {
   });
 }
 
-// ─── Messages ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListConversations() {
   const { coachToken } = useAuth();
@@ -393,12 +393,13 @@ export function useListMessages(memberId: number | null) {
 }
 
 export function useSendMessage() {
-  const { coachToken } = useAuth();
+  const { coachToken, currentMember } = useAuth();
   const queryClient = useQueryClient();
   return useMutation<Message, Error, { memberId: number; content: string; senderType?: string }>({
     mutationFn: async ({ memberId, content, senderType = "member" }) => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (coachToken) headers["Authorization"] = `Bearer ${coachToken}`;
+      else if (currentMember?.membership_code) headers["Authorization"] = `Bearer ${currentMember.membership_code}`;
       const res = await fetch("/api/messages", {
         method: "POST",
         headers,
@@ -413,7 +414,7 @@ export function useSendMessage() {
   });
 }
 
-// ─── Sessions ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListSessions(date?: string) {
   const { coachToken } = useAuth();
@@ -489,7 +490,7 @@ export function useUpdateSession() {
   });
 }
 
-// ─── Calories ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Calories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface FoodItem {
   name: string;
@@ -534,7 +535,7 @@ export function useListCalorieLogs(memberId?: number | "null" | "all") {
     queryFn: async () => {
       const qs = memberId && memberId !== "all" ? `?memberId=${memberId}` : "";
       const res = await fetch(`/api/calories${qs}`, {
-        headers: getAuthHeaders(token),
+        headers: getAuthHeaders(token || ""),
       });
       if (!res.ok) throw new Error("Failed to fetch calorie logs");
       return res.json();
@@ -579,7 +580,7 @@ export function useSaveCalorieLog() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAuthHeaders(token),
+          ...getAuthHeaders(token || ""),
         },
         body: JSON.stringify(data),
       });
@@ -593,14 +594,14 @@ export function useSaveCalorieLog() {
 }
 
 export function useDeleteCalorieLog() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
       const res = await fetch(`/api/calories/${id}`, {
         method: "DELETE",
-        headers: getAuthHeaders(token || "client-fallback"),
+        headers: getAuthHeaders(token || ""),
       });
       if (!res.ok) throw new Error("Failed to delete calorie log");
     },
@@ -610,7 +611,7 @@ export function useDeleteCalorieLog() {
   });
 }
 
-// ─── Client Tasks ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Client Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ClientTask {
   id: number;
@@ -639,8 +640,8 @@ export function useListTasks(memberId?: number) {
 }
 
 export function useCreateTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientTask, Error, Partial<ClientTask>>({
     mutationFn: async (data) => {
@@ -662,8 +663,8 @@ export function useCreateTask() {
 }
 
 export function useUpdateTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientTask, Error, { id: number; data: Partial<ClientTask> }>({
     mutationFn: async ({ id, data }) => {
@@ -685,8 +686,8 @@ export function useUpdateTask() {
 }
 
 export function useDeleteTask() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
@@ -702,7 +703,7 @@ export function useDeleteTask() {
   });
 }
 
-// ─── Client Workouts ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Client Workouts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ClientWorkout {
   id: number;
@@ -733,8 +734,8 @@ export function useListWorkouts(memberId?: number) {
 }
 
 export function useCreateWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientWorkout, Error, Partial<ClientWorkout>>({
     mutationFn: async (data) => {
@@ -756,8 +757,8 @@ export function useCreateWorkout() {
 }
 
 export function useUpdateWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<ClientWorkout, Error, { id: number; data: Partial<ClientWorkout> }>({
     mutationFn: async ({ id, data }) => {
@@ -779,8 +780,8 @@ export function useUpdateWorkout() {
 }
 
 export function useDeleteWorkout() {
-  const { adminToken, coachToken } = useAuth();
-  const token = adminToken || coachToken || "client-fallback";
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || "";
   const queryClient = useQueryClient();
   return useMutation<void, Error, { id: number }>({
     mutationFn: async ({ id }) => {
