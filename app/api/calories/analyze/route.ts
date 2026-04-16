@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const mealText = meal ? meal.trim() : "this image of a meal";
 
@@ -68,8 +68,16 @@ Rules:
     }
 
     const text = result.response.text().trim();
-    const cleaned = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
-    const parsed = JSON.parse(cleaned);
+    console.log("[analyze] Raw Gemini Response:", text);
+    
+    let parsed;
+    try {
+      const cleaned = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr: any) {
+      console.error("[analyze] JSON Parse Error:", parseErr.message, "Text:", text);
+      return NextResponse.json({ error: "Failed to parse AI response." }, { status: 502 });
+    }
 
     // Validate structure
     if (!parsed.totals || typeof parsed.totals.calories !== "number") {
@@ -88,9 +96,9 @@ Rules:
 
     return NextResponse.json(parsed);
   } catch (err: any) {
-    console.error("[calories/analyze] Error:", err.message);
+    console.error("[calories/analyze] Fatal Error:", err);
     return NextResponse.json(
-      { error: "Failed to analyze meal. Please try again." },
+      { error: `AI Error: ${err.message || "Unknown error"}` },
       { status: 500 }
     );
   }

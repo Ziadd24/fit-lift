@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type") || "all";
   // unassigned=true → return members with no coach (for the assign-member drawer)
   const unassigned = searchParams.get("unassigned") === "true";
-  const assignmentSearch = searchParams.get("assignmentSearch") === "true";
 
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -30,14 +29,7 @@ export async function GET(req: NextRequest) {
     // Admin sees all members regardless of coach assignment
     // (no coach_id filter)
   } else if (coachId) {
-    if (assignmentSearch) {
-      // Coach assign drawer:
-      // - with no search, show unassigned members by default
-      // - with search, show all matching members so exact code lookups don't silently disappear
-      if (!search.trim()) {
-        query = query.is("coach_id", null);
-      }
-    } else if (unassigned) {
+    if (unassigned) {
       // Coach is searching for members to assign — show unassigned ones
       query = query.is("coach_id", null);
     } else {

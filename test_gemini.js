@@ -4,7 +4,7 @@ async function test() {
 require('dotenv').config({ path: '.env.local' });
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
   try {
     const prompt = 'Test';

@@ -98,7 +98,7 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
   const [justLogged, setJustLogged] = useState<any | null>(null);
   const { data: logs } = useListCalorieLogs(memberId);
   const log = logs || [];
-  const { mutateAsync: saveCalorieLogAsync } = useSaveCalorieLog();
+  const { mutate: saveCalorieLog } = useSaveCalorieLog();
   const [image, setImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logExpanded, setLogExpanded] = useState(false);
@@ -151,15 +151,16 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed");
 
-      const saved = await saveCalorieLogAsync({
-        member_id: memberId,
-        meal: trimmed || "Photo Upload",
-        result: data,
-        category: getMealCategory(Date.now()),
-      });
-      setJustLogged(saved);
-      setMeal("");
-      setImage(null);
+      saveCalorieLog(
+        { member_id: memberId, meal: trimmed || "Photo Upload", result: data, category: getMealCategory(Date.now()) },
+        {
+          onSuccess: (saved) => {
+            setJustLogged(saved);
+            setMeal("");
+            setImage(null);
+          },
+        }
+      );
     } catch (err: any) {
       setError(err.message || "Failed to analyze meal.");
     } finally {
@@ -322,7 +323,7 @@ export default function NutritionTab({ isPrivate, memberId }: { isPrivate: boole
 
       {/* ── Meal Breakdown Sections ── */}
       <div className="space-y-4">
-        <h2 className="text-white text-lg font-bold mb-4">Today&apos;s Meals</h2>
+        <h2 className="text-white text-lg font-bold mb-4">Today's Meals</h2>
         <MealSection
           title="Breakfast"
           icon={<Apple size={16} color="#F59E0B" />}

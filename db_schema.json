@@ -1,11 +1,12 @@
 {
   "membersInfo": null,
   "mErr": {
-    "code": "PGRST202",
-    "details": "Searched for the function public.get_schema_info with parameter table_name or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.",
-    "hint": null,
-    "message": "Could not find the function public.get_schema_info(table_name) in the schema cache"
+    "message": "Legacy API keys are disabled",
+    "hint": "Your legacy API keys (anon, service_role) were disabled on 2026-04-06T22:41:18.897378+00:00. Re-enable them in the Supabase dashboard, or use the new publishable and secret API keys."
   },
-  "ziad": [],
-  "zErr": null
+  "ziad": null,
+  "zErr": {
+    "message": "Legacy API keys are disabled",
+    "hint": "Your legacy API keys (anon, service_role) were disabled on 2026-04-06T22:41:18.897378+00:00. Re-enable them in the Supabase dashboard, or use the new publishable and secret API keys."
+  }
 }

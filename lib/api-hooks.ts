@@ -375,15 +375,19 @@ export function useListConversations() {
 }
 
 export function useListMessages(memberId: number | null) {
+  const { coachToken, memberCode, currentMember } = useAuth();
+  const token = coachToken || memberCode || currentMember?.membership_code;
   return useQuery<Message[]>({
     queryKey: ["messages", memberId],
     queryFn: async () => {
       if (!memberId) return [];
-      const res = await fetch(`/api/messages?memberId=${memberId}`);
+      const res = await fetch(`/api/messages?memberId=${memberId}`, {
+        headers: getAuthHeaders(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!token,
     refetchInterval: 5000, // Poll every 5s
   });
 }
@@ -523,8 +527,8 @@ export interface CalorieLog {
 }
 
 export function useListCalorieLogs(memberId?: number | "null" | "all") {
-  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
-  const token = adminToken || coachToken || memberCode || currentMember?.membership_code;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
@@ -532,14 +536,7 @@ export function useListCalorieLogs(memberId?: number | "null" | "all") {
       const res = await fetch(`/api/calories${qs}`, {
         headers: getAuthHeaders(token),
       });
-      if (!res.ok) {
-        let message = "Failed to fetch calorie logs";
-        try {
-          const err = await res.json();
-          message = err.error || message;
-        } catch {}
-        throw new Error(message);
-      }
+      if (!res.ok) throw new Error("Failed to fetch calorie logs");
       return res.json();
     },
     refetchInterval: 8000, // Realtime hook handles instant updates; polling is fallback
@@ -573,8 +570,8 @@ export function useVerifyCalorieLog() {
 }
 
 export function useSaveCalorieLog() {
-  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
-  const token = adminToken || coachToken || memberCode || currentMember?.membership_code;
+  const { adminToken, coachToken, memberCode } = useAuth();
+  const token = adminToken || coachToken || memberCode;
   const queryClient = useQueryClient();
   return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
     mutationFn: async (data) => {
@@ -586,14 +583,7 @@ export function useSaveCalorieLog() {
         },
         body: JSON.stringify(data),
       });
-      if (!res.ok) {
-        let message = "Failed to save calorie log";
-        try {
-          const err = await res.json();
-          message = err.error || message;
-        } catch {}
-        throw new Error(message);
-      }
+      if (!res.ok) throw new Error("Failed to save calorie log");
       return res.json();
     },
     onSuccess: () => {

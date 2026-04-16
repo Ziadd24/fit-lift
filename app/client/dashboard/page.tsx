@@ -1094,19 +1094,19 @@ export default function ClientDashboard() {
           >
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 background: "rgba(124,252,0,0.1)",
                 border: "1px solid rgba(124,252,0,0.3)",
-                borderRadius: 10,
+                borderRadius: 12,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Dumbbell size={18} color="#7CFC00" />
+              <Dumbbell size={20} color="#7CFC00" />
             </div>
-            <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "2px", color: "#FFFFFF" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "2px", color: "#FFFFFF" }}>
               FIT & LIFT
             </span>
           </div>
@@ -1560,7 +1560,7 @@ export default function ClientDashboard() {
             </motion.div>
           )}
 
-          {activeNav === "progress" && <ProgressTab isPrivate={isPrivate} />}
+          {activeNav === "progress" && <ProgressTab isPrivate={isPrivate} memberId={memberId!} />}
 
           {activeNav === "coach" && (
             <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0}>

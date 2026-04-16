@@ -2,11 +2,14 @@
   "name": "fitgym",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <24"
+  },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app components lib --ext .js,.jsx,.ts,.tsx",
+    "lint": "next lint",
     "db:migrate": "node -r dotenv/config scripts/migrate.mjs"
   },
   "dependencies": {
