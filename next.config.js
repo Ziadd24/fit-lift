@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ['192.168.1.7'],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
@@ -24,7 +25,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.supabase.co https://wa.me",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' http://192.168.1.7:* https://*.supabase.co wss://*.supabase.co",
               "frame-ancestors 'none'",
             ].join("; "),
           },

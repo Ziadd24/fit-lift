@@ -571,7 +571,7 @@ export default function MemberPortal() {
         {/* Side accent bars */}
         <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
       
-        <nav className="fixed top-0 left-0 right-0 z-50 h-[80px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
+        <nav className="fixed top-0 left-0 right-0 z-50 h-[96px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
           <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
             {/* Logo */}
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
@@ -625,7 +625,7 @@ export default function MemberPortal() {
                 <button onClick={() => setLang("en")} className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
                 <button onClick={() => setLang("ar")} className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>{ARABIC_LANG_LABEL}</button>
               </div>
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2 relative z-[60]">
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
@@ -636,7 +636,7 @@ export default function MemberPortal() {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden fixed top-[80px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
+              className="lg:hidden fixed top-[96px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
               style={{ background: 'rgba(0,0,0,0.97)' }}>
               <div className="px-6 py-6 flex flex-col gap-4">
                 {[
@@ -669,10 +669,10 @@ export default function MemberPortal() {
           )}
         </AnimatePresence>
       
-        <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[110px] pb-20 sm:pb-24">
+        <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[126px] pb-20 sm:pb-24">
       
           {/* Tag line */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
+          <motion.div animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
             className="flex items-center gap-3 mb-5 sm:mb-6">
             <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
             <span className="text-primary text-[12px] sm:text-xs font-bold uppercase tracking-[3px] sm:tracking-[4px]">
@@ -682,7 +682,6 @@ export default function MemberPortal() {
       
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 70, damping: 18 }}
             className="font-extrabold uppercase leading-[1.1] mb-5 sm:mb-6 max-w-3xl"
@@ -704,7 +703,7 @@ export default function MemberPortal() {
           />
       
           {/* Description */}
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
+          <motion.p animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
             className="text-white/60 text-[15px] sm:text-base leading-relaxed max-w-[90%] sm:max-w-md mb-10 sm:mb-10">
             {lang === "ar"
               ? "\u0623\u0641\u0636\u0644 \u0645\u0639\u062f\u0627\u062a\u060c \u0645\u062f\u0631\u0628\u064a\u0646 \u0645\u062d\u062a\u0631\u0641\u064a\u0646\u060c \u0648\u062c\u064a\u0645 \u0628\u064a\u0643\u0641\u0644\u0643 \u062a\u0643\u0648\u0646 \u0623\u062d\u0633\u0646 \u0646\u0633\u062e\u0629 \u0645\u0646 \u0646\u0641\u0633\u0643."
@@ -712,7 +711,7 @@ export default function MemberPortal() {
           </motion.p>
       
           {/* CTA Buttons */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
+          <motion.div animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
             <a href="#pricing"
               className={cn("inline-flex items-center justify-center bg-primary text-primary-foreground font-black uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full w-full sm:w-auto", HOME_BUTTON_PRIMARY)}>
@@ -728,7 +727,7 @@ export default function MemberPortal() {
         </div>
       
         <motion.div
-          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 }}
+          animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 }}
           className="hidden lg:flex flex-col absolute left-8 top-1/2 -translate-y-1/2 items-center gap-5 z-20">
           <a href="https://www.facebook.com/share/1E86b6Vp3n/" target="_blank" rel="noopener noreferrer"
             className="text-white/30 hover:text-primary transition-colors">
