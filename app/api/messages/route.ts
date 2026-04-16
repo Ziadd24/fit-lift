@@ -13,7 +13,18 @@ export async function GET(req: NextRequest) {
     if (isNaN(memberId)) return NextResponse.json({ error: "Invalid memberId" }, { status: 400 });
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
-    if (!coachId && !isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!coachId && !isAdmin) {
+      const authHeader = req.headers.get("Authorization");
+      const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+      if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const { data: memberData } = await supabase
+        .from("members")
+        .select("id")
+        .eq("id", memberId)
+        .eq("membership_code", memberCode)
+        .single();
+      if (!memberData) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { data, error } = await supabase.from("messages").select("*").eq("member_id", memberId).order("created_at", { ascending: true });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data ?? []);

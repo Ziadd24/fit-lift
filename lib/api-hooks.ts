@@ -6,7 +6,7 @@ function getAuthHeaders(token?: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ─── Members ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type MembersPage = {
   members: Member[];
@@ -127,7 +127,7 @@ export function useSearchUnassignedMembers(search: string) {
   return useQuery<MembersPage>({
     queryKey: ["members", "unassigned", search],
     queryFn: async () => {
-      const qs = new URLSearchParams({ unassigned: "true" });
+      const qs = new URLSearchParams({ assignmentSearch: "true" });
       if (search) qs.set("search", search);
       const res = await fetch(`/api/members?${qs.toString()}`, {
         headers: getAuthHeaders(coachToken),
@@ -171,7 +171,7 @@ export function useAssignMember() {
   });
 }
 
-// ─── Photos ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListPhotos(params?: { memberId?: number; global?: boolean; category?: string }) {
   const { adminToken, memberCode } = useAuth();
@@ -231,7 +231,7 @@ export function useDeletePhoto() {
   });
 }
 
-// ─── Announcements ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Announcements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListAnnouncements(params?: { memberId?: number }) {
   const { adminToken, currentMember } = useAuth();
@@ -293,7 +293,7 @@ export function useDeleteAnnouncement() {
   });
 }
 
-// ─── Admin Auth ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Admin Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useAdminLogin() {
   return useMutation<
@@ -313,7 +313,7 @@ export function useAdminLogin() {
   });
 }
 
-// ─── Coach Auth ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Coach Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useCoachLogin() {
   return useMutation<
@@ -357,7 +357,7 @@ export function useCoachRegister() {
   });
 }
 
-// ─── Messages ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListConversations() {
   const { coachToken } = useAuth();
@@ -375,15 +375,19 @@ export function useListConversations() {
 }
 
 export function useListMessages(memberId: number | null) {
+  const { coachToken, memberCode, currentMember } = useAuth();
+  const token = coachToken || memberCode || currentMember?.membership_code;
   return useQuery<Message[]>({
     queryKey: ["messages", memberId],
     queryFn: async () => {
       if (!memberId) return [];
-      const res = await fetch(`/api/messages?memberId=${memberId}`);
+      const res = await fetch(`/api/messages?memberId=${memberId}`, {
+        headers: getAuthHeaders(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
-    enabled: !!memberId,
+    enabled: !!memberId && !!token,
     refetchInterval: 5000, // Poll every 5s
   });
 }
@@ -410,7 +414,7 @@ export function useSendMessage() {
   });
 }
 
-// ─── Sessions ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function useListSessions(date?: string) {
   const { coachToken } = useAuth();
@@ -486,7 +490,7 @@ export function useUpdateSession() {
   });
 }
 
-// ─── Calories ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Calories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface FoodItem {
   name: string;
@@ -607,7 +611,7 @@ export function useDeleteCalorieLog() {
   });
 }
 
-// ─── Client Tasks ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Client Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ClientTask {
   id: number;
@@ -699,7 +703,7 @@ export function useDeleteTask() {
   });
 }
 
-// ─── Client Workouts ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Client Workouts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ClientWorkout {
   id: number;
