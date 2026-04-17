@@ -2,8 +2,10 @@
 
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, BarChart2, Eye, EyeOff, Flame, Plus, Signal, Star, Target, TrendingDown, TrendingUp, Trophy, WifiOff, Zap } from "lucide-react";
+import { Activity, BarChart2, Eye, EyeOff, Flame, Info, Plus, Signal, Star, Target, TrendingDown, TrendingUp, Trophy, WifiOff, Zap } from "lucide-react";
 import { useProgressDashboard, type CoachGoal } from "@/lib/use-progress-dashboard";
+import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
+import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
 
 function cardStyle() {
   return {
@@ -20,16 +22,69 @@ function statusTone(state: "online" | "offline" | "syncing") {
   return { bg: "rgba(124,252,0,0.12)", border: "rgba(124,252,0,0.22)", color: "#B9FF8B", label: "Realtime live" };
 }
 
+function ProgressLoadingState() {
+  return (
+    <div className="flex flex-col gap-4 md:gap-5">
+      <div style={cardStyle()}>
+        <SkeletonBlock width={220} height={26} />
+        <SkeletonBlock width="52%" height={14} style={{ marginTop: 10 }} />
+      </div>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} style={cardStyle()}>
+            <SkeletonBlock width={38} height={38} radius={12} />
+            <SkeletonBlock width="55%" height={28} style={{ marginTop: 12 }} />
+            <SkeletonBlock width="72%" height={14} style={{ marginTop: 10 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ ...cardStyle(), minHeight: 360 }}>
+        <SkeletonBlock width={180} height={20} />
+        <SkeletonBlock width="100%" height={240} style={{ marginTop: 18 }} />
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <SkeletonBlock width="100%" height={280} style={{ background: "#16161A" }} />
+        <SkeletonBlock width="100%" height={280} style={{ background: "#16161A" }} />
+      </div>
+    </div>
+  );
+}
+
+function GoalHistoryChart({ points }: { points: Array<{ label: string; current: number; target: number }> }) {
+  if (!points.length) {
+    return <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Not enough history yet.</div>;
+  }
+
+  const width = 220;
+  const height = 72;
+  const max = Math.max(...points.flatMap((point) => [point.current, point.target]), 1);
+  const x = (index: number) => (index / Math.max(points.length - 1, 1)) * (width - 8) + 4;
+  const y = (value: number) => height - (value / max) * (height - 16) - 8;
+  const currentPath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${x(index)} ${y(point.current)}`).join(" ");
+  const targetPath = points.map((point, index) => `${index === 0 ? "M" : "L"} ${x(index)} ${y(point.target)}`).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: 72 }}>
+      <path d={targetPath} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={2} strokeDasharray="4 5" />
+      <path d={currentPath} fill="none" stroke="#7CFC00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function TrendChart({
   points,
   selectedKey,
   showComparison,
   onSelect,
+  hoveredKey,
+  onHover,
 }: {
   points: Array<{ key: string; shortLabel: string; value: number; previousValue: number }>;
   selectedKey: string | null;
   showComparison: boolean;
   onSelect: (key: string) => void;
+  hoveredKey: string | null;
+  onHover: (key: string | null) => void;
 }) {
   const width = 680;
   const height = 200;
@@ -57,8 +112,14 @@ function TrendChart({
       {showComparison && <path d={buildPath(points.map((point) => point.previousValue))} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth={2} strokeDasharray="6 6" />}
       <path d={buildPath(points.map((point) => point.value))} fill="none" stroke="#7CFC00" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point, index) => (
-        <g key={point.key} onClick={() => onSelect(point.key)} style={{ cursor: "pointer" }}>
-          <circle cx={x(index)} cy={y(point.value)} r={selectedKey === point.key ? 7 : 5} fill={selectedKey === point.key ? "#FFFFFF" : "#7CFC00"} stroke="#111114" strokeWidth={2} />
+        <g
+          key={point.key}
+          onClick={() => onSelect(point.key)}
+          onMouseEnter={() => onHover(point.key)}
+          onMouseLeave={() => onHover(null)}
+          style={{ cursor: "pointer" }}
+        >
+          <circle cx={x(index)} cy={y(point.value)} r={selectedKey === point.key || hoveredKey === point.key ? 7 : 5} fill={selectedKey === point.key || hoveredKey === point.key ? "#FFFFFF" : "#7CFC00"} stroke="#111114" strokeWidth={2} />
           <text x={x(index)} y={height - 8} textAnchor="middle" fill={selectedKey === point.key ? "#FFFFFF" : "#74747A"} fontSize={11}>
             {point.shortLabel}
           </text>
@@ -106,6 +167,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
     bodyMetricCards,
     personalRecords,
     goals,
+    goalHistory,
     workoutsDone,
     caloriesBurned,
     efficiency,
@@ -124,19 +186,34 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
   } = useProgressDashboard(memberId);
 
   const [search, setSearch] = useState("");
+  const [recordFilter, setRecordFilter] = useState<"upper" | "lower" | "30d" | "all">("all");
+  const [hoveredPointKey, setHoveredPointKey] = useState<string | null>(null);
+  const [showRiskInfo, setShowRiskInfo] = useState(false);
+  const { disableHeavyAnimations } = useDashboardMotion();
   const tone = statusTone(connectionState);
   const filteredRecords = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return personalRecords;
-    return personalRecords.filter((record) => record.exercise.toLowerCase().includes(needle));
-  }, [personalRecords, search]);
+    return personalRecords.filter((record) => {
+      const matchesSearch = !needle || record.exercise.toLowerCase().includes(needle);
+      const lowerName = record.exercise.toLowerCase();
+      const isUpper = /(bench|press|row|pull|curl|tricep|shoulder|chest|back)/.test(lowerName);
+      const isLower = /(squat|deadlift|leg|hamstring|glute|calf|lunge)/.test(lowerName);
+      const within30Days = Date.now() - +new Date(record.achievedAt) <= 1000 * 60 * 60 * 24 * 30;
+
+      if (recordFilter === "upper") return matchesSearch && isUpper;
+      if (recordFilter === "lower") return matchesSearch && isLower;
+      if (recordFilter === "30d") return matchesSearch && within30Days;
+      return matchesSearch;
+    });
+  }, [personalRecords, recordFilter, search]);
+  const activePoint = chartPoints.find((point) => point.key === hoveredPointKey) || selectedPoint;
 
   if (isLoading) {
-    return <div style={{ ...cardStyle(), color: "#8B8B8B" }}>Loading your live progress dashboard...</div>;
+    return <ProgressLoadingState />;
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-5">
+    <div className={disableHeavyAnimations ? "reduced-motion flex flex-col gap-4 md:gap-5" : "flex flex-col gap-4 md:gap-5"}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-3">
           <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(124,252,0,0.12)", border: "1px solid rgba(124,252,0,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -144,7 +221,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
           </div>
           <div>
             <div style={{ color: "#FFFFFF", fontSize: 24, fontWeight: 800 }}>Progress Command Center</div>
-            <div style={{ color: "#8B8B8B", fontSize: 14 }}>Live metrics now sync workouts, calories, goals, records, and coach feedback.</div>
+            <div style={{ color: SECONDARY_TEXT_COLOR, fontSize: 14 }}>Live metrics now sync workouts, calories, goals, records, and coach feedback.</div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -153,23 +230,23 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
             <span>{tone.label}</span>
             {pendingCount > 0 && <span style={{ color: "#FFFFFF" }}>{pendingCount} pending</span>}
           </div>
-          <button onClick={async () => { const metric = promptForMetric(); if (metric) await addBodyMetric(metric); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">
+          <button onClick={async () => { const metric = promptForMetric(); if (metric) await addBodyMetric(metric); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white" aria-label="Add a new body metric">
             <span className="inline-flex items-center gap-2"><Plus size={14} /> Add metric</span>
           </button>
-          <button onClick={async () => { const record = promptForRecord(); if (record) await addPersonalRecord(record); }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]">
+          <button onClick={async () => { const record = promptForRecord(); if (record) await addPersonalRecord(record); }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]" aria-label="Add a new personal record">
             <span className="inline-flex items-center gap-2"><Trophy size={14} /> Add PR</span>
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        {[
+          {[
           { label: "Workouts Done", value: workoutsDone, suffix: "", icon: <Trophy size={17} color="#F59E0B" />, tint: "rgba(245,158,11,0.12)", source: "Workout completions" },
           { label: "Calories Burned", value: caloriesBurned, suffix: "", icon: <Flame size={17} color="#FB7185" />, tint: "rgba(251,113,133,0.12)", source: "Workout calorie entries" },
           { label: "Efficiency", value: efficiency, suffix: "%", icon: <Zap size={17} color="#7CFC00" />, tint: "rgba(124,252,0,0.12)", source: "Completed sets / planned sets" },
           { label: "Current Streak", value: streak, suffix: "d", icon: <Star size={17} color="#A78BFA" />, tint: "rgba(167,139,250,0.12)", source: "Consecutive workout days" },
         ].map((item, index) => (
-          <motion.div key={item.label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }} style={cardStyle()}>
+          <motion.div key={item.label} initial={disableHeavyAnimations ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: disableHeavyAnimations ? 0 : index * 0.04, duration: disableHeavyAnimations ? 0 : 0.25 }} style={{ ...cardStyle(), minHeight: 148 }}>
             <div style={{ width: 38, height: 38, borderRadius: 12, background: item.tint, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{item.icon}</div>
             <div style={{ color: "#FFFFFF", fontSize: 26, fontWeight: 800 }}>{item.value.toLocaleString()}{item.suffix}</div>
             <div style={{ color: "#D1D1D4", fontSize: 13, fontWeight: 700, marginTop: 2 }}>{item.label}</div>
@@ -178,67 +255,92 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
         ))}
       </div>
 
-      <div style={cardStyle()}>
+      <div style={{ ...cardStyle(), minHeight: 520 }} className="dashboard-chart-shell">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between" style={{ marginBottom: 18 }}>
           <div>
             <div style={{ color: "#FFFFFF", fontSize: 19, fontWeight: 800 }}>Performance Trend</div>
-            <div style={{ color: "#8B8B8B", fontSize: 13 }}>Tap any point to reveal the workouts behind the number.</div>
+            <div style={{ color: SECONDARY_TEXT_COLOR, fontSize: 13 }}>Tap any point to reveal the workouts behind the number.</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div style={{ display: "flex", background: "#1B1B20", borderRadius: 999, padding: 4 }}>
               {[
-                { key: "weekly", label: "Weekly" },
-                { key: "monthly", label: "Monthly" },
-                { key: "yearly", label: "Yearly" },
+                { key: "7d", label: "7d" },
+                { key: "30d", label: "30d" },
+                { key: "90d", label: "90d" },
+                { key: "1y", label: "1y" },
               ].map((option) => (
-                <button key={option.key} onClick={() => setPeriod(option.key as typeof period)} style={{ borderRadius: 999, border: "none", padding: "8px 14px", background: period === option.key ? "#7CFC00" : "transparent", color: period === option.key ? "#0A0A0C" : "#9A9AA0", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                <button key={option.key} onClick={() => setPeriod(option.key as typeof period)} style={{ borderRadius: 999, border: "none", padding: "8px 14px", background: period === option.key ? "#7CFC00" : "transparent", color: period === option.key ? "#0A0A0C" : "#9A9AA0", fontSize: 12, fontWeight: 800, cursor: "pointer", minHeight: TOUCH_TARGET_SIZE }} aria-pressed={period === option.key} aria-label={`Show ${option.label} progress`}>
                   {option.label}
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowComparison(!showComparison)} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">
+            <button onClick={() => setShowComparison(!showComparison)} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white" aria-pressed={showComparison} aria-label={showComparison ? "Hide previous period comparison" : "Show previous period comparison"}>
               <span className="inline-flex items-center gap-2">{showComparison ? <Eye size={14} /> : <EyeOff size={14} />} Compare</span>
             </button>
           </div>
         </div>
-        <TrendChart points={chartPoints} selectedKey={selectedPointKey} showComparison={showComparison} onSelect={setSelectedPointKey} />
+        <div style={{ minHeight: 220 }}>
+          <motion.div
+            key={period}
+            initial={disableHeavyAnimations ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: disableHeavyAnimations ? 0 : 0.25 }}
+          >
+            <TrendChart points={chartPoints} selectedKey={selectedPointKey} showComparison={showComparison} onSelect={setSelectedPointKey} hoveredKey={hoveredPointKey} onHover={setHoveredPointKey} />
+          </motion.div>
+        </div>
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4">
           <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: 16 }}>
-            <div style={{ color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}>{selectedPoint?.dateLabel || "Current slice"}</div>
-            <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 4 }}>Volume comes from real set x rep x weight data.</div>
+            <div style={{ color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}>{activePoint?.dateLabel || "Current slice"}</div>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 4 }}>Hover or tap a point to inspect exact volume and how it compares to the previous window.</div>
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div style={{ borderRadius: 14, background: "rgba(124,252,0,0.08)", padding: 14 }}>
-                <div style={{ color: "#8B8B8B", fontSize: 11 }}>Current period</div>
-                <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800, marginTop: 4 }}>{(selectedPoint?.value || 0).toLocaleString()}</div>
+                <div style={{ color: "var(--color-text-secondary)", fontSize: 11 }}>Current period</div>
+                <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800, marginTop: 4 }}>{(activePoint?.value || 0).toLocaleString()}</div>
               </div>
               <div style={{ borderRadius: 14, background: "rgba(255,255,255,0.04)", padding: 14 }}>
-                <div style={{ color: "#8B8B8B", fontSize: 11 }}>Previous period</div>
-                <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800, marginTop: 4 }}>{(selectedPoint?.previousValue || 0).toLocaleString()}</div>
+                <div style={{ color: "var(--color-text-secondary)", fontSize: 11 }}>Previous period</div>
+                <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800, marginTop: 4 }}>{(activePoint?.previousValue || 0).toLocaleString()}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 12, borderRadius: 14, background: "rgba(255,255,255,0.04)", padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Net change</div>
+              <div style={{ color: (activePoint?.value || 0) >= (activePoint?.previousValue || 0) ? "#7CFC00" : "#FB7185", fontSize: 13, fontWeight: 800 }}>
+                {((activePoint?.value || 0) - (activePoint?.previousValue || 0)).toLocaleString()}
               </div>
             </div>
           </div>
           <div style={{ borderRadius: 16, background: "linear-gradient(180deg, rgba(124,252,0,0.08), rgba(124,252,0,0.02))", border: "1px solid rgba(255,255,255,0.06)", padding: 16 }}>
             <div style={{ color: "#FFFFFF", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Workouts behind this point</div>
             <div className="flex flex-col gap-3 max-h-[240px] overflow-y-auto">
-              {selectedPoint?.workouts?.length ? selectedPoint.workouts.map((workout) => (
+              {activePoint?.workouts?.length ? activePoint.workouts.map((workout) => (
                 <div key={workout.id} style={{ borderRadius: 14, padding: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ color: "#FFFFFF", fontSize: 13, fontWeight: 700 }}>{workout.title}</div>
-                  <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 4 }}>{new Date(workout.created_at).toLocaleDateString()} · {workout.duration || "Session"} · {workout.status}</div>
+                  <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 4 }}>{new Date(workout.created_at).toLocaleDateString()} · {workout.duration || "Session"} · {workout.status}</div>
                 </div>
-              )) : <div style={{ color: "#8B8B8B", fontSize: 13 }}>No workouts landed in this slice yet.</div>}
+              )) : <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>No workouts landed in this slice yet.</div>}
             </div>
           </div>
         </div>
       </div>
 
+      <LazyRenderSection
+        minHeight={580}
+        fallback={
+          <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
+            <SkeletonBlock width="100%" height={280} style={{ background: "#16161A" }} />
+            <SkeletonBlock width="100%" height={280} style={{ background: "#16161A" }} />
+          </div>
+        }
+      >
       <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
         <div style={cardStyle()}>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Body Metrics</div>
-              <div style={{ color: "#8B8B8B", fontSize: 12 }}>Trend arrows use moving averages, not one noisy check-in.</div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Trend arrows use moving averages, not one noisy check-in.</div>
             </div>
-            <button onClick={async () => { const metric = promptForMetric(); if (metric) await addBodyMetric(metric); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">Log metric</button>
+              <button onClick={async () => { const metric = promptForMetric(); if (metric) await addBodyMetric(metric); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white" aria-label="Log a body metric">Log metric</button>
           </div>
           {bodyMetricCards.length ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -257,14 +359,14 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
                 </div>
               ))}
             </div>
-          ) : <div style={{ color: "#8B8B8B", fontSize: 13 }}>No body metrics yet. Add a manual entry to start live trend tracking.</div>}
+          ) : <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>No body metrics yet. Add a manual entry to start live trend tracking.</div>}
         </div>
 
         <div style={cardStyle()}>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Weekly Training Volume</div>
-              <div style={{ color: "#8B8B8B", fontSize: 12 }}>Subtle past bars, neon current bar.</div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Subtle past bars, neon current bar.</div>
             </div>
             <div style={{ color: "#7CFC00", fontSize: 15, fontWeight: 800 }}>{weeklyVolume.toLocaleString()} kg</div>
           </div>
@@ -283,17 +385,56 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
           </div>
         </div>
       </div>
+      </LazyRenderSection>
 
+      <LazyRenderSection
+        minHeight={620}
+        fallback={
+          <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-4">
+            <SkeletonBlock width="100%" height={320} style={{ background: "#16161A" }} />
+            <SkeletonBlock width="100%" height={320} style={{ background: "#16161A" }} />
+          </div>
+        }
+      >
       <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-4">
         <div style={cardStyle()}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
             <div>
               <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Personal Records</div>
-              <div style={{ color: "#8B8B8B", fontSize: 12 }}>Searchable database with attempt history and linked evidence.</div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Searchable database with attempt history and linked evidence.</div>
             </div>
-            <div className="flex items-center gap-2">
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search exercise" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white" />
-              <button onClick={async () => { const record = promptForRecord(); if (record) await addPersonalRecord(record); }} className="rounded-full border border-[#F59E0B]/20 bg-[#F59E0B]/10 px-4 py-2 text-sm font-semibold text-[#FDE68A]">Add PR</button>
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { key: "upper", label: "Upper Body" },
+                { key: "lower", label: "Lower Body" },
+                { key: "30d", label: "Last 30 Days" },
+                { key: "all", label: "All Time" },
+              ].map((chip) => {
+                const active = recordFilter === chip.key;
+                return (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => setRecordFilter(chip.key as typeof recordFilter)}
+                    style={{
+                      minHeight: 36,
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      border: active ? "1px solid rgba(124,252,0,0.22)" : "1px solid rgba(255,255,255,0.08)",
+                      background: active ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.04)",
+                      color: active ? "#D9FFBF" : "var(--color-text-secondary)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    aria-pressed={active}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search exercise" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white" aria-label="Search personal records by exercise" />
+              <button onClick={async () => { const record = promptForRecord(); if (record) await addPersonalRecord(record); }} className="rounded-full border border-[#F59E0B]/20 bg-[#F59E0B]/10 px-4 py-2 text-sm font-semibold text-[#FDE68A]" aria-label="Add a personal record">Add PR</button>
             </div>
           </div>
           <div className="flex flex-col gap-3 max-h-[420px] overflow-y-auto">
@@ -306,43 +447,64 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
                     <div>
                       <div style={{ color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}>{record.exercise}</div>
                       <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800, marginTop: 4 }}>{record.weight.toFixed(1)} {record.unit}</div>
-                      <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 4 }}>{new Date(record.achievedAt).toLocaleDateString()}</div>
+                      <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 4 }}>{new Date(record.achievedAt).toLocaleDateString()}</div>
                     </div>
                     {isFresh && <div style={{ borderRadius: 999, background: "rgba(245,158,11,0.14)", border: "1px solid rgba(245,158,11,0.24)", padding: "6px 10px", color: "#FDE68A", fontSize: 11, fontWeight: 800 }}>New PR</div>}
                   </div>
-                  <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 10 }}>{record.videoUrl ? "Video evidence linked" : "No video linked"} · {record.attempts?.length || 0} attempts tracked</div>
+                  <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 10 }}>{record.videoUrl ? "Video evidence linked" : "No video linked"} · {record.attempts?.length || 0} attempts tracked</div>
                 </div>
               );
-            }) : <div style={{ color: "#8B8B8B", fontSize: 13 }}>No PR matches yet.</div>}
+            }) : <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>No PR matches yet.</div>}
           </div>
         </div>
 
         <div style={cardStyle()}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
             <div>
-              <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Coach-Set Goals</div>
-              <div style={{ color: "#8B8B8B", fontSize: 12 }}>Animated progress bars change color with completion risk.</div>
+              <div className="flex items-center gap-2">
+                <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Coach-Set Goals</div>
+                <button
+                  type="button"
+                  onClick={() => setShowRiskInfo((value) => !value)}
+                  style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                  aria-expanded={showRiskInfo}
+                  aria-label="Explain goal risk calculation"
+                >
+                  <Info size={14} />
+                </button>
+              </div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Animated progress bars change color with completion risk.</div>
+              {showRiskInfo && (
+                <div style={{ marginTop: 10, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", padding: 12, color: "var(--color-text-secondary)", fontSize: 12, lineHeight: 1.6 }}>
+                  Risk is based on completion ratio versus target. `safe` means at least 90% of target, `watch` means 65% to 89%, and `at-risk` means below 65%.
+                </div>
+              )}
             </div>
-            <button onClick={async () => { await saveGoals(promptForGoals(goals)); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">Edit targets</button>
+            <button onClick={async () => { await saveGoals(promptForGoals(goals)); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white" aria-label="Edit coach-set goal targets">Edit targets</button>
           </div>
           <div className="flex flex-col gap-4">
             {goals.map((goal) => {
               const palette = goal.risk === "safe" ? { fill: "#7CFC00", chip: "rgba(124,252,0,0.12)", text: "#B9FF8B" } : goal.risk === "watch" ? { fill: "#F59E0B", chip: "rgba(245,158,11,0.12)", text: "#FCD34D" } : { fill: "#FB7185", chip: "rgba(251,113,133,0.12)", text: "#FDA4AF" };
+              const history = goalHistory.find((entry) => entry.goalId === goal.id)?.points || [];
               return (
                 <div key={goal.id} style={{ borderRadius: 18, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.03)", padding: 16 }}>
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div>
                       <div style={{ color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}>{goal.label}</div>
-                      <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 4 }}>Source: {goal.source || "Dashboard activity"}</div>
+                      <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 4 }}>Source: {goal.source || "Dashboard activity"}</div>
                     </div>
                     <div style={{ borderRadius: 999, background: palette.chip, padding: "6px 10px", color: palette.text, fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>{goal.risk}</div>
                   </div>
                   <div className="flex items-end justify-between gap-3 mb-3">
                     <div style={{ color: "#FFFFFF", fontSize: 22, fontWeight: 800 }}>{goal.current.toLocaleString()} / {goal.target.toLocaleString()} {goal.unit}</div>
-                    <div style={{ color: "#8B8B8B", fontSize: 12 }}>updated by {goal.updatedBy || "coach"}</div>
+                    <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>updated by {goal.updatedBy || "coach"}</div>
                   </div>
                   <div style={{ height: 12, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
                     <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(goal.completion * 100, 100)}%` }} transition={{ duration: 0.75, ease: "easeOut" }} style={{ height: "100%", borderRadius: 999, background: palette.fill }} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ color: "var(--color-text-secondary)", fontSize: 11, marginBottom: 6 }}>Goal history</div>
+                    <GoalHistoryChart points={history} />
                   </div>
                 </div>
               );
@@ -353,19 +515,29 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
               <div style={{ width: 34, height: 34, borderRadius: 12, background: "rgba(124,252,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}><Activity size={16} color="#7CFC00" /></div>
               <div>
                 <div style={{ color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}>Source Trace</div>
-                <div style={{ color: "#8B8B8B", fontSize: 12 }}>Workouts drive volume, nutrition logs feed calorie goals, check-ins populate body metrics.</div>
+                <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Workouts drive volume, nutrition logs feed calorie goals, check-ins populate body metrics.</div>
               </div>
             </div>
           </div>
         </div>
       </div>
+      </LazyRenderSection>
 
+      <LazyRenderSection
+        minHeight={340}
+        fallback={
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+            <SkeletonBlock width="100%" height={240} style={{ background: "#16161A" }} />
+            <SkeletonBlock width="100%" height={240} style={{ background: "#16161A" }} />
+          </div>
+        }
+      >
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
         <div style={cardStyle()}>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <div style={{ color: "#FFFFFF", fontSize: 18, fontWeight: 800 }}>Live Coach Feedback</div>
-              <div style={{ color: "#8B8B8B", fontSize: 12 }}>Realtime coach reviews pulse here without a refresh.</div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Realtime coach reviews pulse here without a refresh.</div>
             </div>
             {isPrivate && <div style={{ borderRadius: 999, padding: "8px 12px", background: "rgba(124,252,0,0.12)", border: "1px solid rgba(124,252,0,0.2)", color: "#B9FF8B", fontSize: 12, fontWeight: 800 }}>{newCoachReviewCount} new reviews</div>}
           </div>
@@ -379,7 +551,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
                 <div style={{ marginBottom: 10 }}>{item.icon}</div>
                 <div style={{ color: "#FFFFFF", fontSize: 24, fontWeight: 800 }}>{item.value}</div>
                 <div style={{ color: "#FFFFFF", fontSize: 13, fontWeight: 700, marginTop: 4 }}>{item.label}</div>
-                <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 6 }}>{item.subtitle}</div>
+                <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 6 }}>{item.subtitle}</div>
               </div>
             ))}
           </div>
@@ -395,12 +567,14 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
             ].map((item, index) => (
               <div key={item.label} style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: index === 3 ? "rgba(124,252,0,0.08)" : "rgba(255,255,255,0.03)", padding: 14 }}>
                 <div style={{ color: "#FFFFFF", fontSize: 13, fontWeight: 700 }}>{item.label}</div>
-                <div style={{ color: "#8B8B8B", fontSize: 12, marginTop: 4 }}>{item.status}</div>
+                <div style={{ color: "var(--color-text-secondary)", fontSize: 12, marginTop: 4 }}>{item.status}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
+      </LazyRenderSection>
     </div>
   );
 }
+
