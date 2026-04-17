@@ -7,6 +7,7 @@ import {
   useListMessages,
   useSendMessage,
   useListMembers,
+  useUploadMessageImage,
 } from "@/lib/api-hooks";
 import { Card, Input, Button } from "@/components/ui/PremiumComponents";
 import { MessageCircle, Send, User, Image as ImageIcon, Megaphone, X } from "lucide-react";
@@ -34,6 +35,8 @@ export default function CoachMessages() {
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastImage, setBroadcastImage] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const broadcastFileInputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +49,7 @@ export default function CoachMessages() {
   const { data: membersPage } = useListMembers();
   const members = membersPage?.members || [];
   const sendMutation = useSendMessage();
+  const uploadImageMutation = useUploadMessageImage();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,33 +59,50 @@ export default function CoachMessages() {
     scrollToBottom();
   }, [messages, selectedMemberId]);
 
-  const handleSend = (e?: React.FormEvent, customText?: string, imageUrl?: string) => {
+  const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const text = customText !== undefined ? customText : messageText;
-    if (!text.trim() && !imageUrl) return;
+    if (!messageText.trim() && !pendingImage) return;
     if (!selectedMemberId) return;
 
-    sendMutation.mutate({ memberId: selectedMemberId, content: text });
-    if (customText === undefined) setMessageText("");
+    const imageUrl = pendingImage;
+    setPendingImage(null);
+    setMessageText("");
+
+    sendMutation.mutate({ 
+      memberId: selectedMemberId, 
+      content: messageText,
+      imageUrl: imageUrl || undefined,
+      senderType: "coach"
+    });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && selectedMemberId) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        handleSend(undefined, "[Image]", event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file || !selectedMemberId) return;
+
+    setIsUploading(true);
+    try {
+      const url = await uploadImageMutation.mutateAsync(file);
+      setPendingImage(url);
+    } catch (err: any) {
+      alert("Failed to upload image: " + err.message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleBroadcast = () => {
+  const handleBroadcast = async () => {
     if (!broadcastText.trim() && !broadcastImage) return;
     const targets = members?.length ? members : fallbackList.map(f => ({ id: f.member_id }));
     
     targets.forEach(m => {
-      sendMutation.mutate({ memberId: m.id, content: broadcastText });
+      sendMutation.mutate({ 
+        memberId: m.id, 
+        content: broadcastText,
+        imageUrl: broadcastImage || undefined,
+        senderType: "coach"
+      });
     });
 
     setBroadcastText("");
@@ -89,14 +110,19 @@ export default function CoachMessages() {
     setIsBroadcastModalOpen(false);
   };
 
-  const handleBroadcastImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBroadcastImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setBroadcastImage(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const url = await uploadImageMutation.mutateAsync(file);
+      setBroadcastImage(url);
+    } catch (err: any) {
+      alert("Failed to upload image: " + err.message);
+    } finally {
+      setIsUploading(false);
+      if (broadcastFileInputRef.current) broadcastFileInputRef.current.value = "";
     }
   };
 
@@ -247,6 +273,22 @@ export default function CoachMessages() {
 
               {/* Message Input */}
               <div className="p-4 border-t border-white/5 bg-black/40">
+                {/* Pending Image Preview */}
+                {pendingImage && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-3 relative rounded-xl overflow-hidden border border-primary/30 h-24 w-24"
+                  >
+                    <img src={pendingImage} className="w-full h-full object-cover" alt="Pending upload" />
+                    <button 
+                      onClick={() => setPendingImage(null)}
+                      className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-red-500 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </motion.div>
+                )}
                 <form onSubmit={(e) => handleSend(e)} className="flex gap-3">
                   <input 
                     type="file" 
@@ -258,23 +300,33 @@ export default function CoachMessages() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0 w-11 h-11 p-0 border-white/10 text-muted-foreground hover:text-primary hover:border-primary/50"
+                    className="shrink-0 w-11 h-11 p-0 border-white/10 text-muted-foreground hover:text-primary hover:border-primary/50 disabled:opacity-50"
                     onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading || uploadImageMutation.isPending}
                   >
-                    <ImageIcon className="w-5 h-5" />
+                    {isUploading ? (
+                      <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5" />
+                    )}
                   </Button>
                   <Input
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={pendingImage ? "Add a caption (optional)..." : "Type a message..."}
                     className="flex-1 bg-white/5 border-white/10 focus-visible:ring-primary/50"
+                    disabled={isUploading}
                   />
                   <Button
                     type="submit"
-                    disabled={(!messageText.trim()) || sendMutation.isPending}
+                    disabled={(!messageText.trim() && !pendingImage) || sendMutation.isPending || isUploading}
                     className="shrink-0 px-5"
                   >
-                    <Send className="w-5 h-5" />
+                    {sendMutation.isPending ? (
+                      <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
                   </Button>
                 </form>
               </div>
