@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/use-auth";
 import { useListCalorieLogs, useListMessages, useListWorkouts, type CalorieLog, type ClientWorkout } from "@/lib/api-hooks";
 
-export type DashboardPeriod = "weekly" | "monthly" | "yearly";
+export type DashboardPeriod = "7d" | "30d" | "90d" | "1y";
 
 export type BodyMetricEntry = {
   id: string;
@@ -74,6 +74,12 @@ type ChartPoint = {
   dateLabel: string;
 };
 
+type GoalHistoryPoint = {
+  label: string;
+  current: number;
+  target: number;
+};
+
 type PendingPatch = Partial<ProgressProfile> & {
   memberId: number;
   queuedAt: string;
@@ -93,7 +99,7 @@ type StoreState = {
 };
 
 export const useProgressDashboardStore = create<StoreState>((set) => ({
-  period: "monthly",
+  period: "30d",
   showComparison: true,
   selectedPointKey: null,
   connectionState: "online",
@@ -284,7 +290,7 @@ function buildChartPoints(workouts: ClientWorkout[], period: DashboardPeriod): C
   const now = new Date();
   const points: ChartPoint[] = [];
 
-  if (period === "weekly") {
+  if (period === "7d") {
     for (let index = 6; index >= 0; index -= 1) {
       const day = startOfDay(addDays(now, -index));
       const previousDay = startOfDay(addDays(day, -7));
@@ -303,7 +309,7 @@ function buildChartPoints(workouts: ClientWorkout[], period: DashboardPeriod): C
     return points;
   }
 
-  if (period === "monthly") {
+  if (period === "30d") {
     for (let index = 5; index >= 0; index -= 1) {
       const end = startOfDay(addDays(now, -(index * 7)));
       const start = addDays(end, -6);
@@ -321,6 +327,33 @@ function buildChartPoints(workouts: ClientWorkout[], period: DashboardPeriod): C
         key: `${start.toISOString()}-${end.toISOString()}`,
         label: `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
         shortLabel: `W${6 - index}`,
+        value: extractWorkoutStats(currentWorkouts).totalVolume,
+        previousValue: extractWorkoutStats(previousWorkouts).totalVolume,
+        workouts: currentWorkouts,
+        dateLabel: `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+      });
+    }
+    return points;
+  }
+
+  if (period === "90d") {
+    for (let index = 5; index >= 0; index -= 1) {
+      const end = startOfDay(addDays(now, -(index * 14)));
+      const start = addDays(end, -13);
+      const previousEnd = addDays(start, -1);
+      const previousStart = addDays(previousEnd, -13);
+      const currentWorkouts = workouts.filter((workout) => {
+        const createdAt = new Date(workout.created_at).getTime();
+        return createdAt >= start.getTime() && createdAt <= end.getTime() + 86400000 - 1;
+      });
+      const previousWorkouts = workouts.filter((workout) => {
+        const createdAt = new Date(workout.created_at).getTime();
+        return createdAt >= previousStart.getTime() && createdAt <= previousEnd.getTime() + 86400000 - 1;
+      });
+      points.push({
+        key: `${start.toISOString()}-${end.toISOString()}`,
+        label: `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+        shortLabel: `${start.toLocaleDateString(undefined, { month: "short" })} ${start.getDate()}`,
         value: extractWorkoutStats(currentWorkouts).totalVolume,
         previousValue: extractWorkoutStats(previousWorkouts).totalVolume,
         workouts: currentWorkouts,
@@ -385,7 +418,7 @@ function deriveBodyMetricCards(metrics: BodyMetricEntry[]) {
 
 function derivePersonalRecords(profileRecords: PersonalRecord[], attemptsByExercise: Map<string, PersonalRecord["attempts"]>) {
   const autoRecords = Array.from(attemptsByExercise.entries()).map(([exercise, attempts]) => {
-    const sorted = [...attempts].sort((a, b) => b.weight - a.weight || +new Date(b.achievedAt) - +new Date(a.achievedAt));
+    const sorted = [...(attempts || [])].sort((a, b) => b.weight - a.weight || +new Date(b.achievedAt) - +new Date(a.achievedAt));
     return {
       id: `auto-${exercise}`,
       exercise,
@@ -427,6 +460,55 @@ function getCurrentForGoal(metric: string, context: { dailyCalories: number; wee
     default:
       return 0;
   }
+}
+
+function buildGoalHistory(
+  goals: CoachGoal[],
+  period: DashboardPeriod,
+  chartPoints: ChartPoint[],
+  calorieLogs: CalorieLog[],
+  bodyMetricCards: Array<{ label: string; history: number[] }>
+) {
+  const today = startOfDay(new Date());
+  return goals.map((goal) => {
+    let history: GoalHistoryPoint[] = [];
+
+    if (goal.metric === "volume" || goal.metric === "workouts") {
+      history = chartPoints.map((point) => ({
+        label: point.shortLabel,
+        current: goal.metric === "volume" ? point.value : point.workouts.length,
+        target: goal.target,
+      }));
+    } else if (goal.metric === "calories") {
+      const dayCount = period === "7d" ? 7 : period === "30d" ? 6 : period === "90d" ? 6 : 12;
+      const step = period === "1y" ? 30 : period === "90d" ? 14 : period === "30d" ? 5 : 1;
+      history = Array.from({ length: dayCount }).map((_, index) => {
+        const offset = (dayCount - 1 - index) * step;
+        const day = startOfDay(addDays(today, -offset));
+        const nextDay = addDays(day, step);
+        const calories = calorieLogs
+          .filter((log) => {
+            const createdAt = +new Date(log.created_at);
+            return createdAt >= day.getTime() && createdAt < nextDay.getTime();
+          })
+          .reduce((sum, log) => sum + (log.result?.totals?.calories || 0), 0);
+        return {
+          label: step === 1 ? day.toLocaleDateString(undefined, { weekday: "short" }) : day.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          current: calories,
+          target: goal.target,
+        };
+      });
+    } else if (goal.metric === "body_weight") {
+      const weightHistory = bodyMetricCards.find((metric) => metric.label === "Body Weight")?.history || [];
+      history = weightHistory.slice(-6).map((value, index) => ({
+        label: `P${index + 1}`,
+        current: value,
+        target: goal.target,
+      }));
+    }
+
+    return { goalId: goal.id, metric: goal.metric, points: history };
+  });
 }
 
 export function useProgressDashboard(memberId?: number) {
@@ -638,6 +720,7 @@ export function useProgressDashboard(memberId?: number) {
       const risk = completion >= 0.9 ? "safe" : completion >= 0.65 ? "watch" : "at-risk";
       return { ...goal, current, completion, risk };
     });
+    const goalHistory = buildGoalHistory(profile?.coach_goals || [], period, chartPoints, calorieLogs, bodyMetricCards);
 
     const caloriesBurned = workouts.reduce((sum, workout) => sum + Number(workout.calories || 0), 0);
     const efficiency = workoutStats.totalSets ? Math.round((workoutStats.completedSets / workoutStats.totalSets) * 100) : 0;
@@ -655,6 +738,7 @@ export function useProgressDashboard(memberId?: number) {
       bodyMetricCards,
       personalRecords,
       goals,
+      goalHistory,
       workoutsDone: workoutStats.completedWorkouts.length,
       caloriesBurned,
       efficiency,
@@ -727,4 +811,3 @@ export function useProgressDashboard(memberId?: number) {
     ...derived,
   };
 }
-

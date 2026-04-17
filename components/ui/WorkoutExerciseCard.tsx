@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDrag } from "@use-gesture/react";
 import { Check, MoreHorizontal, Clock, Timer, Plus, RefreshCw, ChevronDown } from "lucide-react";
+import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
 
 /* ─── Types ─────────────────────────────────────────────── */
 export interface ExerciseSet {
@@ -11,6 +13,7 @@ export interface ExerciseSet {
   reps: number;
   kg: number;
   completed: boolean;
+  skipped?: boolean;
 }
 
 export interface WorkoutExercise {
@@ -28,49 +31,103 @@ interface WorkoutExerciseCardProps {
   exercise: WorkoutExercise;
   onChange?: (updated: WorkoutExercise) => void;
   onMenuAction?: (action: string, exerciseId: string) => void;
+  onSetAction?: (payload: {
+    action: "complete" | "skip" | "toggle";
+    exerciseId: string;
+    exerciseName: string;
+    setId: number;
+    previous: ExerciseSet;
+    next: ExerciseSet;
+  }) => void;
 }
 
 /* ─── Set Row ───────────────────────────────────────────── */
 function SetRow({
   set,
+  exerciseId,
+  exerciseName,
   onUpdate,
+  onAction,
 }: {
   set: ExerciseSet;
+  exerciseId: string;
+  exerciseName: string;
   onUpdate: (updated: ExerciseSet) => void;
+  onAction?: WorkoutExerciseCardProps["onSetAction"];
 }) {
   const [editingReps, setEditingReps] = useState(false);
   const [editingKg, setEditingKg] = useState(false);
+  const [dragX, setDragX] = useState(0);
 
-  const toggle = () => onUpdate({ ...set, completed: !set.completed });
+  const commitUpdate = (next: ExerciseSet, action: "complete" | "skip" | "toggle") => {
+    onUpdate(next);
+    onAction?.({
+      action,
+      exerciseId,
+      exerciseName,
+      setId: set.id,
+      previous: set,
+      next,
+    });
+  };
 
-  const rowBg = set.completed
+  const toggle = () => commitUpdate({ ...set, completed: !set.completed, skipped: false }, "toggle");
+
+  const bindDrag = useDrag(
+    ({ movement: [mx], last }) => {
+      if (!last) {
+        setDragX(Math.max(-88, Math.min(88, mx)));
+        return;
+      }
+
+      if (mx >= 72) {
+        commitUpdate({ ...set, completed: true, skipped: false }, "complete");
+      } else if (mx <= -72) {
+        commitUpdate({ ...set, completed: false, skipped: true }, "skip");
+      }
+
+      setDragX(0);
+    },
+    {
+      axis: "x",
+      filterTaps: true,
+      pointer: { touch: true },
+    }
+  );
+
+  const rowBg = set.skipped
+    ? "rgba(245,158,11,0.08)"
+    : set.completed
     ? "rgba(124,252,0,0.04)"
     : "rgba(255,255,255,0.02)";
-  const rowBorder = set.completed
+  const rowBorder = set.skipped
+    ? "1px solid rgba(245,158,11,0.2)"
+    : set.completed
     ? "1px solid rgba(124,252,0,0.12)"
     : "1px solid rgba(255,255,255,0.05)";
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-2 px-3 rounded-xl transition-all"
+    <div className="flex items-center gap-2 px-3 rounded-xl transition-all"
       style={{
         height: 52,
         background: rowBg,
         border: rowBorder,
         marginBottom: 6,
+        transform: `translateX(${dragX}px)`,
+        touchAction: "pan-y",
       }}
+      {...bindDrag()}
     >
       {/* SET NUMBER */}
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
         style={{
-          background: set.completed
+          background: set.skipped
+            ? "rgba(245,158,11,0.15)"
+            : set.completed
             ? "rgba(124,252,0,0.15)"
             : "rgba(255,255,255,0.06)",
-          color: set.completed ? "#7CFC00" : "#8B8B8B",
+          color: set.skipped ? "#F59E0B" : set.completed ? "#7CFC00" : SECONDARY_TEXT_COLOR,
         }}
       >
         {set.id}
@@ -95,13 +152,14 @@ function SetRow({
               setEditingReps(false);
             }}
             className="w-full text-center bg-transparent border-b text-sm font-bold text-white outline-none"
-            style={{ borderColor: "#7CFC00" }}
+            style={{ borderColor: "#7CFC00", minHeight: TOUCH_TARGET_SIZE }}
           />
         ) : (
           <button
             onClick={() => setEditingReps(true)}
             className="text-sm font-black text-white hover:text-primary transition-colors w-full"
-            style={{ color: set.completed ? "#7CFC00" : "#ffffff" }}
+            style={{ color: set.completed ? "#7CFC00" : set.skipped ? "#F59E0B" : "#ffffff", minHeight: TOUCH_TARGET_SIZE }}
+            aria-label={`Edit repetitions for set ${set.id}`}
           >
             {set.reps}
           </button>
@@ -120,13 +178,14 @@ function SetRow({
               setEditingKg(false);
             }}
             className="w-full text-center bg-transparent border-b text-sm font-bold text-white outline-none"
-            style={{ borderColor: "#7CFC00" }}
+            style={{ borderColor: "#7CFC00", minHeight: TOUCH_TARGET_SIZE }}
           />
         ) : (
           <button
             onClick={() => setEditingKg(true)}
             className="text-sm font-black text-white hover:text-primary transition-colors w-full"
-            style={{ color: set.completed ? "#7CFC00" : "#ffffff" }}
+            style={{ color: set.completed ? "#7CFC00" : set.skipped ? "#F59E0B" : "#ffffff", minHeight: TOUCH_TARGET_SIZE }}
+            aria-label={`Edit weight for set ${set.id}`}
           >
             {set.kg}
           </button>
@@ -141,22 +200,30 @@ function SetRow({
         style={{
           background: set.completed
             ? "rgba(124,252,0,0.9)"
+            : set.skipped
+            ? "rgba(245,158,11,0.22)"
             : "rgba(255,255,255,0.06)",
           border: set.completed
             ? "none"
+            : set.skipped
+            ? "1px solid rgba(245,158,11,0.3)"
             : "1px solid rgba(255,255,255,0.12)",
           boxShadow: set.completed
             ? "0 0 14px rgba(124,252,0,0.45)"
             : "none",
+          minWidth: TOUCH_TARGET_SIZE,
+          minHeight: TOUCH_TARGET_SIZE,
         }}
+        aria-pressed={set.completed}
+        aria-label={`Set ${set.id} ${set.completed ? "completed" : "not completed"}. Activate to ${set.completed ? "mark incomplete" : "mark complete"}.`}
       >
         <Check
           className="w-4 h-4"
-          style={{ color: set.completed ? "#000" : "#5A5A5A" }}
+          style={{ color: set.completed ? "#000" : set.skipped ? "#FCD34D" : "#5A5A5A" }}
           strokeWidth={3}
         />
       </motion.button>
-    </motion.div>
+    </div>
   );
 }
 
@@ -165,11 +232,13 @@ export function WorkoutExerciseCard({
   exercise: initialExercise,
   onChange,
   onMenuAction,
+  onSetAction,
 }: WorkoutExerciseCardProps) {
   const [exercise, setExercise] = useState<WorkoutExercise>(initialExercise);
   const [notes, setNotes] = useState(initialExercise.notes ?? "");
   const [editingNotes, setEditingNotes] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateSet = (updated: ExerciseSet) => {
     const newSets = exercise.sets.map((s) =>
@@ -197,6 +266,31 @@ export function WorkoutExerciseCard({
   const completedCount = exercise.sets.filter((s) => s.completed).length;
   const totalCount = exercise.sets.length;
 
+  useEffect(() => {
+    return () => {
+      if (longPressRef.current) {
+        clearTimeout(longPressRef.current);
+      }
+    };
+  }, []);
+
+  const startLongPress = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    longPressRef.current = setTimeout(() => {
+      setMenuOpen(true);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(20);
+      }
+    }, 450);
+  };
+
+  const clearLongPress = () => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+  };
+
   return (
     <motion.div
       layout
@@ -207,6 +301,14 @@ export function WorkoutExerciseCard({
         boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
         backdropFilter: "blur(12px)",
       }}
+      role="group"
+      aria-label={`${exercise.name} exercise`}
+      onTouchStart={startLongPress}
+      onTouchEnd={clearLongPress}
+      onTouchCancel={clearLongPress}
+      onMouseDown={startLongPress}
+      onMouseUp={clearLongPress}
+      onMouseLeave={clearLongPress}
     >
       {/* ── HEADER ── */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
@@ -261,9 +363,13 @@ export function WorkoutExerciseCard({
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+            className="rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+            style={{ minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
+            aria-label={`Open actions for ${exercise.name}`}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
           >
-            <MoreHorizontal className="w-4 h-4" style={{ color: "#8B8B8B" }} />
+            <MoreHorizontal className="w-4 h-4" style={{ color: SECONDARY_TEXT_COLOR }} />
           </button>
           <AnimatePresence>
             {menuOpen && (
@@ -285,16 +391,24 @@ export function WorkoutExerciseCard({
                 >
                   {[
                     { label: "Edit exercise", icon: "✏️", action: "edit" },
-                    { label: "Swap exercise", icon: "🔄", action: "swap" },
+                    { label: "Replace exercise", icon: "🔄", action: "replace" },
+                    { label: "Skip exercise", icon: "⏭️", action: "skip" },
+                    { label: "Add note", icon: "📝", action: "note" },
                     { label: "Remove", icon: "🗑️", action: "remove" },
                   ].map((item) => (
                     <button
                       key={item.label}
                       onClick={() => {
                         setMenuOpen(false);
+                        if (item.action === "note") {
+                          setEditingNotes(true);
+                          return;
+                        }
                         onMenuAction?.(item.action, exercise.id);
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors text-left"
+                      style={{ minHeight: TOUCH_TARGET_SIZE }}
+                      role="menuitem"
                     >
                       <span>{item.icon}</span>
                       {item.label}
@@ -324,7 +438,7 @@ export function WorkoutExerciseCard({
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
           style={{
             background: "rgba(255,255,255,0.06)",
-            color: "#8B8B8B",
+            color: SECONDARY_TEXT_COLOR,
             border: "1px solid rgba(255,255,255,0.08)",
           }}
         >
@@ -345,13 +459,14 @@ export function WorkoutExerciseCard({
               }}
               placeholder="Add notes here..."
               className="w-full text-xs bg-transparent outline-none text-white placeholder-[#3A3A3A]"
-              style={{ borderBottom: "1px solid rgba(124,252,0,0.4)" }}
+              style={{ borderBottom: "1px solid rgba(124,252,0,0.4)", minHeight: TOUCH_TARGET_SIZE }}
             />
           ) : (
             <button
               onClick={() => setEditingNotes(true)}
               className="flex items-center gap-1.5 text-xs transition-colors hover:text-white"
-              style={{ color: notes ? "#8B8B8B" : "#3A3A3A" }}
+              style={{ color: notes ? SECONDARY_TEXT_COLOR : "#3A3A3A", minHeight: TOUCH_TARGET_SIZE }}
+              aria-label={notes ? `Edit notes for ${exercise.name}` : `Add notes for ${exercise.name}`}
             >
               <span>⇌</span>
               {notes || "Add notes here..."}
@@ -381,7 +496,14 @@ export function WorkoutExerciseCard({
       <div className="px-3 pt-2 pb-1">
         <AnimatePresence initial={false}>
           {exercise.sets.map((set) => (
-            <SetRow key={set.id} set={set} onUpdate={updateSet} />
+            <SetRow
+              key={set.id}
+              set={set}
+              exerciseId={exercise.id}
+              exerciseName={exercise.name}
+              onUpdate={updateSet}
+              onAction={onSetAction}
+            />
           ))}
         </AnimatePresence>
       </div>
@@ -394,8 +516,10 @@ export function WorkoutExerciseCard({
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.1)",
-            color: "#8B8B8B",
+            color: SECONDARY_TEXT_COLOR,
+            minHeight: TOUCH_TARGET_SIZE,
           }}
+          aria-label={`Add a set to ${exercise.name}`}
         >
           <Plus className="w-4 h-4" />
           Add Set
@@ -403,6 +527,7 @@ export function WorkoutExerciseCard({
         <button
           className="flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:text-white"
           style={{ color: "#5A5A5A" }}
+          aria-label={`Load set history for ${exercise.name}`}
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Load from History

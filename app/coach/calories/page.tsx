@@ -156,7 +156,7 @@ export default function CaloriesPage() {
   // Client Selection & Assessment State
   const { data: membersPage } = useListMembers();
   const members = membersPage?.members || [];
-  const { selectedClientId, clearSelectedClient } = useClientContext();
+  const { selectedClientId, setSelectedClient, clearSelectedClient } = useClientContext();
   const [assessment, setAssessment] = useState<any>(null);
   const [isAssessing, setIsAssessing] = useState(false);
   const [clientGoals, setClientGoals] = useState<Record<number, MacroTotals>>({});
@@ -396,7 +396,7 @@ export default function CaloriesPage() {
                   
                   return (
                     <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                      onClick={() => setSelectedClientId(m.id)}
+                      onClick={() => setSelectedClient(m.id, m.name)}
                       className="cursor-pointer flex flex-col gap-4 p-5 rounded-3xl transition-all border border-white/5 hover:border-[#7CFC00]/30 hover:bg-[#7CFC00]/5"
                       style={cardStyle}>
                       <div className="flex justify-between items-start">

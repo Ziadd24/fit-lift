@@ -3,6 +3,29 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+function getFriendlyAnalysisError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("503") ||
+    normalized.includes("service unavailable") ||
+    normalized.includes("high demand") ||
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("temporarily busy")
+  ) {
+    return {
+      message: "AI meal analysis is temporarily busy right now. Please try again in a minute.",
+      status: 503,
+    };
+  }
+
+  return {
+    message: "Meal analysis failed. Please try again.",
+    status: 500,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { meal, image } = await req.json();
@@ -97,9 +120,10 @@ Rules:
     return NextResponse.json(parsed);
   } catch (err: any) {
     console.error("[calories/analyze] Fatal Error:", err);
+    const friendlyError = getFriendlyAnalysisError(err);
     return NextResponse.json(
-      { error: `AI Error: ${err.message || "Unknown error"}` },
-      { status: 500 }
+      { error: friendlyError.message },
+      { status: friendlyError.status }
     );
   }
 }
