@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle, AlertCircle, HelpCircle, Flame, Zap, Wheat, Droplets,
   CheckCheck, Edit3, MessageSquare, Clock, ChevronDown, ChevronUp, Loader2
 } from "lucide-react";
 import type { CalorieLog } from "@/lib/api-hooks";
+import { useDashboardMotion } from "@/lib/performance";
 
 /* ─── Meal Emoji Map ──────────────────────────────────────────────────── */
 const MEAL_EMOJI: Record<string, string> = {
@@ -78,7 +79,7 @@ interface CalorieMarkerCardProps {
   compact?: boolean;
 }
 
-export function CalorieMarkerCard({
+function CalorieMarkerCardComponent({
   log,
   mode,
   coachName,
@@ -100,6 +101,7 @@ export function CalorieMarkerCard({
   const totals = r.totals;
   const verified = log.verified_status;
   const timeStr = new Date(log.created_at || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const { disableHeavyAnimations } = useDashboardMotion();
 
   const handleVerify = () => {
     if (commentMode) {
@@ -113,9 +115,9 @@ export function CalorieMarkerCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={disableHeavyAnimations ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: disableHeavyAnimations ? 0 : 0.3 }}
       style={{
         background: "rgba(22,22,26,0.95)",
         border: `1px solid rgba(255,255,255,0.07)`,
@@ -150,7 +152,7 @@ export function CalorieMarkerCard({
             <Clock className="w-3 h-3" style={{ color: "#5A5A5A" }} />
             <span className="text-[11px]" style={{ color: "#5A5A5A" }}>{timeStr}</span>
             {log.member_name && mode === "coach" && (
-              <span className="text-[11px]" style={{ color: "#8B8B8B" }}>· {log.member_name}</span>
+              <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>· {log.member_name}</span>
             )}
           </div>
         </div>
@@ -174,7 +176,7 @@ export function CalorieMarkerCard({
       <div className="flex items-center justify-between px-4 pb-3">
         <ConfidenceBadge score={score} />
         {mode === "client" && r.client_suggestion && verified !== "verified" && (
-          <span className="text-[11px] italic" style={{ color: "#8B8B8B" }}>
+          <span className="text-[11px] italic" style={{ color: "var(--color-text-secondary)" }}>
             💡 {r.client_suggestion}
           </span>
         )}
@@ -190,7 +192,7 @@ export function CalorieMarkerCard({
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
         >
           {r.portion_analysis && (
-            <p className="text-[11px] mt-3 mb-2" style={{ color: "#8B8B8B" }}>
+            <p className="text-[11px] mt-3 mb-2" style={{ color: "var(--color-text-secondary)" }}>
               📏 {r.portion_analysis}
             </p>
           )}
@@ -245,7 +247,7 @@ export function CalorieMarkerCard({
                 </button>
                 <button onClick={() => setCommentMode(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "#8B8B8B" }}>
+                  style={{ background: "rgba(255,255,255,0.05)", color: "var(--color-text-secondary)" }}>
                   Cancel
                 </button>
               </div>
@@ -275,3 +277,6 @@ export function CalorieMarkerCard({
     </motion.div>
   );
 }
+
+export const CalorieMarkerCard = memo(CalorieMarkerCardComponent);
+
