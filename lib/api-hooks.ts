@@ -395,21 +395,42 @@ export function useListMessages(memberId: number | null) {
 export function useSendMessage() {
   const { coachToken, currentMember } = useAuth();
   const queryClient = useQueryClient();
-  return useMutation<Message, Error, { memberId: number; content: string; senderType?: string }>({
-    mutationFn: async ({ memberId, content, senderType = "member" }) => {
+  return useMutation<Message, Error, { memberId: number; content?: string; senderType?: string; imageUrl?: string }>({
+    mutationFn: async ({ memberId, content = "", senderType = "member", imageUrl }) => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (coachToken) headers["Authorization"] = `Bearer ${coachToken}`;
       else if (currentMember?.membership_code) headers["Authorization"] = `Bearer ${currentMember.membership_code}`;
       const res = await fetch("/api/messages", {
         method: "POST",
         headers,
-        body: JSON.stringify({ memberId, content, senderType }),
+        body: JSON.stringify({ memberId, content, senderType, imageUrl }),
       });
       if (!res.ok) throw new Error("Failed to send message");
       return res.json();
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["messages", vars.memberId] });
+    },
+  });
+}
+
+export function useUploadMessageImage() {
+  const { coachToken } = useAuth();
+  return useMutation<string, Error, File>({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/messages/upload", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${coachToken}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to upload image");
+      }
+      const data = await res.json();
+      return data.url;
     },
   });
 }

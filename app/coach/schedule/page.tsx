@@ -8,13 +8,27 @@ import {
   useUpdateSession,
   useListMembers,
 } from "@/lib/api-hooks";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Search, HelpCircle, Plus, X,
   Clock, Calendar, Users, Dumbbell, Zap, Heart, Bike, Star,
   Filter, ChevronDown, Edit2, Trash2, Check, Play, Pause, Square,
+  MoreHorizontal, GripVertical,
 } from "lucide-react";
 import { useSessions } from "@/lib/use-sessions";
+
+// ─── Mobile Detection Hook ───────────────────────────────────────────────────
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
 
 // ─── Type Definitions ────────────────────────────────────────────────────────
 
@@ -401,6 +415,216 @@ function CurrentTimeLine({ startHour }: { startHour: number }) {
   );
 }
 
+// ─── Mobile Components ───────────────────────────────────────────────────────
+
+function MobileResourceCard({
+  resource,
+  count,
+  isExpanded,
+  onToggle,
+  bookings,
+  onEdit,
+  onStatusChange,
+  currentTime,
+}: {
+  resource: Resource;
+  count: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  bookings: Booking[];
+  onEdit: (b: Booking) => void;
+  onStatusChange: (id: number | string, action: "start" | "pause" | "end") => void;
+  currentTime: number;
+}) {
+  const Icon = resource.icon;
+  const activityStyle = ACTIVITY_COLORS[resource.name] || ACTIVITY_COLORS["Personal Training"];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--color-card, #16161A)",
+        border: "1px solid rgba(255,255,255,0.06)",
+      }}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ background: resource.color }}
+          >
+            <Icon size={18} color={resource.glowColor} />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-white">{resource.name}</p>
+            <p className="text-xs" style={{ color: count > 0 ? resource.glowColor : "#5A5A5A" }}>
+              {count} session{count !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+        <ChevronDown
+          size={18}
+          className="transition-transform"
+          style={{ color: "#8B8B8B", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-2">
+              {bookings.length === 0 ? (
+                <p className="text-xs text-center py-3" style={{ color: "#5A5A5A" }}>
+                  No sessions scheduled
+                </p>
+              ) : (
+                bookings.map((booking) => (
+                  <MobileSessionCard
+                    key={booking.id}
+                    booking={booking}
+                    activityStyle={activityStyle}
+                    onEdit={onEdit}
+                    onStatusChange={onStatusChange}
+                    currentTime={currentTime}
+                  />
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function MobileSessionCard({
+  booking,
+  activityStyle,
+  onEdit,
+  onStatusChange,
+  currentTime,
+}: {
+  booking: Booking;
+  activityStyle: { bg: string; border: string; glow: string; text: string };
+  onEdit: (b: Booking) => void;
+  onStatusChange: (id: number | string, action: "start" | "pause" | "end") => void;
+  currentTime: number;
+}) {
+  const canStart = booking.status === "scheduled";
+  const canPause = booking.status === "in_progress";
+  const canEnd = booking.status === "in_progress" || booking.status === "paused";
+
+  const statusColors: Record<string, string> = {
+    scheduled: "#8B8B8B",
+    in_progress: "#7CFC00",
+    paused: "#F59E0B",
+    completed: "#10B981",
+  };
+
+  const statusLabels: Record<string, string> = {
+    scheduled: "Scheduled",
+    in_progress: "In Progress",
+    paused: "Paused",
+    completed: "Completed",
+  };
+
+  return (
+    <motion.div
+      layout
+      className="rounded-xl p-3 cursor-pointer"
+      style={{
+        background: activityStyle.bg,
+        border: `1px solid ${activityStyle.border}`,
+      }}
+      onClick={() => onEdit(booking)}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{booking.clientName}</p>
+          <p className="text-xs" style={{ color: activityStyle.text }}>
+            {formatDisplayTime(booking.startTime)} · {booking.durationMinutes}min
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{
+              background: statusColors[booking.status],
+              boxShadow: booking.status === "in_progress" ? `0 0 6px ${statusColors.in_progress}` : "none",
+            }}
+          />
+          <span className="text-[10px]" style={{ color: statusColors[booking.status] }}>
+            {statusLabels[booking.status]}
+          </span>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex items-center gap-2 mt-3">
+        {canStart && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(booking.id, "start");
+            }}
+            className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
+            style={{ background: "rgba(124,252,0,0.2)", color: "#7CFC00" }}
+          >
+            <Play size={12} /> Start
+          </button>
+        )}
+        {canPause && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(booking.id, "pause");
+            }}
+            className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
+            style={{ background: "rgba(245,158,11,0.2)", color: "#F59E0B" }}
+          >
+            <Pause size={12} /> Pause
+          </button>
+        )}
+        {canEnd && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(booking.id, "end");
+            }}
+            className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
+            style={{ background: "rgba(16,185,129,0.2)", color: "#10B981" }}
+          >
+            <Square size={12} /> End
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function MobileStatsPill({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+      <span className="text-xs font-semibold text-white">{value}</span>
+      <span className="text-[10px]" style={{ color: "#5A5A5A" }}>{label}</span>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CoachSchedule() {
@@ -413,6 +637,19 @@ export default function CoachSchedule() {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Mobile
+  const isMobile = useIsMobile();
+  const [expandedResources, setExpandedResources] = useState<string[]>([]);
+  const [showAllResources, setShowAllResources] = useState(false);
+  const swipeRef = useRef<HTMLDivElement>(null);
+
+  // Toggle resource expansion
+  const toggleResource = (id: string) => {
+    setExpandedResources(prev =>
+      prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+    );
+  };
 
   // Modals
   const [createModal, setCreateModal] = useState<{ open: boolean; slot?: number; resourceId?: string }>({ open: false });
@@ -507,6 +744,16 @@ export default function CoachSchedule() {
     setSelectedDate(d);
   };
 
+  // Swipe handlers for mobile
+  const handleSwipe = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 50;
+    if (info.offset.x > threshold) {
+      handleNavigateDate(-1); // Swipe right = previous day
+    } else if (info.offset.x < -threshold) {
+      handleNavigateDate(1); // Swipe left = next day
+    }
+  };
+
   const handleOpenCreate = (slot?: number, resourceId?: string) => {
     const defaultStart = slot !== undefined ? slotToTime(slot) : "09:00";
     const defaultResource = resourceId || "personal";
@@ -572,15 +819,24 @@ export default function CoachSchedule() {
 
   return (
     <CoachLayout>
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       <div style={{ fontFamily: "Inter, sans-serif", minHeight: "calc(100vh - 40px)" }}>
 
         {/* ── HEADER ── */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>
             Schedule
           </h1>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {/* Search toggle */}
             <AnimatePresence>
               {showSearch && (
@@ -611,14 +867,22 @@ export default function CoachSchedule() {
               <Search size={16} color={showSearch ? "#7CFC00" : "#8B8B8B"} />
             </button>
 
-            {/* Filter */}
+            {/* Filter - hide label on mobile */}
             <div style={{ position: "relative" }}>
               <button
                 id="schedule-filter-btn"
                 onClick={() => setShowFilterMenu(v => !v)}
-                style={{ ...glassPanel, height: 38, borderRadius: 10, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", color: showFilterMenu ? "#7CFC00" : "#8B8B8B", fontSize: 12, fontWeight: 600 }}
+                className="hidden sm:flex"
+                style={{ ...glassPanel, height: 38, borderRadius: 10, alignItems: "center", gap: 6, padding: "0 12px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", color: showFilterMenu ? "#7CFC00" : "#8B8B8B", fontSize: 12, fontWeight: 600 }}
               >
                 <Filter size={14} /> Filters <ChevronDown size={12} />
+              </button>
+              <button
+                onClick={() => setShowFilterMenu(v => !v)}
+                className="flex sm:hidden"
+                style={{ ...glassPanel, width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", color: showFilterMenu ? "#7CFC00" : "#8B8B8B" }}
+              >
+                <Filter size={16} />
               </button>
               <AnimatePresence>
                 {showFilterMenu && (
@@ -653,8 +917,8 @@ export default function CoachSchedule() {
               </AnimatePresence>
             </div>
 
-            {/* View toggle */}
-            <div style={{ display: "flex", padding: 3, gap: 2, background: "rgba(255,255,255,0.05)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+            {/* View toggle - desktop only */}
+            <div className="hidden sm:flex" style={{ padding: 3, gap: 2, background: "rgba(255,255,255,0.05)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
               {(["day","week"] as const).map(v => (
                 <button key={v}
                   onClick={() => setViewMode(v)}
@@ -664,26 +928,37 @@ export default function CoachSchedule() {
               ))}
             </div>
 
+            {/* Help button - desktop only */}
             <button
               id="schedule-help-btn"
               title="Help"
-              style={{ ...glassPanel, width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)" }}
+              className="hidden sm:flex"
+              style={{ ...glassPanel, width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               <HelpCircle size={16} color="#8B8B8B" />
             </button>
 
+            {/* New Session - icon only on mobile */}
             <button
               id="schedule-new-btn"
               onClick={() => handleOpenCreate()}
-              style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "#7CFC00", color: "#000", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 0 16px rgba(124,252,0,0.35)" }}
+              className="hidden sm:flex"
+              style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "#7CFC00", color: "#000", fontSize: 12, fontWeight: 800, alignItems: "center", gap: 6, boxShadow: "0 0 16px rgba(124,252,0,0.35)" }}
             >
               <Plus size={15} /> New Session
+            </button>
+            <button
+              onClick={() => handleOpenCreate()}
+              className="flex sm:hidden"
+              style={{ ...glassPanel, width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1px solid #7CFC00", background: "rgba(124,252,0,0.1)" }}
+            >
+              <Plus size={18} color="#7CFC00" />
             </button>
           </div>
         </div>
 
         {/* ── DATE NAV ── */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 20 }}>
+        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-4">
           <button
             id="schedule-prev-day"
             onClick={() => handleNavigateDate(-1)}
@@ -711,28 +986,51 @@ export default function CoachSchedule() {
 
           <button
             onClick={() => setSelectedDate(today)}
+            className="hidden sm:block"
             style={{ height: 28, padding: "0 12px", borderRadius: 8, background: dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.06)"}`, color: dateToISO(selectedDate) === dateToISO(today) ? "#7CFC00" : "#8B8B8B", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
             Today
           </button>
         </div>
 
-        {/* ── STATS ROW ── */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-          {[
-            { label: "Scheduled", value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
-            { label: "In Progress", value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
-            { label: "Paused", value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
-            { label: "Completed", value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
-          ].map(stat => (
-            <div key={stat.label} style={{ ...cardStyle, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 120 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: stat.color, boxShadow: `0 0 6px ${stat.color}` }} />
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ fontSize: 10, color: "#5A5A5A", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{stat.label}</div>
-              </div>
-            </div>
-          ))}
+        {/* Mobile Today button */}
+        <div className="flex sm:hidden justify-center mb-4">
+          <button
+            onClick={() => setSelectedDate(today)}
+            style={{ height: 32, padding: "0 16px", borderRadius: 8, background: dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.06)"}`, color: dateToISO(selectedDate) === dateToISO(today) ? "#7CFC00" : "#8B8B8B", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {dateToISO(selectedDate) === dateToISO(today) ? "Today" : "Jump to Today"}
+          </button>
         </div>
+
+        {/* ── STATS ROW ── */}
+        {isMobile ? (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {[
+              { label: "Scheduled", value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
+              { label: "In Progress", value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
+              { label: "Paused", value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
+              { label: "Completed", value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
+            ].map(stat => (
+              <MobileStatsPill key={stat.label} label={stat.label} value={stat.value} color={stat.color} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+            {[
+              { label: "Scheduled", value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
+              { label: "In Progress", value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
+              { label: "Paused", value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
+              { label: "Completed", value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
+            ].map(stat => (
+              <div key={stat.label} style={{ ...cardStyle, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 120 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: stat.color, boxShadow: `0 0 6px ${stat.color}` }} />
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{stat.value}</div>
+                  <div style={{ fontSize: 10, color: "#5A5A5A", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 2 }}>{stat.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── SCHEDULE GRID ── */}
         <div style={{ ...cardStyle, overflow: "hidden", position: "relative" }}>
@@ -770,6 +1068,66 @@ export default function CoachSchedule() {
             </div>
           </div>
 
+          {/* Mobile List View */}
+          {isMobile ? (
+            <motion.div
+              ref={swipeRef}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={handleSwipe}
+              className="p-4 space-y-3"
+            >
+              {/* Swipe hint */}
+              <div className="flex items-center justify-center gap-2 text-xs mb-2" style={{ color: "#5A5A5A" }}>
+                <ChevronLeft size={14} />
+                <span>Swipe to change date</span>
+                <ChevronRight size={14} />
+              </div>
+
+              {/* Top 3 Resources by session count */}
+              {(() => {
+                const sortedResources = [...RESOURCES]
+                  .map(r => ({ ...r, count: bookingsByResource[r.id]?.length || 0 }))
+                  .sort((a, b) => b.count - a.count);
+                
+                const topResources = showAllResources ? sortedResources : sortedResources.slice(0, 3);
+                
+                return (
+                  <>
+                    {topResources.map(res => (
+                      <MobileResourceCard
+                        key={res.id}
+                        resource={res}
+                        count={res.count}
+                        isExpanded={expandedResources.includes(res.id)}
+                        onToggle={() => toggleResource(res.id)}
+                        bookings={bookingsByResource[res.id] || []}
+                        onEdit={b => setEditModal({ open: true, booking: b })}
+                        onStatusChange={handleTimerAction}
+                        currentTime={currentTime}
+                      />
+                    ))}
+                    
+                    {/* View All / View Less button */}
+                    <button
+                      onClick={() => setShowAllResources(!showAllResources)}
+                      className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
+                      style={{ 
+                        background: "rgba(124,252,0,0.1)", 
+                        border: "1px solid rgba(124,252,0,0.2)",
+                        color: "#7CFC00"
+                      }}
+                    >
+                      {showAllResources ? "Show Less" : `View All ${RESOURCES.length} Resources`}
+                    </button>
+                  </>
+                );
+              })()}
+            </motion.div>
+          ) : (
+          /* Desktop Grid View */
+          <>
           {/* Grid body */}
           <div style={{ display: "flex", overflowY: "auto", maxHeight: "60vh" }} ref={gridRef}>
             {/* Time labels column */}
@@ -815,6 +1173,8 @@ export default function CoachSchedule() {
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ── CREATE MODAL ── */}

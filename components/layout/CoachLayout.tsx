@@ -97,7 +97,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="text-center">
               <h1 className="text-sm font-black text-white tracking-wide">
-                Captain&apos;s <span className="text-primary">Portal</span>
+                Coach <span className="text-primary">Hub</span>
               </h1>
               {currentCoach && (
                 <p className="text-xs text-muted-foreground truncate max-w-[140px] mt-0.5">
@@ -150,7 +150,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5 text-white" />
           </button>
           <span className="text-sm font-black text-white tracking-wide">
-            Captain&apos;s <span className="text-primary">Portal</span>
+            Coach <span className="text-primary">Hub</span>
           </span>
           <button
             onClick={() => setIsEditProfileOpen(true)}
@@ -245,7 +245,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
               <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                   <span style={{ fontSize: 16, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.5px" }}>
-                    Captain&apos;s <span style={{ color: "#7CFC00" }}>Portal</span>
+                    Coach <span style={{ color: "#7CFC00" }}>Hub</span>
                   </span>
                   <button onClick={() => setIsDrawerOpen(false)}
                     style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.06)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#8B8B8B" }}>
