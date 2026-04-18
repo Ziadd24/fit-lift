@@ -334,7 +334,7 @@ export default function ClientLoginPage() {
                       </button>
                     </div>
                     <p className="text-[11px] text-[#8B8B8B] mt-1.5">
-                      Enter your 4-digit code or membership ID (e.g. FIT-2024-8842)
+                      Enter your full membership code or just the last 4 digits (e.g. FIT-0001 or 0001)
                     </p>
                   </div>
 

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 import { sanitizeSearchFilter } from "@/lib/sanitize";
+import { normalizeMembershipCode } from "@/lib/member-code";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 1000;
 
 export async function GET(req: NextRequest) {
   const isAdmin = await verifyAdminAuth(req);
@@ -13,14 +15,19 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const pageSizeParam = searchParams.get("pageSize") || "";
   const search = searchParams.get("search") || "";
   const status = searchParams.get("status") || "all";
   const type = searchParams.get("type") || "all";
   // unassigned=true → return members with no coach (for the assign-member drawer)
   const unassigned = searchParams.get("unassigned") === "true";
+  const wantsAll = pageSizeParam === "all";
+  const pageSize = wantsAll
+    ? MAX_PAGE_SIZE
+    : Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(pageSizeParam || String(PAGE_SIZE)) || PAGE_SIZE));
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const today = new Date().toISOString().split("T")[0];
   const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -64,8 +71,8 @@ export async function GET(req: NextRequest) {
     members: data,
     total: count ?? 0,
     page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.ceil((count ?? 0) / PAGE_SIZE),
+    pageSize,
+    totalPages: Math.ceil((count ?? 0) / pageSize),
   });
 }
 
@@ -85,12 +92,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   if (name.length > 200) return NextResponse.json({ error: "Name too long" }, { status: 400 });
 
+  const normalizedMembershipCode = normalizeMembershipCode(String(membership_code));
+  if (!normalizedMembershipCode || normalizedMembershipCode.length > 50) {
+    return NextResponse.json({ error: "Invalid membership code" }, { status: 400 });
+  }
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("members")
     .insert({
       name: name.slice(0, 200),
-      membership_code: membership_code.slice(0, 50),
+      membership_code: normalizedMembershipCode,
       email: (email || "").slice(0, 200) || null,
       phone: (phone || "").slice(0, 50) || null,
       membership_type: (membership_type || "1 Month").slice(0, 100),
@@ -106,5 +118,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Membership code already exists" }, { status: 409 });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabase
+    .from("member_progress_profiles")
+    .upsert(
+      {
+        member_id: data.id,
+        body_metrics: [],
+        coach_goals: [],
+        personal_records: [],
+        wearable_connections: [],
+        updated_by_role: "system",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "member_id" }
+    );
+
   return NextResponse.json(data, { status: 201 });
 }
