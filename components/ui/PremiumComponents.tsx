@@ -103,7 +103,7 @@ export const Badge = ({
   className,
 }: {
   children: React.ReactNode;
-  variant?: "default" | "success" | "destructive" | "outline";
+  variant?: "default" | "success" | "destructive" | "outline" | "warning";
   className?: string;
 }) => {
   const variants = {
@@ -111,6 +111,7 @@ export const Badge = ({
     success: "bg-green-500/20 text-green-400 border border-green-500/30",
     destructive: "bg-destructive/20 text-destructive border border-destructive/30",
     outline: "bg-transparent text-foreground border border-border",
+    warning: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/20",
   };
 
   return (
