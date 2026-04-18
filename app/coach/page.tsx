@@ -4,94 +4,22 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoachLayout } from "@/components/layout/CoachLayout";
-import { useListMembers, useListSessions, useUpdateMember, useSearchUnassignedMembers, useAssignMember } from "@/lib/api-hooks";
+import { useListMembers, useUpdateMember, useSearchUnassignedMembers, useAssignMember } from "@/lib/api-hooks";
 import { useClientContext } from "@/lib/use-client-context";
 import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
-  Users, Activity, CalendarCheck,
+  Users, Activity,
   MessageSquare, ChevronLeft, ChevronRight,
   Tag, Calendar, Smartphone, Mail, User, Star, MapPin,
-  Clock, Search, Edit2, UserPlus, Megaphone, X,
-  Flame, Dumbbell, GripVertical, Plus, ChevronDown, TrendingUp,
+  Search, Edit2, UserPlus, X, Plus,
+  Flame,
   Utensils, ChevronRight as ArrowRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/use-auth";
 import type { Member } from "@/lib/supabase";
-import { DEFAULT_ACTIVITIES, FEATURED_ACTIVITY, PERIOD_DATA } from "@/lib/coach-mock-data";
-import type { ActivityItem } from "@/lib/coach-mock-data";
 
-type TimePeriod = "Day" | "Week" | "Month";
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SVG Sparkline ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-function Sparkline({ values, color = "#7CFC00" }: { values: number[]; color?: string }) {
-  const w = 60, h = 24;
-  const min = Math.min(...values), max = Math.max(...values);
-  const range = max - min || 1;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return `${x},${y}`;
-  }).join(" ");
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none">
-      <polyline points={pts} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Multi-color Conic Ring ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-function OverviewRing({ size = 120, segments = [
-    { pct: 0.60, color: "#7CFC00" },
-    { pct: 0.25, color: "#8B5CF6" },
-    { pct: 0.15, color: "#F59E0B" },
-  ] }: { size?: number, segments?: {pct: number, color: string}[] }) {
-  const cx = size / 2, cy = size / 2, r = size / 2 - 10;
-  const circ = 2 * Math.PI * r;
-  let cumPct = 0;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={9} />
-      {segments.map(({ pct, color }) => {
-        const offset = circ * (1 - pct);
-        const rotation = cumPct * 360;
-        cumPct += pct;
-        return (
-          <circle
-            key={color}
-            cx={cx} cy={cy} r={r}
-            fill="none" stroke={color} strokeWidth={9}
-            strokeDasharray={`${circ * pct} ${circ}`}
-            strokeDashoffset={0}
-            strokeLinecap="butt"
-            style={{ transform: `rotate(${rotation}deg)`, transformOrigin: `${cx}px ${cy}px` }}
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Simple circular ring ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-function CircleRing({ percent, color, size = 56, thickness = 5 }: { percent: number; color: string; size?: number; thickness?: number }) {
-  const r = (size - thickness * 2) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (percent / 100) * circ;
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={thickness} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth={thickness}
-        strokeDasharray={circ} strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 0.8s ease" }}
-      />
-    </svg>
-  );
-}
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Semi-circle Gauge ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+/* Semi-circle Gauge for Nutrition */
 function SemiGauge({ percent = 95.5 }: { percent?: number }) {
   const w = 200, h = 100, r = 80;
   const cx = w / 2, cy = h;
@@ -114,55 +42,7 @@ function SemiGauge({ percent = 95.5 }: { percent?: number }) {
   );
 }
 
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Activity item ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-function ActivityItem({
-  icon: Icon, iconBg, title, sub, pct,
-  editMode, onDelete,
-}: {
-  icon: any; iconBg: string; title: string; sub: string; pct: number;
-  editMode?: boolean; onDelete?: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-xl transition-colors"
-      style={{ background: "rgba(255,255,255,0.03)", marginBottom: 8 }}
-    >
-      {editMode && <GripVertical className="w-4 h-4 text-[#5A5A5A] cursor-grab flex-shrink-0" />}
-      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0"
-        style={{ background: iconBg }}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate" style={{ fontFamily: "Inter,sans-serif" }}>{title}</p>
-        <p className="text-xs" style={{ color: "#8B8B8B", fontFamily: "Inter,sans-serif" }}>{sub}</p>
-      </div>
-      {editMode ? (
-        <button onClick={onDelete} className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-500/20 transition-colors">
-          <X className="w-3.5 h-3.5 text-red-400 hover:text-red-400" />
-        </button>
-      ) : (
-        <div style={{ position: "relative", width: 20, height: 20 }}>
-          <CircleRing percent={pct} color="#7CFC00" size={20} thickness={3} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Skeleton Card ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-function SkeletonCard({ height = 280 }: { height?: number }) {
-  return (
-    <div className="dash-card p-6" style={{ height }}>
-      <div className="space-y-3 animate-pulse">
-        <div className="h-4 rounded-lg skeleton-shimmer w-1/3" />
-        <div className="h-4 rounded-lg skeleton-shimmer w-2/3" />
-        <div className="h-20 rounded-xl skeleton-shimmer w-full" />
-        <div className="h-4 rounded-lg skeleton-shimmer w-1/2" />
-      </div>
-    </div>
-  );
-}
-
-/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Status colour for client cards ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+/* Status colour for client cards */
 function clientStatus(m: Member) {
   return new Date(m.sub_expiry_date) > new Date() ? "#7CFC00" : "#ef4444";
 }
@@ -175,18 +55,16 @@ export default function CoachDashboard() {
   const { currentCoach } = useAuth();
   const { setSelectedClient } = useClientContext();
   const { data: membersPage, refetch: refetchMembers } = useListMembers();
-  const { data: sessions } = useListSessions();
   const updateMemberMutation = useUpdateMember();
 
   const members: Member[] = membersPage?.members || [];
+  const totalMembers = membersPage?.total || 0;
+  const currentPage = membersPage?.page || 1;
+  const totalPages = membersPage?.totalPages || 1;
 
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ UI State ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("Week");
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  /* UI State */
   const [searchQuery, setSearchQuery] = useState("");
-
-  const periodData = PERIOD_DATA;
-  const currentPeriodData = periodData[timePeriod];
+  const [displayLimit, setDisplayLimit] = useState(50); // Show 50 at a time in table
 
   /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Daily calorie totals from Nutrition Tracker (localStorage) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
   const [dailyTotals, setDailyTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
@@ -209,19 +87,10 @@ export default function CoachDashboard() {
     return () => window.removeEventListener("storage", load);
   }, []);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [editActivity, setEditActivity] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [isEditClientOpen, setIsEditClientOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Partial<Member>>({});
-  const [broadcastText, setBroadcastText] = useState("");
   const carouselRef = useRef<HTMLDivElement>(null);
-
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Activity items ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â sourced from config, not hardcoded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-  const [activities, setActivities] = useState<ActivityItem[]>(DEFAULT_ACTIVITIES);
-
-  const [newExTitle, setNewExTitle] = useState("");
-  const [newExSub, setNewExSub] = useState("");
 
   /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Search & Assign Unassigned Members ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
   const [assignSearchQuery, setAssignSearchQuery] = useState("");
@@ -243,10 +112,15 @@ export default function CoachDashboard() {
     });
   };
 
+  // Client-side filtering for search (with debounced API search for large datasets)
   const filteredMembers = members.filter((m) =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.membership_code?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // Paginate the filtered results for performance
+  const displayedMembers = filteredMembers.slice(0, displayLimit);
+  const hasMoreMembers = filteredMembers.length > displayLimit;
   const safeIdx = filteredMembers.length > 0 ? ((activeIdx % filteredMembers.length) + filteredMembers.length) % filteredMembers.length : 0;
   const activeClient = filteredMembers[safeIdx] || null;
   const activeClientId = activeClient?.id || "default";
@@ -262,29 +136,9 @@ export default function CoachDashboard() {
     setIsEditingGoal(false);
   };
 
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Sessions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-  const todaySessions = sessions?.filter((s: any) =>
-    new Date(s.scheduled_at).toDateString() === new Date().toDateString()
-  ) || [];
-  const completedSessions = sessions?.filter((s: any) => s.status === "completed") || [];
-  const progressPct = todaySessions.length > 0
-    ? Math.round((todaySessions.filter((s: any) => s.status === "completed").length / todaySessions.length) * 100)
-    : 0;
-
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Period switch with skeleton ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-  const switchPeriod = (p: TimePeriod) => {
-    if (p === timePeriod) return;
-    setIsRefreshing(true);
-    setTimeout(() => { setTimePeriod(p); setIsRefreshing(false); }, 400);
-  };
-
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Client switch with skeleton ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+  /* Client carousel navigation */
   const switchClient = useCallback((idx: number) => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setActiveIdx(((idx % filteredMembers.length) + filteredMembers.length) % filteredMembers.length);
-      setIsRefreshing(false);
-    }, 300);
+    setActiveIdx(((idx % filteredMembers.length) + filteredMembers.length) % filteredMembers.length);
   }, [filteredMembers.length]);
 
   /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Scroll carousel to active card ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
@@ -316,31 +170,12 @@ export default function CoachDashboard() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Period Toggle */}
-            <div className="flex items-center p-1 gap-1 rounded-full overflow-x-auto no-scrollbar max-w-full" style={{ background: "#1A1A1F" }}>
-              {(["Day","Week","Month"] as TimePeriod[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => switchPeriod(p)}
-                  className="relative px-5 py-1.5 rounded-full text-xs font-medium uppercase tracking-wide transition-all duration-300"
-                  style={{
-                    color: timePeriod === p ? "#000" : "#8B8B8B",
-                    minWidth: 64, fontFamily: "Inter,sans-serif", letterSpacing: "0.5px"
-                  }}
-                >
-                  {timePeriod === p && (
-                    <motion.span
-                      layoutId="period-pill"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: "#7CFC00", boxShadow: "0 2px 8px rgba(124,252,0,0.3)" }}
-                      transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                    />
-                  )}
-                  <span className="relative z-10">{p}</span>
-                </button>
-              ))}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                {totalMembers} client{totalMembers !== 1 ? 's' : ''}
+              </span>
             </div>
-
             <button
               onClick={() => setIsAddOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-black transition-all"
@@ -349,89 +184,27 @@ export default function CoachDashboard() {
               <UserPlus className="w-4 h-4" /> Add Client
             </button>
             <button
-              onClick={() => setIsBroadcastOpen(true)}
+              onClick={() => {
+                if (activeClient) {
+                  router.push(`/coach/messages?memberId=${activeClient.id}`);
+                } else {
+                  router.push("/coach/messages");
+                }
+              }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white border transition-all hover:border-white/30"
               style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "Inter,sans-serif" }}
             >
-              <Megaphone className="w-4 h-4" /> Broadcast
+              <MessageSquare className="w-4 h-4" /> Message
             </button>
           </div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â TOP GRID: Activity | Calories ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-
-          {/* 1. Today's Activity */}
-          <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-            <div style={{ ...cardStyle, padding: 24, height: 280, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Today's Activity</span>
-                <button
-                  onClick={() => { setEditActivity(!editActivity); setNewExTitle(""); setNewExSub(""); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border hover:bg-white/5"
-                  style={{ 
-                     color: editActivity ? "#000" : "#fff", 
-                     background: editActivity ? "#7CFC00" : "transparent",
-                     borderColor: editActivity ? "#7CFC00" : "rgba(255,255,255,0.1)"
-                  }}
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  {editActivity ? "Done" : "Customize"}
-                </button>
-              </div>
-
-              {/* Featured activity banner ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â data from config */}
-              <div className="rounded-xl p-4 mb-3 relative overflow-hidden flex-shrink-0" style={{ background: FEATURED_ACTIVITY.gradient, height: 100 }}>
-                <div className="font-bold text-white" style={{ fontSize: 28, fontWeight: 700 }}>{FEATURED_ACTIVITY.value}</div>
-                <div className="text-xs text-white/80">{FEATURED_ACTIVITY.unit}</div>
-                <div className="absolute bottom-3 left-4 px-3 py-1 rounded-xl text-xs font-semibold uppercase text-white" style={{ background: "rgba(0,0,0,0.35)" }}>{FEATURED_ACTIVITY.label}</div>
-              </div>
-
-              {/* Activity list ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â only first 1 visible, scrollable */}
-              <div className="overflow-y-auto no-scrollbar flex-1" style={{ minHeight: 0 }}>
-                {activities.map((a) => (
-                  <ActivityItem key={a.id} icon={a.icon} iconBg={a.iconBg} title={a.title} sub={a.sub} pct={a.pct}
-                    editMode={editActivity} onDelete={() => setActivities(prev => prev.filter((x) => x.id !== a.id))}
-                  />
-                ))}
-                {editActivity && (
-                  <div className="mt-2 p-3 rounded-xl border border-dashed border-[#7CFC00] bg-[#7CFC00]/5 flex flex-col gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="Exercise Name (e.g. Squat)" 
-                      value={newExTitle}
-                      onChange={e => setNewExTitle(e.target.value)}
-                      className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#7CFC00]" 
-                    />
-                    <input 
-                      type="text" 
-                      placeholder="Details (e.g. 3 sets ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 10 reps)" 
-                      value={newExSub}
-                      onChange={e => setNewExSub(e.target.value)}
-                      className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#7CFC00]" 
-                    />
-                    <button 
-                      onClick={() => {
-                        if (newExTitle.trim()) {
-                          setActivities([...activities, { id: Date.now(), title: newExTitle, sub: newExSub || "1 set ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 10 reps", icon: Dumbbell, iconBg: "#7CFC00", pct: 0 }]);
-                          setNewExTitle(""); setNewExSub("");
-                        }
-                      }}
-                      className="w-full rounded-lg flex items-center justify-center gap-1.5 transition-colors hover:bg-[#7CFC00]/20"
-                      style={{ height: 32, background: "rgba(124,252,0,0.15)", color: "#7CFC00", fontSize: 12, fontWeight: 600, fontFamily: "Inter,sans-serif" }}>
-                      <Plus className="w-3.5 h-3.5" /> Add Custom Activity
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* 2. Calories Gauge Card ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â live from Nutrition Tracker */}
-          <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+        {/* ══ NUTRITION OVERVIEW ══ */}
+        <div className="mb-8">
+          <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }} className="max-w-md">
             <div style={{ ...cardStyle, padding: 24, height: 280, display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div className="flex items-center justify-between w-full mb-3">
-                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Calories</span>
+                <span className="font-semibold text-white" style={{ fontSize: 18 }}>Daily Nutrition</span>
                 <Link href="/coach/calories"
                   className="flex items-center gap-1 text-[11px] font-bold transition-opacity hover:opacity-80"
                   style={{ color: "#7CFC00" }}>
@@ -533,14 +306,15 @@ export default function CoachDashboard() {
             </div>
           </div>
 
-          {/* Carousel with edge mask */}
+          {/* Carousel with edge mask - limited to first 15 for performance with hundreds of clients */}
           <div className="relative carousel-mask" style={{ height: 180 }}>
             <div
               ref={carouselRef}
               className="flex gap-4 overflow-x-auto no-scrollbar h-full items-center px-4"
               style={{ scrollSnapType: "x mandatory", scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
             >
-              {filteredMembers.map((member, idx) => {
+              {/* Show first 15 clients in carousel for optimal performance */}
+              {filteredMembers.slice(0, 15).map((member, idx) => {
                 const selected = idx === safeIdx;
                 const sColor = clientStatus(member);
                 return (
@@ -586,6 +360,25 @@ export default function CoachDashboard() {
                 );
               })}
 
+              {/* View All card - shown when more than 15 clients */}
+              {filteredMembers.length > 15 && (
+                <button
+                  onClick={() => document.getElementById('roster-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="flex-shrink-0 flex flex-col items-center justify-center gap-2 transition-all"
+                  style={{
+                    width: 120, height: 160,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 16, scrollSnapAlign: "start",
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <span className="text-sm font-bold text-white">+{filteredMembers.length - 15}</span>
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: "#8B8B8B", fontFamily: "Inter,sans-serif" }}>View All</span>
+                </button>
+              )}
+
               {/* Add Client card */}
               <button
                 onClick={() => setIsAddOpen(true)}
@@ -606,15 +399,10 @@ export default function CoachDashboard() {
           </div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â DETAIL + SCHEDULE ROW ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
+        {/* ══ CLIENT SPOTLIGHT ══ */}
+        <div className="mb-8">
             <AnimatePresence mode="wait">
-              {isRefreshing ? (
-                <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <SkeletonCard height={280} />
-                </motion.div>
-              ) : !activeClient ? (
+              {!activeClient ? (
                 <div style={{ ...cardStyle, padding: 32, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
                   <Users className="w-10 h-10 mb-3 opacity-30 text-white" />
                   <p className="text-white font-semibold">No Clients Yet</p>
@@ -675,67 +463,34 @@ export default function CoachDashboard() {
                       ))}
                     </div>
 
-                    {/* Progress bar */}
+                    {/* Progress bar - real calorie progress */}
                     <div>
                       <div className="flex justify-between mb-2">
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-white">Fitness Progress</span>
-                        <span className="font-bold text-sm" style={{ color: "#7CFC00" }}>68%</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-white">Today's Nutrition Progress</span>
+                        <span className="font-bold text-sm" style={{ color: "#7CFC00" }}>
+                          {Math.min(Math.round((dailyTotals.calories / CALORIE_GOAL) * 100), 100)}%
+                        </span>
                       </div>
                       <div className="rounded-full overflow-hidden" style={{ height: 10, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.05)" }}>
                         <motion.div className="h-full rounded-full"
                           style={{ background: "linear-gradient(90deg, #7CFC00, #39FF14)", boxShadow: "0 0 10px rgba(124,252,0,0.5)" }}
-                          initial={{ width: 0 }} animate={{ width: "68%" }}
+                          initial={{ width: 0 }} 
+                          animate={{ width: `${Math.min((dailyTotals.calories / CALORIE_GOAL) * 100, 100)}%` }}
                           transition={{ duration: 0.8, ease: "easeOut" }}
                         />
                       </div>
+                      <p className="text-[10px] mt-2" style={{ color: "#8B8B8B" }}>
+                        {dailyTotals.calories.toLocaleString()} / {CALORIE_GOAL.toLocaleString()} kcal consumed today
+                      </p>
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-
-          {/* Mission Schedule */}
-          <div style={{ ...cardStyle, padding: 24, display: "flex", flexDirection: "column", borderLeft: "4px solid #7CFC00" }}>
-            <h3 className="font-semibold text-white mb-0.5" style={{ fontSize: 18, fontFamily: "Inter,sans-serif" }}>Mission Schedule</h3>
-            <p className="text-sm font-medium mb-5" style={{ color: "#7CFC00" }}>{new Date().toLocaleDateString()}</p>
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
-              {todaySessions.length > 0 ? todaySessions.map((s: any) => (
-                <div key={s.id} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <div className="flex items-center gap-2 text-xs font-bold text-white">
-                      <Clock className="w-3.5 h-3.5" style={{ color: "#7CFC00" }} />
-                      {new Date(s.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: s.status === "completed" ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.1)", color: s.status === "completed" ? "#10B981" : "#8B8B8B" }}>
-                      {s.status}
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-white">{s.member_name}</p>
-                  <p className="text-xs mb-2" style={{ color: "#8B8B8B" }}>{s.session_type}</p>
-                  <button onClick={() => router.push("/coach/schedule")} className="w-full text-xs py-1.5 rounded-lg border font-medium transition-colors hover:border-primary/50"
-                    style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8B8B8B" }}>
-                    View Details
-                  </button>
-                </div>
-              )) : (
-                <div className="h-32 flex flex-col items-center justify-center" style={{ color: "#5A5A5A" }}>
-                  <Calendar className="w-8 h-8 mb-2 opacity-50" />
-                  <p className="text-sm">No missions today.</p>
-                </div>
-              )}
-            </div>
-            <button onClick={() => router.push("/coach/schedule")}
-              className="w-full mt-4 py-2.5 rounded-xl font-semibold text-sm text-black transition-all"
-              style={{ background: "#7CFC00", fontFamily: "Inter,sans-serif" }}>
-              + New Entry
-            </button>
-          </div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â FULL ROSTER TABLE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
-        <div style={{ ...cardStyle, overflow: "hidden" }}>
+        {/* ══ ROSTER TABLE ══ */}
+        <div id="roster-section" style={{ ...cardStyle, overflow: "hidden" }}>
           <div className="p-5 flex flex-col lg:flex-row justify-between items-center gap-4"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-3">
@@ -743,6 +498,11 @@ export default function CoachDashboard() {
               <span className="font-bold text-xs px-2.5 py-0.5 rounded-full" style={{ background: "rgba(124,252,0,0.15)", color: "#7CFC00" }}>
                 {filteredMembers.length}
               </span>
+              {filteredMembers.length > displayLimit && (
+                <span className="text-xs text-muted-foreground">
+                  (showing {displayedMembers.length})
+                </span>
+              )}
             </div>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#5A5A5A" }} />
@@ -768,7 +528,7 @@ export default function CoachDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredMembers.map((m) => (
+                {displayedMembers.map((m) => (
                   <tr key={m.id} className="border-b transition-colors hover:bg-white/[0.02]"
                     style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <td className="p-4" style={{ paddingLeft: 24 }}>
@@ -812,6 +572,23 @@ export default function CoachDashboard() {
                 ))}
               </tbody>
             </table>
+            
+            {/* Load More Button - for handling hundreds of clients */}
+            {hasMoreMembers && (
+              <div className="p-4 text-center">
+                <button
+                  onClick={() => setDisplayLimit(prev => prev + 50)}
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                  style={{ 
+                    background: "rgba(124,252,0,0.1)", 
+                    border: "1px solid rgba(124,252,0,0.2)",
+                    color: "#7CFC00"
+                  }}
+                >
+                  Load More ({filteredMembers.length - displayLimit} remaining)
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -889,37 +666,6 @@ export default function CoachDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â BROADCAST MODAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
-      <AnimatePresence>
-        {isBroadcastOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsBroadcastOpen(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ ...cardStyle, width: "100%", maxWidth: 420, padding: 28, position: "relative" }}>
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="text-xl font-bold text-white uppercase" style={{ fontFamily: "Inter,sans-serif" }}>Broadcast</h2>
-                <button onClick={() => setIsBroadcastOpen(false)} style={{ color: "#8B8B8B" }}><X className="w-5 h-5" /></button>
-              </div>
-              <textarea value={broadcastText} onChange={e => setBroadcastText(e.target.value)}
-                placeholder="Type your message to all clients..."
-                rows={4}
-                className="w-full rounded-xl p-4 text-sm text-white resize-none outline-none transition-colors"
-                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "Inter,sans-serif" }}
-              />
-              <div className="flex gap-3 mt-4">
-                <button onClick={() => setIsBroadcastOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors"
-                  style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8B8B8B" }}>
-                  Cancel
-                </button>
-                <button onClick={() => { alert("Broadcast coming soon!"); setIsBroadcastOpen(false); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-black flex items-center justify-center gap-2"
-                  style={{ background: "#7CFC00" }}>
-                  <Megaphone className="w-4 h-4" /> Send to All
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </CoachLayout>
   );
 }

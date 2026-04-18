@@ -7,8 +7,9 @@ const MEMBER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 // Admin JWT is already time-limited server-side (8h), but we also
 // clear it client-side after 8 hours to force re-login
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
-// Coach sessions also 24h
+// Coach sessions: 24h default, 30 days if rememberMe
 const COACH_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const COACH_SESSION_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface AuthState {
   adminToken: string | null;
@@ -23,7 +24,8 @@ interface AuthState {
   coachToken: string | null;
   currentCoach: Coach | null;
   coachLoginAt: number | null;
-  setCoachAuth: (token: string | null, coach: Coach | null) => void;
+  coachRememberMe: boolean;
+  setCoachAuth: (token: string | null, coach: Coach | null, rememberMe?: boolean) => void;
 
   logoutMember: () => void;
   logoutAdmin: () => void;
@@ -54,11 +56,13 @@ export const useAuth = create<AuthState>()(
       coachToken: null,
       currentCoach: null,
       coachLoginAt: null,
-      setCoachAuth: (token, coach) =>
+      coachRememberMe: false,
+      setCoachAuth: (token, coach, rememberMe = false) =>
         set({
           coachToken: token,
           currentCoach: coach,
           coachLoginAt: token ? Date.now() : null,
+          coachRememberMe: rememberMe,
         }),
 
       logoutMember: () =>
@@ -68,10 +72,10 @@ export const useAuth = create<AuthState>()(
         set({ adminToken: null, adminLoginAt: null }),
 
       logoutCoach: () =>
-        set({ coachToken: null, currentCoach: null, coachLoginAt: null }),
+        set({ coachToken: null, currentCoach: null, coachLoginAt: null, coachRememberMe: false }),
 
       checkSessionExpiry: () => {
-        const { memberLoginAt, adminLoginAt, coachLoginAt } = get();
+        const { memberLoginAt, adminLoginAt, coachLoginAt, coachRememberMe } = get();
         const now = Date.now();
 
         // Clear expired member session
@@ -84,9 +88,10 @@ export const useAuth = create<AuthState>()(
           set({ adminToken: null, adminLoginAt: null });
         }
 
-        // Clear expired coach session
-        if (coachLoginAt && now - coachLoginAt > COACH_SESSION_TTL_MS) {
-          set({ coachToken: null, currentCoach: null, coachLoginAt: null });
+        // Clear expired coach session (with rememberMe support)
+        const coachTTL = coachRememberMe ? COACH_SESSION_REMEMBER_TTL_MS : COACH_SESSION_TTL_MS;
+        if (coachLoginAt && now - coachLoginAt > coachTTL) {
+          set({ coachToken: null, currentCoach: null, coachLoginAt: null, coachRememberMe: false });
         }
       },
     }),
@@ -113,6 +118,7 @@ export const useAuth = create<AuthState>()(
         coachToken: state.coachToken,
         currentCoach: state.currentCoach,
         coachLoginAt: state.coachLoginAt,
+        coachRememberMe: state.coachRememberMe,
       }),
     }
   )

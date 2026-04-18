@@ -39,12 +39,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { memberId, content, senderType = "member" } = body;
-  if (!memberId || !content) return NextResponse.json({ error: "memberId and content are required" }, { status: 400 });
-  if (typeof content !== "string" || content.length > 5000) {
+  const { memberId, content, senderType = "member", imageUrl } = body;
+  if (!memberId) return NextResponse.json({ error: "memberId is required" }, { status: 400 });
+  if (content && (typeof content !== "string" || content.length > 5000)) {
     return NextResponse.json({ error: "Content too long (max 5000 characters)" }, { status: 400 });
   }
-  const sanitizedContent = sanitizeHtml(content);
+  const sanitizedContent = content ? sanitizeHtml(content) : "";
   const supabase = getSupabaseAdmin();
   let coachId: number | null = null;
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { data, error } = await supabase.from("messages").insert({
-    coach_id: coachId, member_id: memberId, content: sanitizedContent, sender_type: senderType,
+    coach_id: coachId, member_id: memberId, content: sanitizedContent, sender_type: senderType, image_url: imageUrl || null,
   }).select("*").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
