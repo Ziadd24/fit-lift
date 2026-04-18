@@ -1206,6 +1206,7 @@ export default function CoachSchedule() {
                 <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <FormField label="Client">
                     <select
+                      className="coach-schedule-select"
                       value={formClient}
                       onChange={e => setFormClient(e.target.value)}
                       style={selectStyle}
@@ -1216,7 +1217,7 @@ export default function CoachSchedule() {
                   </FormField>
 
                   <FormField label="Activity / Session Type">
-                    <select value={formActivity} onChange={e => {
+                    <select className="coach-schedule-select" value={formActivity} onChange={e => {
                       setFormActivity(e.target.value);
                       const rid = SESSION_TYPE_TO_RESOURCE[e.target.value] || "personal";
                       setFormResource(rid);
@@ -1225,18 +1226,12 @@ export default function CoachSchedule() {
                     </select>
                   </FormField>
 
-                  <FormField label="Resource / Area">
-                    <select value={formResource} onChange={e => setFormResource(e.target.value)} style={selectStyle}>
-                      {RESOURCES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  </FormField>
-
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <FormField label="Start Time">
                       <input type="time" value={formStart} onChange={e => setFormStart(e.target.value)} required style={inputStyle} />
                     </FormField>
                     <FormField label="Duration (min)">
-                      <select value={formDuration} onChange={e => setFormDuration(e.target.value)} style={selectStyle}>
+                      <select className="coach-schedule-select" value={formDuration} onChange={e => setFormDuration(e.target.value)} style={selectStyle}>
                         {[30,45,60,90,120].map(d => <option key={d} value={d}>{d} min</option>)}
                       </select>
                     </FormField>
@@ -1403,6 +1398,7 @@ const inputStyle: React.CSSProperties = {
 const selectStyle: React.CSSProperties = {
   ...inputStyle,
   appearance: "none",
+  colorScheme: "dark",
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%238B8B8B' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E")`,
   backgroundRepeat: "no-repeat",
   backgroundPosition: "right 10px center",

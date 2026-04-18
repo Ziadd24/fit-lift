@@ -394,6 +394,15 @@ select:focus-visible,
   outline-offset: 2px;
 }
 
+.coach-schedule-select {
+  color-scheme: dark;
+}
+
+.coach-schedule-select option {
+  background-color: #16161a;
+  color: #ffffff;
+}
+
 /* Safe area bottom padding for bottom nav on iOS */
 .pb-safe-nav {
   padding-bottom: max(12px, env(safe-area-inset-bottom));

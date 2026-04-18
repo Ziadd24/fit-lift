@@ -1,0 +1,12 @@
+
+> fitgym@1.0.0 dev
+> next dev -H 0.0.0.0
+
+▲ Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+- Environments: .env.local
+✓ Ready in 2.6s
+
+○ Compiling /client/dashboard ...
+ GET /client/dashboard 200 in 7.1s (next.js: 5.9s, application-code: 1219ms)
