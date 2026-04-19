@@ -41,7 +41,17 @@ export const useAuth = create<AuthState>()(
       adminToken: null,
       adminLoginAt: null,
       setAdminToken: (token) =>
-        set({ adminToken: token, adminLoginAt: token ? Date.now() : null }),
+        set({
+          adminToken: token,
+          adminLoginAt: token ? Date.now() : null,
+          memberCode: null,
+          currentMember: null,
+          memberLoginAt: null,
+          coachToken: null,
+          currentCoach: null,
+          coachLoginAt: null,
+          coachRememberMe: false,
+        }),
 
       memberCode: null,
       currentMember: null,
@@ -51,6 +61,12 @@ export const useAuth = create<AuthState>()(
           memberCode: code,
           currentMember: member,
           memberLoginAt: code ? Date.now() : null,
+          adminToken: null,
+          adminLoginAt: null,
+          coachToken: null,
+          currentCoach: null,
+          coachLoginAt: null,
+          coachRememberMe: false,
         }),
 
       coachToken: null,
@@ -63,6 +79,11 @@ export const useAuth = create<AuthState>()(
           currentCoach: coach,
           coachLoginAt: token ? Date.now() : null,
           coachRememberMe: rememberMe,
+          adminToken: null,
+          adminLoginAt: null,
+          memberCode: null,
+          currentMember: null,
+          memberLoginAt: null,
         }),
 
       logoutMember: () =>
