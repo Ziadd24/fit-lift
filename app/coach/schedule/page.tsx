@@ -640,16 +640,9 @@ export default function CoachSchedule() {
 
   // Mobile
   const isMobile = useIsMobile();
-  const [expandedResources, setExpandedResources] = useState<string[]>([]);
-  const [showAllResources, setShowAllResources] = useState(false);
   const swipeRef = useRef<HTMLDivElement>(null);
-
-  // Toggle resource expansion
-  const toggleResource = (id: string) => {
-    setExpandedResources(prev =>
-      prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
-    );
-  };
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyColumnsRef = useRef<HTMLDivElement>(null);
 
   // Modals
   const [createModal, setCreateModal] = useState<{ open: boolean; slot?: number; resourceId?: string }>({ open: false });
@@ -661,8 +654,6 @@ export default function CoachSchedule() {
   const [formResource, setFormResource] = useState("personal");
   const [formStart, setFormStart] = useState("09:00");
   const [formDuration, setFormDuration] = useState("60");
-
-  const gridRef = useRef<HTMLDivElement>(null);
 
   // API
   const { data: allSessions } = useListSessions();
@@ -736,6 +727,8 @@ export default function CoachSchedule() {
   // Time slots
   const timeSlots = Array.from({ length: TOTAL_SLOTS }, (_, i) => i);
   const totalGridHeight = TOTAL_SLOTS * SLOT_HEIGHT_PX;
+  const resourceColumnWidth = isMobile ? 148 : 180;
+  const timeColumnWidth = isMobile ? 58 : 72;
 
   // Handlers
   const handleNavigateDate = (dir: -1 | 1) => {
@@ -753,6 +746,19 @@ export default function CoachSchedule() {
       handleNavigateDate(1); // Swipe left = next day
     }
   };
+
+  useEffect(() => {
+    const bodyColumns = bodyColumnsRef.current;
+    const headerColumns = headerScrollRef.current;
+    if (!bodyColumns || !headerColumns) return;
+
+    const syncHeader = () => {
+      headerColumns.scrollLeft = bodyColumns.scrollLeft;
+    };
+
+    bodyColumns.addEventListener("scroll", syncHeader);
+    return () => bodyColumns.removeEventListener("scroll", syncHeader);
+  }, [isMobile]);
 
   const handleOpenCreate = (slot?: number, resourceId?: string) => {
     const defaultStart = slot !== undefined ? slotToTime(slot) : "09:00";
@@ -1037,17 +1043,17 @@ export default function CoachSchedule() {
           {/* Header: resource columns */}
           <div style={{ display: "flex", position: "sticky", top: 0, zIndex: 40, ...glassPanel, borderBottom: "1px solid rgba(255,255,255,0.06)", borderRadius: 0 }}>
             {/* Time label column */}
-            <div style={{ width: 72, flexShrink: 0, padding: "12px 0", borderRight: "1px solid rgba(255,255,255,0.04)" }} />
+            <div style={{ width: timeColumnWidth, flexShrink: 0, padding: "12px 0", borderRight: "1px solid rgba(255,255,255,0.04)" }} />
 
             {/* Resource headers */}
-            <div style={{ flex: 1, overflowX: "auto", display: "flex" }} id="resource-header-scroll">
+            <div ref={headerScrollRef} style={{ flex: 1, overflowX: "auto", display: "flex" }} id="resource-header-scroll">
               {RESOURCES.map(res => {
                 const Icon = res.icon;
                 const count = bookingsByResource[res.id]?.length || 0;
                 return (
                   <div key={res.id} style={{
-                    flex: "0 0 180px", minWidth: 180,
-                    padding: "12px 16px",
+                    flex: `0 0 ${resourceColumnWidth}px`, minWidth: resourceColumnWidth,
+                    padding: isMobile ? "10px 12px" : "12px 16px",
                     borderRight: "1px solid rgba(255,255,255,0.04)",
                     display: "flex", alignItems: "center", gap: 8,
                   }}>
@@ -1055,10 +1061,10 @@ export default function CoachSchedule() {
                       <Icon size={14} color={res.glowColor} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {res.name}
                       </div>
-                      <div style={{ fontSize: 9, color: count > 0 ? res.glowColor : "#5A5A5A", fontWeight: 600 }}>
+                      <div style={{ fontSize: isMobile ? 8 : 9, color: count > 0 ? res.glowColor : "#5A5A5A", fontWeight: 600 }}>
                         {count} session{count !== 1 ? "s" : ""}
                       </div>
                     </div>
@@ -1068,78 +1074,27 @@ export default function CoachSchedule() {
             </div>
           </div>
 
-          {/* Mobile List View */}
-          {isMobile ? (
-            <motion.div
-              ref={swipeRef}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={handleSwipe}
-              className="p-4 space-y-3"
-            >
-              {/* Swipe hint */}
-              <div className="flex items-center justify-center gap-2 text-xs mb-2" style={{ color: "#5A5A5A" }}>
-                <ChevronLeft size={14} />
-                <span>Swipe to change date</span>
-                <ChevronRight size={14} />
-              </div>
-
-              {/* Top 3 Resources by session count */}
-              {(() => {
-                const sortedResources = [...RESOURCES]
-                  .map(r => ({ ...r, count: bookingsByResource[r.id]?.length || 0 }))
-                  .sort((a, b) => b.count - a.count);
-                
-                const topResources = showAllResources ? sortedResources : sortedResources.slice(0, 3);
-                
-                return (
-                  <>
-                    {topResources.map(res => (
-                      <MobileResourceCard
-                        key={res.id}
-                        resource={res}
-                        count={res.count}
-                        isExpanded={expandedResources.includes(res.id)}
-                        onToggle={() => toggleResource(res.id)}
-                        bookings={bookingsByResource[res.id] || []}
-                        onEdit={b => setEditModal({ open: true, booking: b })}
-                        onStatusChange={handleTimerAction}
-                        currentTime={currentTime}
-                      />
-                    ))}
-                    
-                    {/* View All / View Less button */}
-                    <button
-                      onClick={() => setShowAllResources(!showAllResources)}
-                      className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
-                      style={{ 
-                        background: "rgba(124,252,0,0.1)", 
-                        border: "1px solid rgba(124,252,0,0.2)",
-                        color: "#7CFC00"
-                      }}
-                    >
-                      {showAllResources ? "Show Less" : `View All ${RESOURCES.length} Resources`}
-                    </button>
-                  </>
-                );
-              })()}
-            </motion.div>
-          ) : (
-          /* Desktop Grid View */
+          {/* Schedule Grid */}
           <>
           {/* Grid body */}
-          <div style={{ display: "flex", overflowY: "auto", maxHeight: "60vh" }} ref={gridRef}>
+          <motion.div
+            ref={swipeRef}
+            drag={isMobile ? "x" : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={isMobile ? handleSwipe : undefined}
+            style={{ display: "flex", overflowY: "auto", maxHeight: isMobile ? "66vh" : "60vh" }}
+          >
             {/* Time labels column */}
-            <div style={{ width: 72, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.04)", position: "sticky", left: 0, background: "#16161A", zIndex: 20 }}>
+            <div style={{ width: timeColumnWidth, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.04)", position: "sticky", left: 0, background: "#16161A", zIndex: 20 }}>
               {timeSlots.map(slot => <TimeLabel key={slot} slot={slot} />)}
             </div>
 
             {/* Resource columns */}
-            <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+            <div ref={bodyColumnsRef} style={{ flex: 1, display: "flex", overflowX: "auto" }}>
               {RESOURCES.map((res, resIdx) => (
                 <div key={res.id} style={{
-                  flex: "0 0 180px", minWidth: 180,
+                  flex: `0 0 ${resourceColumnWidth}px`, minWidth: resourceColumnWidth,
                   borderRight: resIdx < RESOURCES.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
                   position: "relative",
                   height: totalGridHeight,
@@ -1172,9 +1127,8 @@ export default function CoachSchedule() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
           </>
-          )}
         </div>
 
         {/* ── CREATE MODAL ── */}

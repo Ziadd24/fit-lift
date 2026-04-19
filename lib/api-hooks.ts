@@ -568,8 +568,8 @@ export interface CalorieLog {
 }
 
 export function useListCalorieLogs(memberId?: number | "null" | "all") {
-  const { adminToken, coachToken, memberCode } = useAuth();
-  const token = adminToken || coachToken || memberCode;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
@@ -611,8 +611,8 @@ export function useVerifyCalorieLog() {
 }
 
 export function useSaveCalorieLog() {
-  const { adminToken, coachToken, memberCode } = useAuth();
-  const token = adminToken || coachToken || memberCode;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
   const queryClient = useQueryClient();
   return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
     mutationFn: async (data) => {
