@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "@/lib/use-auth";
 import { useCoachLogin } from "@/lib/api-hooks";
 import { Button, Input, Label } from "@/components/ui/PremiumComponents";
@@ -36,7 +35,6 @@ export default function CoachLoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState(0);
@@ -89,8 +87,8 @@ export default function CoachLoginPage() {
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (!password) {
+      setError("Please enter your password");
       return;
     }
 
@@ -100,7 +98,7 @@ export default function CoachLoginPage() {
         {
           onSuccess: (res) => {
             setFailedAttempts(0);
-            setCoachAuth(res.token, res.coach, rememberMe);
+            setCoachAuth(res.token, res.coach, false);
             router.push("/coach");
           },
           onError: (err: any) => {
@@ -283,7 +281,6 @@ export default function CoachLoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••"
                       required
-                      minLength={8}
                       disabled={isLockedOut}
                       className="pr-12"
                     />
@@ -299,52 +296,8 @@ export default function CoachLoginPage() {
                       )}
                     </button>
                   </div>
-                  
-                  {/* Password Strength Indicator */}
-                  {password.length > 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="mt-2"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <motion.div 
-                            className="h-full rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(passwordStrength.score / 5) * 100}%` }}
-                            style={{ backgroundColor: passwordStrength.color }}
-                            transition={{ duration: 0.3 }}
-                          />
-                        </div>
-                        <span className="text-[10px] font-medium" style={{ color: passwordStrength.color }}>
-                          {passwordStrength.label}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Min 8 chars, uppercase, number & symbol recommended
-                      </p>
-                    </motion.div>
-                  )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary/50"
-                    />
-                    <span className="text-sm text-muted-foreground">Remember me for 30 days</span>
-                  </label>
-                  <Link 
-                    href="/coach/login/forgot" 
-                    className="text-sm text-primary hover:text-primary/80 transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
 
                 <Button
                   type="submit"
@@ -365,9 +318,9 @@ export default function CoachLoginPage() {
               <div className="mt-6 pt-6 border-t border-white/5">
                 <p className="text-xs text-muted-foreground text-center">
                   Having trouble?{" "}
-                  <Link href="/admin/support" className="text-primary hover:underline">
+                  <a href="/admin/support" className="text-primary hover:underline">
                     Contact your administrator
-                  </Link>
+                  </a>
                 </p>
               </div>
             </motion.div>

@@ -1382,9 +1382,9 @@ function SettingsModal({
   const normalizedWidgetOrder = normalizeWidgetOrder(widgetOrder);
   if (!isOpen) return null;
   return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
-      <motion.div ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", inset: "8vh auto auto 50%", transform: "translateX(-50%)", width: "min(640px, calc(100vw - 24px))", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
+    <AnimatePresence mode="wait">
+      <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
+      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", inset: "8vh auto auto 50%", transform: "translateX(-50%)", width: "min(640px, calc(100vw - 24px))", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div id={titleId} style={{ fontSize: 20, fontWeight: 800, color: "var(--dashboard-text-primary)" }}>Dashboard Settings</div>
@@ -2540,33 +2540,19 @@ export default function ClientDashboard() {
                 marginBottom: 24,
               }}
             >
-              {/* Top: Avatar + Greeting + Badges */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-                <div
-                  style={{
-                    width: 56, height: 56, borderRadius: "50%",
-                    background: isPrivate
-                      ? "linear-gradient(135deg, #7CFC00, #4CAF50)"
-                      : "linear-gradient(135deg, #8B5CF6, #6D28D9)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 20, fontWeight: 700,
-                    color: isPrivate ? "#000" : "#FFF",
-                    flexShrink: 0,
-                    border: isPrivate ? "2px solid rgba(124,252,0,0.4)" : "none",
-                  }}
-                >
-                  {memberName.slice(0, 2).toUpperCase()}
-                </div>
-
+              {/* Top: Greeting + Badges */}
+              <div style={{ marginBottom: 20 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2 }}>
                         Hello, {memberName}
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 3 }}>
-                        {isPrivate ? "Private coaching active — keep pushing" : "Track your progress. 7 days to goal."}
-                      </div>
+                      {isPrivate && (
+                        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 3 }}>
+                          Private coaching active — keep pushing
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {/* Status badge — dynamic */}
@@ -3286,21 +3272,6 @@ export default function ClientDashboard() {
               textAlign: "center",
             }}
           >
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 80, height: 80, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #7CFC00, #4CAF50)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 28, fontWeight: 700, color: "#000",
-                  border: "3px solid #7CFC00",
-                  boxShadow: "0 0 20px rgba(124,252,0,0.3)",
-                }}
-              >
-                {memberName.slice(0, 2).toUpperCase()}
-              </div>
-            </div>
-
             <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 2 }}>{memberType}</div>
 

@@ -7,11 +7,6 @@ type CalorieResult = Record<string, any> & {
   shared_coach_id?: number | null;
 };
 
-function hasPrivateAccess(membershipType?: string | null) {
-  if (!membershipType) return false;
-  const normalizedType = membershipType.trim().toLowerCase();
-  return normalizedType === "vip" || normalizedType.includes("private");
-}
 
 function isFiniteId(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -141,9 +136,6 @@ export async function POST(req: NextRequest) {
           .eq("coach_id", coachId)
           .single();
         if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
-        if (!hasPrivateAccess(member.membership_type)) {
-          return NextResponse.json({ error: "Only private clients share calorie logs with coaches" }, { status: 403 });
-        }
         sharedWithCoach = true;
         sharedCoachId = coachId;
       } else {
@@ -158,7 +150,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         resolvedMemberId = member.id;
-        sharedWithCoach = hasPrivateAccess(member.membership_type) && isFiniteId(member.coach_id);
+        sharedWithCoach = isFiniteId(member.coach_id);
         sharedCoachId = sharedWithCoach ? member.coach_id : null;
       }
     }
