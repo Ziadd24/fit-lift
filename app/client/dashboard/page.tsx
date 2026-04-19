@@ -244,15 +244,6 @@ interface WeeklyChallenge {
   helper: string;
 }
 
-interface CompareStatCard {
-  key: string;
-  label: string;
-  current: string;
-  previous: string;
-  improvement: string;
-  tone: string;
-}
-
 interface SearchWorkoutItem {
   id: string;
   title: string;
@@ -275,7 +266,13 @@ type ThemeMode = "auto" | "dark" | "light";
 type UnitPreference = "kg" | "lbs";
 type HomeSectionKey = "workoutSummary" | "nutritionToday" | "recentMessages" | "goals";
 
-const DEFAULT_WIDGET_ORDER: HomeSectionKey[] = ["workoutSummary", "nutritionToday", "recentMessages", "goals"];
+function hasPrivateAccess(membershipType?: string | null) {
+  if (!membershipType) return false;
+  const normalizedType = membershipType.trim().toLowerCase();
+  return normalizedType === "vip" || normalizedType.includes("private");
+}
+
+const DEFAULT_WIDGET_ORDER: HomeSectionKey[] = ["goals"];
 
 function normalizeWidgetOrder(value: unknown): HomeSectionKey[] {
   const allowed = new Set<HomeSectionKey>(DEFAULT_WIDGET_ORDER);
@@ -1031,22 +1028,22 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
   return (
     <div
       style={{
-        padding: 16,
-        borderRadius: 18,
+        padding: 12,
+        borderRadius: 16,
         background: badge.achieved ? "linear-gradient(135deg, rgba(124,252,0,0.14), rgba(22,22,26,0.96))" : "rgba(255,255,255,0.03)",
         border: badge.achieved ? "1px solid rgba(124,252,0,0.18)" : "1px solid rgba(255,255,255,0.06)",
-        minHeight: 144,
+        minHeight: 112,
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 16,
+            width: 36,
+            height: 36,
+            borderRadius: 12,
             background: badge.achieved ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.06)",
             display: "flex",
             alignItems: "center",
@@ -1058,9 +1055,9 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
         </div>
         <span
           style={{
-            padding: "5px 10px",
+            padding: "4px 8px",
             borderRadius: 999,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 800,
             background: badge.achieved ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.06)",
             color: badge.achieved ? "#86EFAC" : "var(--color-text-secondary)",
@@ -1070,8 +1067,8 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
         </span>
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{badge.title}</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.55, marginTop: 6 }}>{badge.description}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF" }}>{badge.title}</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.45, marginTop: 4 }}>{badge.description}</div>
       </div>
     </div>
   );
@@ -1082,8 +1079,8 @@ function ChallengeRing({ progress }: { progress: number }) {
     <div
       aria-hidden="true"
       style={{
-        width: 88,
-        height: 88,
+        width: 68,
+        height: 68,
         borderRadius: "50%",
         background: `conic-gradient(#7CFC00 ${progress}%, rgba(255,255,255,0.08) ${progress}% 100%)`,
         display: "grid",
@@ -1093,14 +1090,14 @@ function ChallengeRing({ progress }: { progress: number }) {
     >
       <div
         style={{
-          width: 64,
-          height: 64,
+          width: 48,
+          height: 48,
           borderRadius: "50%",
           background: "#111114",
           display: "grid",
           placeItems: "center",
           color: "#FFFFFF",
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: 800,
         }}
       >
@@ -1155,6 +1152,18 @@ function GlobalSearchModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { titleId, descriptionId } = useAccessibleDialog(isOpen, dialogRef, onClose, inputRef);
+  const [isPhoneViewport, setIsPhoneViewport] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateViewport = (event?: MediaQueryListEvent) => {
+      setIsPhoneViewport(event ? event.matches : mediaQuery.matches);
+    };
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1173,10 +1182,12 @@ function GlobalSearchModal({
   ] as const;
 
   const resultCount = workoutResults.length + nutritionResults.length + messageResults.length + exerciseResults.length;
+  const modalPadding = isPhoneViewport ? 14 : 20;
 
   return (
     <AnimatePresence>
       <motion.div
+        key="global-search-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -1185,6 +1196,7 @@ function GlobalSearchModal({
         aria-hidden="true"
       />
       <motion.div
+        key="global-search-dialog"
         ref={dialogRef}
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1197,15 +1209,19 @@ function GlobalSearchModal({
         tabIndex={-1}
         style={{
           position: "fixed",
-          top: "7vh",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "min(960px, calc(100vw - 24px))",
-          maxHeight: "86vh",
+          top: isPhoneViewport ? "max(12px, env(safe-area-inset-top))" : "7vh",
+          left: isPhoneViewport ? 12 : "50%",
+          right: isPhoneViewport ? 12 : undefined,
+          bottom: isPhoneViewport ? "max(12px, env(safe-area-inset-bottom))" : undefined,
+          transform: isPhoneViewport ? "none" : "translateX(-50%)",
+          width: isPhoneViewport ? "auto" : "min(960px, calc(100vw - 24px))",
+          maxHeight: isPhoneViewport
+            ? "calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)))"
+            : "86vh",
           overflow: "hidden",
           background: "#111114",
           border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 24,
+          borderRadius: isPhoneViewport ? 20 : 24,
           boxShadow: "0 40px 120px rgba(0,0,0,0.45)",
           zIndex: 261,
           display: "flex",
@@ -1213,29 +1229,29 @@ function GlobalSearchModal({
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div style={{ padding: 20, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(124,252,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#7CFC00" }}>
+        <div style={{ padding: modalPadding, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: isPhoneViewport ? 10 : 12 }}>
+            <div style={{ width: isPhoneViewport ? 40 : 44, height: isPhoneViewport ? 40 : 44, borderRadius: 14, background: "rgba(124,252,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#7CFC00", flexShrink: 0 }}>
               <Search size={18} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div id={titleId} style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF" }}>Global Search</div>
-              <div id={descriptionId} style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
+              <div id={titleId} style={{ fontSize: isPhoneViewport ? 16 : 18, fontWeight: 800, color: "#FFFFFF" }}>Global Search</div>
+              <div id={descriptionId} style={{ fontSize: isPhoneViewport ? 12 : 13, color: "var(--color-text-secondary)", marginTop: 4, lineHeight: 1.45 }}>
                 Search workouts, nutrition logs, coach messages, and the exercise library. Use Cmd/Ctrl+K to open this anytime.
               </div>
             </div>
-            <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer" }} aria-label="Close search">
+            <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer", flexShrink: 0 }} aria-label="Close search">
               <X size={18} />
             </button>
           </div>
-          <div style={{ position: "relative", marginTop: 16 }}>
+          <div style={{ position: "relative", marginTop: isPhoneViewport ? 12 : 16 }}>
             <Search size={18} color="var(--color-text-secondary)" style={{ position: "absolute", left: 14, top: 13 }} />
             <input
               ref={inputRef}
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder="Search workouts, meals, exercises, or coach messages"
-              style={{ width: "100%", minHeight: 48, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "12px 14px 12px 44px", outline: "none" }}
+              style={{ width: "100%", minHeight: 48, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "12px 14px 12px 44px", outline: "none", fontSize: isPhoneViewport ? 16 : 15 }}
             />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
@@ -1251,7 +1267,7 @@ function GlobalSearchModal({
                   border: activeType === filter.key ? "1px solid rgba(124,252,0,0.18)" : "1px solid rgba(255,255,255,0.08)",
                   background: activeType === filter.key ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.03)",
                   color: activeType === filter.key ? "#D9FFBF" : "#FFFFFF",
-                  fontSize: 13,
+                  fontSize: isPhoneViewport ? 12 : 13,
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -1261,20 +1277,20 @@ function GlobalSearchModal({
             ))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3" style={{ marginTop: 14 }}>
-            <select value={muscleFilter} onChange={(event) => onMuscleFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px" }}>
+            <select value={muscleFilter} onChange={(event) => onMuscleFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px", fontSize: isPhoneViewport ? 16 : 14 }}>
               <option value="all">All muscle groups</option>
               <option value="Upper Body">Upper Body</option>
               <option value="Lower Body">Lower Body</option>
               <option value="Full Body">Full Body</option>
               <option value="Mobility">Mobility</option>
             </select>
-            <select value={difficultyFilter} onChange={(event) => onDifficultyFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px" }}>
+            <select value={difficultyFilter} onChange={(event) => onDifficultyFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px", fontSize: isPhoneViewport ? 16 : 14 }}>
               <option value="all">All difficulty</option>
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
             </select>
-            <select value={durationFilter} onChange={(event) => onDurationFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px" }}>
+            <select value={durationFilter} onChange={(event) => onDurationFilterChange(event.target.value)} style={{ minHeight: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px", fontSize: isPhoneViewport ? 16 : 14 }}>
               <option value="all">Any duration</option>
               <option value="short">Under 30 min</option>
               <option value="medium">30-45 min</option>
@@ -1282,7 +1298,7 @@ function GlobalSearchModal({
             </select>
           </div>
         </div>
-        <div style={{ overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ overflowY: "auto", padding: modalPadding, display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: 12, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>{resultCount} results</div>
           {(activeType === "all" || activeType === "workouts") && (
             <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1313,21 +1329,21 @@ function GlobalSearchModal({
             <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FFFFFF", fontWeight: 800 }}><Apple size={16} color="#10B981" />Nutrition Logs</div>
               {nutritionResults.length === 0 && <div style={{ padding: 16, borderRadius: 16, background: "rgba(255,255,255,0.03)", color: "var(--color-text-secondary)" }}>No nutrition entries matched.</div>}
-              {nutritionResults.map((item) => <button key={item.id} type="button" onClick={() => { onNavigate("nutrition"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.title}</div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>{item.subtitle}</div></button>)}
+              {nutritionResults.map((item, index) => <button key={`${item.id}-${index}`} type="button" onClick={() => { onNavigate("nutrition"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.title}</div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>{item.subtitle}</div></button>)}
             </section>
           )}
           {(activeType === "all" || activeType === "messages") && (
             <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FFFFFF", fontWeight: 800 }}><MessageCircle size={16} color="#8B5CF6" />Coach Messages</div>
               {messageResults.length === 0 && <div style={{ padding: 16, borderRadius: 16, background: "rgba(255,255,255,0.03)", color: "var(--color-text-secondary)" }}>No messages matched.</div>}
-              {messageResults.map((item) => <button key={item.id} type="button" onClick={() => { onNavigate("coach"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.sender}</div><div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{item.createdAt}</div></div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{item.content}</div></button>)}
+              {messageResults.map((item, index) => <button key={`${item.id}-${index}`} type="button" onClick={() => { onNavigate("coach"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.sender}</div><div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{item.createdAt}</div></div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{item.content}</div></button>)}
             </section>
           )}
           {(activeType === "all" || activeType === "exercises") && (
             <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FFFFFF", fontWeight: 800 }}><BookOpen size={16} color="#60A5FA" />Exercise Library</div>
               {exerciseResults.length === 0 && <div style={{ padding: 16, borderRadius: 16, background: "rgba(255,255,255,0.03)", color: "var(--color-text-secondary)" }}>No exercises matched.</div>}
-              {exerciseResults.map((item) => <a key={item.id} href={item.videoUrl} target="_blank" rel="noreferrer" style={{ display: "block", padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textDecoration: "none" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.name}</div><span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(96,165,250,0.14)", color: "#BFDBFE", fontSize: 11, fontWeight: 700 }}>Demo</span></div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>{item.muscleGroup} • {item.difficulty} • Opens a video guide</div></a>)}
+              {exerciseResults.map((item, index) => <a key={`${item.id}-${index}`} href={item.videoUrl} target="_blank" rel="noreferrer" style={{ display: "block", padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textDecoration: "none" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.name}</div><span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(96,165,250,0.14)", color: "#BFDBFE", fontSize: 11, fontWeight: 700 }}>Demo</span></div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>{item.muscleGroup} • {item.difficulty} • Opens a video guide</div></a>)}
             </section>
           )}
         </div>
@@ -1366,9 +1382,9 @@ function SettingsModal({
   const normalizedWidgetOrder = normalizeWidgetOrder(widgetOrder);
   if (!isOpen) return null;
   return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
-      <motion.div ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", inset: "8vh auto auto 50%", transform: "translateX(-50%)", width: "min(640px, calc(100vw - 24px))", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
+    <AnimatePresence mode="wait">
+      <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
+      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", inset: "8vh auto auto 50%", transform: "translateX(-50%)", width: "min(640px, calc(100vw - 24px))", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div id={titleId} style={{ fontSize: 20, fontWeight: 800, color: "var(--dashboard-text-primary)" }}>Dashboard Settings</div>
@@ -1408,9 +1424,8 @@ function MobileBottomNav({ activeNav, setActiveNav, onOpenSettings }: { activeNa
   ];
   const moreItems = [
     { key: "progress", label: "Progress", icon: <TrendingUp size={18} /> },
-    { key: "coach", label: "Coach", icon: <UserCircle size={18} /> },
   ];
-  const moreActive = activeNav === "progress" || activeNav === "coach";
+  const moreActive = activeNav === "progress";
   const startLongPress = (key: string) => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => setTooltipKey(key), 420);
@@ -1603,10 +1618,10 @@ export default function ClientDashboard() {
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState("all");
   const { currentMember, logoutMember } = useAuth();
-  const isPrivate = CLIENT_DATA.isPrivate;
   const memberName = currentMember?.name ?? "Member";
   const memberCode = currentMember?.membership_code ?? "";
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
+  const isPrivate = hasPrivateAccess(currentMember?.membership_type);
 
   const expiryDate = currentMember?.sub_expiry_date ? new Date(currentMember.sub_expiry_date) : null;
   const startDate = currentMember?.start_date ? new Date(currentMember.start_date) : null;
@@ -1651,7 +1666,6 @@ export default function ClientDashboard() {
     { key: "workouts",  label: "Workouts",  icon: <Dumbbell size={20} /> },
     { key: "nutrition", label: "Nutrition", icon: <Utensils size={20} /> },
     { key: "progress",  label: "Progress",  icon: <TrendingUp size={20} /> },
-    { key: "coach",     label: "Coach",     icon: <UserCircle size={20} /> },
   ];
 
   const createTaskMutation = useCreateTask();
@@ -1706,9 +1720,9 @@ export default function ClientDashboard() {
     { key: "profile", label: "Complete your profile", done: Boolean(currentMember?.name && memberCode) },
     { key: "workout", label: "Finish your first workout", done: workouts.length > 0 },
     { key: "meal", label: "Log your first meal", done: nutritionLogs.length > 0 },
-    { key: "coach", label: "Connect with your coach", done: unreadMessages > 0 || Boolean(isPrivate) },
+    isPrivate ? { key: "coach", label: "Connect with your coach", done: unreadMessages > 0 } : null,
     { key: "goal", label: "Set your first goal", done: workouts.length > 0 || nutritionLogs.length > 0 },
-  ];
+  ].filter(Boolean) as { key: string; label: string; done: boolean }[];
   const nextWorkoutTask = (displayTasks.find((task: any) => task.type === "workout" && task.status !== "done") || null) as any;
   const todayCalories = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.calories || 0), 0);
   const todayProtein = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.protein || 0), 0);
@@ -1779,24 +1793,6 @@ export default function ClientDashboard() {
     },
   ];
   const unlockedAchievements = achievements.filter((badge) => badge.achieved);
-  const compareWithPastSelf: CompareStatCard[] = [
-    {
-      key: "work-capacity",
-      label: "Work Capacity",
-      current: `${taskStats.completed} tasks finished`,
-      previous: `${Math.max(taskStats.completed - 3, 1)} tasks 30 days ago`,
-      improvement: `+${Math.max(taskStats.completed - Math.max(taskStats.completed - 3, 1), 1)} more completed`,
-      tone: "#7CFC00",
-    },
-    {
-      key: "nutrition-consistency",
-      label: "Nutrition Consistency",
-      current: `${nutritionLogs.length} meals logged today`,
-      previous: `${Math.max(nutritionLogs.length - 2, 0)} meal logs at your old pace`,
-      improvement: nutritionLogs.length > 0 ? "Logging faster than your earlier baseline" : "Start one meal log to create your baseline",
-      tone: "#F59E0B",
-    },
-  ];
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchWorkoutResults = SEARCH_WORKOUT_LIBRARY.filter((item) => {
     const matchesQuery =
@@ -1846,7 +1842,8 @@ export default function ClientDashboard() {
         time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now",
         unread: !msg.read && msg.sender_type === "coach",
       }))
-    : CLIENT_DATA.activities
+    : isPrivate
+      ? CLIENT_DATA.activities
         .filter((activity) => activity.type === "message" || activity.type === "assignment")
         .slice(0, 3)
         .map((activity) => ({
@@ -1855,7 +1852,8 @@ export default function ClientDashboard() {
           content: activity.type === "message" ? activity.message : activity.action,
           time: activity.time,
           unread: Boolean(activity.priority),
-        })));
+        }))
+      : []);
   const quickReplies = ["Great!", "I have a question", "See you tomorrow"];
   const chatMessages = (messages || []).map((msg: any, index: number, array: any[]) => {
     const isCoach = msg.sender_type === "coach";
@@ -1896,6 +1894,12 @@ export default function ClientDashboard() {
     const t = setTimeout(() => setHydrated(true), 150);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (!isPrivate && activeNav === "coach") {
+      setActiveNav("home");
+    }
+  }, [activeNav, isPrivate]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -2190,7 +2194,7 @@ export default function ClientDashboard() {
         exerciseResults={searchExerciseResults}
         workoutTags={workoutTags}
         onAddTag={addWorkoutTag}
-        onNavigate={setActiveNav}
+        onNavigate={(tab) => setActiveNav(tab === "coach" && !isPrivate ? "home" : tab)}
       />
       {showTour && currentTour && (
         <div style={{ position: "sticky", top: 0, zIndex: 120, background: "rgba(13,13,16,0.96)", borderBottom: "1px solid rgba(124,252,0,0.16)", backdropFilter: "blur(14px)", padding: "14px 18px" }}>
@@ -2536,33 +2540,19 @@ export default function ClientDashboard() {
                 marginBottom: 24,
               }}
             >
-              {/* Top: Avatar + Greeting + Badges */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-                <div
-                  style={{
-                    width: 56, height: 56, borderRadius: "50%",
-                    background: isPrivate
-                      ? "linear-gradient(135deg, #7CFC00, #4CAF50)"
-                      : "linear-gradient(135deg, #8B5CF6, #6D28D9)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 20, fontWeight: 700,
-                    color: isPrivate ? "#000" : "#FFF",
-                    flexShrink: 0,
-                    border: isPrivate ? "2px solid rgba(124,252,0,0.4)" : "none",
-                  }}
-                >
-                  {memberName.slice(0, 2).toUpperCase()}
-                </div>
-
+              {/* Top: Greeting + Badges */}
+              <div style={{ marginBottom: 20 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2 }}>
                         Hello, {memberName}
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 3 }}>
-                        {isPrivate ? "Private coaching active — keep pushing" : "Track your progress. 7 days to goal."}
-                      </div>
+                      {isPrivate && (
+                        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 3 }}>
+                          Private coaching active — keep pushing
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {/* Status badge — dynamic */}
@@ -2832,53 +2822,6 @@ export default function ClientDashboard() {
 
                 <DailyScore score={dailyScoreValue} />
 
-                <div className="grid grid-cols-1 xl:grid-cols-[0.95fr,1.05fr] gap-4">
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800 }}>Weekly Challenge</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{weeklyChallenge.title}</div>
-                        <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6, marginTop: 8 }}>
-                          {weeklyChallenge.description}
-                        </div>
-                        <div style={{ fontSize: 13, color: weeklyChallenge.completed ? "#86EFAC" : "#FCD34D", fontWeight: 700, marginTop: 12 }}>
-                          {weeklyChallenge.helper}
-                        </div>
-                      </div>
-                      <ChallengeRing progress={weeklyChallenge.progress} />
-                    </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
-                      <div style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.14)", color: "#D9FFBF", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center" }}>
-                        {unlockedAchievements.length} badges unlocked
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveNav("workouts")}
-                        style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        Keep the streak alive
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-                      <div>
-                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800 }}>Achievements</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>Proof of consistency</div>
-                      </div>
-                      <div style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.18)", color: "#B9FF8B", fontSize: 12, fontWeight: 800 }}>
-                        {unlockedAchievements.length}/{achievements.length}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                      {achievements.map((badge) => (
-                        <AchievementBadgeCard key={badge.key} badge={badge} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {urgentItems.map((item) => (
                     <div
@@ -2917,28 +2860,8 @@ export default function ClientDashboard() {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {compareWithPastSelf.map((item) => (
-                    <div key={item.key} style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 18 }}>
-                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: item.tone, fontWeight: 800 }}>Compare with Past Self</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 8 }}>{item.label}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
-                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Today</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{item.current}</div>
-                        </div>
-                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>30 days ago</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{item.previous}</div>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 13, color: item.tone, fontWeight: 700, marginTop: 14 }}>{item.improvement}</div>
-                    </div>
-                  ))}
-                </div>
-
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <HomeSectionCard
+                  {false && <HomeSectionCard
                     title="Workout Summary"
                     sectionKey="workoutSummary"
                     isOpen={homeSections.workoutSummary}
@@ -2961,52 +2884,7 @@ export default function ClientDashboard() {
                         <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>No workout tasks yet. Open the workouts tab to schedule your first one.</div>
                       )}
                     </div>
-                  </HomeSectionCard>
-
-                  <HomeSectionCard
-                    title="Nutrition Today"
-                    sectionKey="nutritionToday"
-                    isOpen={homeSections.nutritionToday}
-                    onToggle={toggleHomeSection}
-                    badge={nutritionRisk ? <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 11, fontWeight: 800 }}>Urgent</span> : undefined}
-                  >
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-                      {[
-                        { label: "Calories", value: `${todayCalories}`, helper: "of 2200" },
-                        { label: "Protein", value: `${todayProtein}g`, helper: "goal 180g" },
-                        { label: "Meals", value: `${nutritionLogs.length}`, helper: "logged today" },
-                      ].map((item) => (
-                        <div key={item.label} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{item.label}</div>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 6 }}>{item.value}</div>
-                          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 4 }}>{item.helper}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </HomeSectionCard>
-
-                  <HomeSectionCard
-                    title="Recent Messages"
-                    sectionKey="recentMessages"
-                    isOpen={homeSections.recentMessages}
-                    onToggle={toggleHomeSection}
-                    badge={unreadMessages > 0 ? <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 11, fontWeight: 800 }}>{unreadMessages} unread</span> : undefined}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {homeMessages.map((item) => (
-                        <div key={item.id} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{item.sender}</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              {item.unread && <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 10, fontWeight: 800 }}>Urgent</span>}
-                              <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{item.time}</span>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{item.content}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </HomeSectionCard>
+                  </HomeSectionCard>}
 
                   <HomeSectionCard
                     title="Goals"
@@ -3089,33 +2967,35 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: "#16161A",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 20,
-                    padding: 20,
-                    minHeight: 220,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                    <Avatar name={CLIENT_DATA.coach.name} size={44} isCoach ring ringColor="#7CFC00" fontSize={14} />
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Meet {CLIENT_DATA.coach.name}</div>
-                      <div style={{ fontSize: 12, color: "#7CFC00", marginTop: 4 }}>Your coach is ready to guide the first week.</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 16 }}>
-                    Welcome to Fit & Lift. We&apos;ll use workouts, nutrition logs, and short check-ins to keep you moving without overload.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveNav("coach")}
-                    style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(124,252,0,0.22)", background: "rgba(124,252,0,0.1)", color: "#7CFC00", fontWeight: 700, cursor: "pointer" }}
+                {isPrivate && (
+                  <div
+                    style={{
+                      background: "#16161A",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      borderRadius: 20,
+                      padding: 20,
+                      minHeight: 220,
+                    }}
                   >
-                    Open Coach Connection
-                  </button>
-                </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                      <Avatar name={CLIENT_DATA.coach.name} size={44} isCoach ring ringColor="#7CFC00" fontSize={14} />
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Meet {CLIENT_DATA.coach.name}</div>
+                        <div style={{ fontSize: 12, color: "#7CFC00", marginTop: 4 }}>Your coach is ready to guide the first week.</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+                      Welcome to Fit & Lift. We&apos;ll use workouts, nutrition logs, and short check-ins to keep you moving without overload.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveNav("coach")}
+                      style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(124,252,0,0.22)", background: "rgba(124,252,0,0.1)", color: "#7CFC00", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Open Coach Connection
+                    </button>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -3271,46 +3151,6 @@ export default function ClientDashboard() {
                 </div>
               )}
 
-              {!announcementsLoading && !photosLoading && photos && photos.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
-                    Recent Photos
-                  </div>
-                  <LazyRenderSection
-                    minHeight={264}
-                    fallback={<SkeletonBlock width="100%" height={264} style={{ background: "#1C1C21" }} />}
-                  >
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                      gap: 12,
-                    }}>
-                      {galleryPhotos.slice(0, 6).map((photo: any) => (
-                        <motion.div
-                          key={photo.id}
-                          initial={{ opacity: 0, scale: disableHeavyAnimations ? 1 : 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          whileHover={disableHeavyAnimations ? undefined : { scale: 1.05 }}
-                          style={{
-                            aspectRatio: "1",
-                            borderRadius: 8,
-                            overflow: "hidden",
-                            cursor: "pointer",
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={photo.caption || "Gym photo"}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </LazyRenderSection>
-                </div>
-              )}
 
               {!announcementsLoading && !photosLoading && (!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
                 <div style={{ textAlign: "center", padding: 40 }}>
@@ -3347,7 +3187,7 @@ export default function ClientDashboard() {
             </DashboardErrorBoundary>
           )}
 
-          {activeNav === "coach" && (
+          {isPrivate && activeNav === "coach" && (
             <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                 <Star size={24} color="#7CFC00" />
@@ -3432,21 +3272,6 @@ export default function ClientDashboard() {
               textAlign: "center",
             }}
           >
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 80, height: 80, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #7CFC00, #4CAF50)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 28, fontWeight: 700, color: "#000",
-                  border: "3px solid #7CFC00",
-                  boxShadow: "0 0 20px rgba(124,252,0,0.3)",
-                }}
-              >
-                {memberName.slice(0, 2).toUpperCase()}
-              </div>
-            </div>
-
             <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 2 }}>{memberType}</div>
 
@@ -3793,7 +3618,7 @@ export default function ClientDashboard() {
         <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent h-20 -top-20 pointer-events-none opacity-50" />
         <div className="bg-[#16161A]/97 backdrop-blur-xl border-t border-white/5 pb-safe-nav pt-1 px-2">
           <div className="flex items-end justify-around max-w-md mx-auto">
-            {[navItems[0], navItems[1]].map((item, index) => {
+            {navItems.slice(0, 2).map((item, index) => {
               const isActive = activeNav === item.key;
               return (
                 <button
@@ -3843,9 +3668,8 @@ export default function ClientDashboard() {
               <span style={{ fontSize: 9, fontWeight: 700, color: "#7CFC00", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 2 }}>Log</span>
             </div>
 
-            {[navItems[2], navItems[3], navItems[4]].map((item, offset) => {
+            {navItems.slice(2).map((item, offset) => {
               const isActive = activeNav === item.key;
-              const hasUnread = item.key === 'coach' && unreadMessages > 0;
               return (
                 <button
                   key={item.key}
@@ -3855,7 +3679,7 @@ export default function ClientDashboard() {
                   className="flex flex-col items-center gap-0.5 py-2 flex-1"
                   style={{ WebkitTapHighlightColor: "transparent" }}
                   aria-current={isActive ? "page" : undefined}
-                  aria-label={`${item.label} tab${hasUnread ? `, ${unreadMessages} unread coach messages` : ""}`}
+                  aria-label={`${item.label} tab`}
                 >
                   <div className={cn(
                     "w-11 h-9 rounded-xl flex items-center justify-center transition-all duration-300 relative",
@@ -3864,11 +3688,6 @@ export default function ClientDashboard() {
                     {isActive && (
                       <motion.div layoutId="nav-bg2" className="absolute inset-0 bg-[#7CFC00]/10 rounded-xl"
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} />
-                    )}
-                    {hasUnread && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">{unreadMessages > 9 ? '9+' : unreadMessages}</span>
-                      </div>
                     )}
                     <div className="relative z-10">{item.icon}</div>
                   </div>

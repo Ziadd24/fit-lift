@@ -10,7 +10,7 @@ import { isMembershipActive } from "@/lib/utils";
 import Link from "next/link";
 
 export default function AdminDashboard() {
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
   const { data: announcements } = useListAnnouncements();
   const { data: photos } = useListPhotos();

@@ -124,14 +124,14 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
         {displayBundles.map((bundle: any, i: number) => (
           <motion.div
             key={i}
-            className="shrink-0 snap-center w-[85vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(20%-16px)]"
+            className="shrink-0 snap-center w-[82vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(20%-16px)]"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             viewport={{ once: true }}
           >
             <div
-              className={`relative overflow-hidden rounded-[28px] p-7 flex flex-col min-h-[620px] transition-all duration-300 ${
+              className={`relative overflow-hidden rounded-[24px] md:rounded-[28px] p-5 md:p-7 flex flex-col min-h-[520px] md:min-h-[620px] transition-all duration-300 ${
                 bundle.highlight
                   ? "border-2 border-[#47D84B] shadow-[0_0_0_1px_rgba(71,216,75,0.14),0_0_38px_rgba(71,216,75,0.22)]"
                   : "border border-white/[0.08]"
@@ -152,40 +152,40 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
               />
 
               {bundle.highlight && (
-                <span className="absolute top-0 right-0 bg-[#47D84B] text-white text-[11px] font-black uppercase tracking-[0.14em] px-6 py-3 rounded-bl-2xl shadow-[0_10px_24px_rgba(71,216,75,0.28)]">
+                <span className="absolute top-0 right-0 bg-[#47D84B] text-white text-[10px] md:text-[11px] font-black uppercase tracking-[0.12em] md:tracking-[0.14em] px-4 md:px-6 py-2.5 md:py-3 rounded-bl-2xl shadow-[0_10px_24px_rgba(71,216,75,0.28)]">
                   {lang === "ar" ? "\u0627\u0644\u0623\u0643\u062b\u0631 \u0637\u0644\u0628\u064b\u0627" : "RECOMMENDED"}
                 </span>
               )}
 
               <div className="relative z-10 flex flex-col items-center text-center flex-1">
                 <div
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${
+                  className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-5 md:mb-8 ${
                     bundle.highlight ? "bg-[#47D84B]/12 border border-[#47D84B]/25" : "bg-white/[0.03] border border-white/[0.08]"
                   }`}
                 >
-                  <Calendar className="w-8 h-8 text-[#47D84B]" strokeWidth={2.2} />
+                  <Calendar className="w-6 h-6 md:w-8 md:h-8 text-[#47D84B]" strokeWidth={2.2} />
                 </div>
 
-                <div className="mb-7">
-                  <h4 className="text-[15px] md:text-[17px] font-black text-white uppercase tracking-[0.18em]">{bundle.name}</h4>
+                <div className="mb-5 md:mb-7">
+                  <h4 className="text-[14px] md:text-[17px] font-black text-white uppercase tracking-[0.12em] md:tracking-[0.18em]">{bundle.name}</h4>
                 </div>
 
-                <div className="flex items-end justify-center gap-3 mb-3">
-                  <span className={`font-black text-white leading-none ${bundle.highlight ? "text-6xl" : "text-5xl"}`}>
+                <div className="flex items-end justify-center gap-2 md:gap-3 mb-2 md:mb-3">
+                  <span className={`font-black text-white leading-none ${bundle.highlight ? "text-5xl md:text-6xl" : "text-4xl md:text-5xl"}`}>
                     {bundle.price.toLocaleString()}
                   </span>
-                  <span className="text-[18px] text-white/55 font-bold mb-2">{t.pricing.currency}</span>
+                  <span className="text-[15px] md:text-[18px] text-white/55 font-bold mb-1.5 md:mb-2">{t.pricing.currency}</span>
                 </div>
 
-                <p className="text-center text-[15px] text-white/45 mb-10">{bundle.period}</p>
+                <p className="text-center text-[14px] md:text-[15px] text-white/45 mb-7 md:mb-10">{bundle.period}</p>
 
-                <div className="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] mb-10" />
+                <div className="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] mb-7 md:mb-10" />
 
-                <ul className="space-y-4 mb-10 flex-1 w-full text-left">
+                <ul className="space-y-3 md:space-y-4 mb-7 md:mb-10 flex-1 w-full text-left">
                   {bundle.features.map((f: string, index: number) => (
-                    <li key={index} className="flex items-center gap-3 text-white/72 text-[15px]">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#47D84B]/10 flex-shrink-0">
-                        <Check className="w-4 h-4 text-[#47D84B]" strokeWidth={3} />
+                    <li key={index} className="flex items-center gap-2.5 md:gap-3 text-white/72 text-[13px] md:text-[15px]">
+                      <span className="flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#47D84B]/10 flex-shrink-0">
+                        <Check className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#47D84B]" strokeWidth={3} />
                       </span>
                       <span>{f}</span>
                     </li>
@@ -196,7 +196,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
                   href={`https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(t.pricing.msg.replace("{plan}", bundle.name).replace("{price}", bundle.price.toString()))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`mt-auto w-full py-4 rounded-full font-black text-[15px] tracking-wide text-center transition-all active:scale-95 ${
+                  className={`mt-auto w-full py-3.5 md:py-4 rounded-full font-black text-[14px] md:text-[15px] tracking-wide text-center transition-all active:scale-95 ${
                     bundle.highlight
                       ? "bg-[#47D84B] text-white shadow-[0_14px_30px_rgba(71,216,75,0.28)] hover:scale-105 hover:shadow-[0_0_34px_rgba(71,216,75,0.36)]"
                       : "bg-[#111111] text-white hover:bg-[#47D84B] hover:text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(124,252,0,0.22)]"
@@ -215,10 +215,10 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
           <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ease-out ${i === activeIndex ? "w-6 scale-y-110 bg-[#47D84B] shadow-[0_0_8px_rgba(71,216,75,0.5)]" : "w-1.5 scale-y-100 bg-white/20"}`} />
         ))}
       </div>
-      <button onClick={pricingPrev} aria-label="Previous plan" className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={pricingPrev} aria-label="Previous plan" className="flex absolute left-2 md:left-0 top-1/2 -translate-y-1/2 md:-translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/75 md:bg-black/60 border border-white/15 text-white items-center justify-center opacity-95 md:opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <button onClick={pricingNext} aria-label="Next plan" className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
+      <button onClick={pricingNext} aria-label="Next plan" className="flex absolute right-2 md:right-0 top-1/2 -translate-y-1/2 md:translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/75 md:bg-black/60 border border-white/15 text-white items-center justify-center opacity-95 md:opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronRight className="w-5 h-5" />
       </button>
     </div>
@@ -368,9 +368,16 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   const galleryRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(galleryRef, 0.15);
 
-  const images = photos && photos.length > 0
-    ? photos.filter((p: any) => !p.category || p.category === "gallery").map((p: any) => p.url)
-    : ["/images/gym-hero.jpg"];
+  const galleryItems = photos && photos.length > 0
+    ? photos
+        .filter((p: any) => (!p.category || p.category === "gallery") && typeof p.url === "string" && p.url.trim().length > 0)
+        .map((p: any, photoIndex: number) => ({
+          key: `${p.id ?? "photo"}-${photoIndex}`,
+          src: p.url.trim(),
+        }))
+    : [{ key: "fallback-0", src: "/images/gym-hero.jpg" }];
+
+  const images = galleryItems.map((item) => item.src);
 
   const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
@@ -405,11 +412,11 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   // Render all images with CSS crossfade for zero-lag transitions
 
   return (
-    <div ref={galleryRef} className="rounded-2xl overflow-hidden h-80 relative group bg-black">
-      {images.map((src, idx) => (
+    <div ref={galleryRef} className="rounded-2xl overflow-hidden h-72 md:h-80 relative group bg-black">
+      {galleryItems.map((item, idx) => (
         <img
-          key={src}
-          src={src}
+          key={item.key}
+          src={item.src}
           alt={lang === "ar" ? "\u0635\u0648\u0631\u0629 \u0645\u0646 \u0627\u0644\u062c\u064a\u0645" : "Gallery photo"}
           loading="eager"
           decoding="async"
@@ -424,14 +431,14 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
       ))}
       {images.length > 1 && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <button onClick={prev} aria-label="Previous photo" className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />
+          <button onClick={prev} aria-label="Previous photo" className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/70 md:bg-black/50 text-white flex items-center justify-center opacity-95 md:opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={next} aria-label="Next photo" className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10">
+          <button onClick={next} aria-label="Next photo" className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/70 md:bg-black/50 text-white flex items-center justify-center opacity-95 md:opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
             <ChevronRight className="w-5 h-5" />
           </button>
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-50 transition-opacity duration-300 z-10">
+          <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90 md:opacity-50 transition-opacity duration-300 z-10">
             {images.map((_img: string, i: number) => (
               <div key={i} className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-primary" : "w-1.5 bg-white/50"}`} />
             ))}

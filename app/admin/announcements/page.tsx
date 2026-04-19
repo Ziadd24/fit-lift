@@ -18,7 +18,7 @@ export default function AdminAnnouncements() {
   const queryClient = useQueryClient();
   const { adminToken } = useAuth();
   const { data: announcements, isLoading } = useListAnnouncements();
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
 
   const createMutation = useCreateAnnouncement();

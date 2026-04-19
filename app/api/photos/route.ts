@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
   const memberIdParam = searchParams.get("memberId");
   const memberId = memberIdParam ? parseInt(memberIdParam) : null;
   const isGlobal = searchParams.get("global") === "true";
+  const category = searchParams.get("category");
   const supabase = getSupabaseAdmin();
 
   let query = supabase
@@ -17,6 +18,10 @@ export async function GET(req: NextRequest) {
     query = query.or(`member_id.eq.${memberId},member_id.is.null`);
   } else if (isGlobal) {
     query = query.is("member_id", null);
+  }
+
+  if (category) {
+    query = query.eq("category", category);
   }
 
 
