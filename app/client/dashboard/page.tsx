@@ -8,7 +8,7 @@ import WorkoutsTab from "./WorkoutsTab";
 import ProgressTab from "./ProgressTab";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useListMessages, useSendMessage, useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
+import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
 import { useProgressDashboardStore } from "@/lib/use-progress-dashboard";
 import { cn, getMembershipStatus, getDaysRemainingText } from "@/lib/utils";
@@ -31,16 +31,8 @@ import {
   Copy,
   Apple,
   MoreHorizontal,
-  MessageCircle,
-  Phone,
-  Video,
-  Paperclip,
-  Smile,
-  Mic,
-  Send,
   FileText,
   Download,
-  ThumbsUp,
   X,
   Bell,
   Calendar,
@@ -90,6 +82,9 @@ function usePrefersReducedMotion() {
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
+
+const GYM_WHATSAPP = "2010099887771";
+
 const CLIENT_DATA = {
   id: "FIT-2024-8842",
   name: "Ziad",
@@ -157,14 +152,6 @@ const CLIENT_DATA = {
   ],
   activities: [
     {
-      id: 1,
-      type: "message",
-      actor: "Coach Mike",
-      time: "10:15 AM",
-      message: "Great job yesterday! Let's push harder today.",
-      priority: true,
-    },
-    {
       id: 2,
       type: "assignment",
       actor: "Coach Mike",
@@ -214,13 +201,6 @@ const ONBOARDING_STEPS = [
     cta: "Show coach connection",
     nav: "nutrition",
   },
-  {
-    key: "coach",
-    title: "Stay connected to your coach",
-    description: "Questions, feedback, and accountability all live here, so you never have to guess what to do next.",
-    cta: "Finish tour",
-    nav: "coach",
-  },
 ];
 
 const SUCCESS_STORIES = [
@@ -264,7 +244,7 @@ interface ExerciseLibraryItem {
 
 type ThemeMode = "auto" | "dark" | "light";
 type UnitPreference = "kg" | "lbs";
-type HomeSectionKey = "workoutSummary" | "nutritionToday" | "recentMessages" | "goals";
+type HomeSectionKey = "workoutSummary" | "nutritionToday" | "goals";
 
 function hasPrivateAccess(membershipType?: string | null) {
   if (!membershipType) return false;
@@ -415,6 +395,15 @@ function Avatar({
     </div>
   );
 }
+
+function WhatsAppIcon({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
 
 // ─── Mini Line Chart ─────────────────────────────────────────────────────────
 function PerformanceChart({ isPrivate }: { isPrivate: boolean }) {
@@ -838,40 +827,6 @@ function ActivityItem({ activity, isPrivate }: { activity: typeof CLIENT_DATA.ac
             </div>
           </div>
 
-          {activity.type === "message" && (
-            <div>
-              <div
-                style={{
-                  background: "rgba(124,252,0,0.1)",
-                  border: "1px solid rgba(124,252,0,0.2)",
-                  borderRadius: 12,
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  color: "#FFFFFF",
-                  lineHeight: 1.5,
-                }}
-              >
-                {activity.message}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-                <button
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#5A5A5A",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 12,
-                  }}
-                >
-                  <ThumbsUp size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-
           {activity.type === "assignment" && (
             <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{activity.action}</div>
           )}
@@ -1123,7 +1078,6 @@ function GlobalSearchModal({
   onDurationFilterChange,
   workoutResults,
   nutritionResults,
-  messageResults,
   exerciseResults,
   workoutTags,
   onAddTag,
@@ -1133,8 +1087,8 @@ function GlobalSearchModal({
   onClose: () => void;
   query: string;
   onQueryChange: (value: string) => void;
-  activeType: "all" | "workouts" | "nutrition" | "messages" | "exercises";
-  onTypeChange: (value: "all" | "workouts" | "nutrition" | "messages" | "exercises") => void;
+  activeType: "all" | "workouts" | "nutrition" | "exercises";
+  onTypeChange: (value: "all" | "workouts" | "nutrition" | "exercises") => void;
   muscleFilter: string;
   onMuscleFilterChange: (value: string) => void;
   difficultyFilter: string;
@@ -1143,7 +1097,6 @@ function GlobalSearchModal({
   onDurationFilterChange: (value: string) => void;
   workoutResults: SearchWorkoutItem[];
   nutritionResults: { id: string; title: string; subtitle: string }[];
-  messageResults: { id: string; sender: string; content: string; createdAt: string }[];
   exerciseResults: ExerciseLibraryItem[];
   workoutTags: Record<string, string[]>;
   onAddTag: (workoutId: string, tag: string) => void;
@@ -1177,11 +1130,10 @@ function GlobalSearchModal({
     { key: "all", label: "All" },
     { key: "workouts", label: "Workouts" },
     { key: "nutrition", label: "Nutrition" },
-    { key: "messages", label: "Coach Messages" },
     { key: "exercises", label: "Exercises" },
   ] as const;
 
-  const resultCount = workoutResults.length + nutritionResults.length + messageResults.length + exerciseResults.length;
+  const resultCount = workoutResults.length + nutritionResults.length + exerciseResults.length;
   const modalPadding = isPhoneViewport ? 14 : 20;
 
   return (
@@ -1237,7 +1189,7 @@ function GlobalSearchModal({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div id={titleId} style={{ fontSize: isPhoneViewport ? 16 : 18, fontWeight: 800, color: "#FFFFFF" }}>Global Search</div>
               <div id={descriptionId} style={{ fontSize: isPhoneViewport ? 12 : 13, color: "var(--color-text-secondary)", marginTop: 4, lineHeight: 1.45 }}>
-                Search workouts, nutrition logs, coach messages, and the exercise library. Use Cmd/Ctrl+K to open this anytime.
+                Search workouts, nutrition logs, and the exercise library. Use Cmd/Ctrl+K to open this anytime.
               </div>
             </div>
             <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer", flexShrink: 0 }} aria-label="Close search">
@@ -1250,7 +1202,7 @@ function GlobalSearchModal({
               ref={inputRef}
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search workouts, meals, exercises, or coach messages"
+              placeholder="Search workouts, meals, or exercises"
               style={{ width: "100%", minHeight: 48, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "12px 14px 12px 44px", outline: "none", fontSize: isPhoneViewport ? 16 : 15 }}
             />
           </div>
@@ -1332,13 +1284,6 @@ function GlobalSearchModal({
               {nutritionResults.map((item, index) => <button key={`${item.id}-${index}`} type="button" onClick={() => { onNavigate("nutrition"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.title}</div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>{item.subtitle}</div></button>)}
             </section>
           )}
-          {(activeType === "all" || activeType === "messages") && (
-            <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FFFFFF", fontWeight: 800 }}><MessageCircle size={16} color="#8B5CF6" />Coach Messages</div>
-              {messageResults.length === 0 && <div style={{ padding: 16, borderRadius: 16, background: "rgba(255,255,255,0.03)", color: "var(--color-text-secondary)" }}>No messages matched.</div>}
-              {messageResults.map((item, index) => <button key={`${item.id}-${index}`} type="button" onClick={() => { onNavigate("coach"); onClose(); }} style={{ padding: 16, borderRadius: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "left", cursor: "pointer" }}><div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{item.sender}</div><div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{item.createdAt}</div></div><div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{item.content}</div></button>)}
-            </section>
-          )}
           {(activeType === "all" || activeType === "exercises") && (
             <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FFFFFF", fontWeight: 800 }}><BookOpen size={16} color="#60A5FA" />Exercise Library</div>
@@ -1376,7 +1321,6 @@ function SettingsModal({
   const labels: Record<HomeSectionKey, string> = {
     workoutSummary: "Workout Summary",
     nutritionToday: "Nutrition Today",
-    recentMessages: "Recent Messages",
     goals: "Goals",
   };
   const normalizedWidgetOrder = normalizeWidgetOrder(widgetOrder);
@@ -1485,7 +1429,6 @@ function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigat
     { icon: <Dumbbell size={22} color="#7CFC00" />, bg: "rgba(124,252,0,0.1)", label: "Log Workout", sub: "Mark sets done", tab: "workouts" },
     { icon: <Apple size={22} color="#10B981" />, bg: "rgba(16,185,129,0.1)", label: "Log Meal", sub: "AI nutrition tracker", tab: "nutrition" },
     { icon: <Camera size={22} color="#F59E0B" />, bg: "rgba(245,158,11,0.12)", label: "Scan Food", sub: "Open AI food scan", tab: "nutrition" },
-    { icon: <MessageCircle size={22} color="#8B5CF6" />, bg: "rgba(139,92,246,0.1)", label: "Message Coach", sub: "Open chat", tab: "chat" },
   ];
   return (
     <AnimatePresence>
@@ -1519,7 +1462,7 @@ function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigat
           <button
             key={o.label}
             ref={(element) => { optionRefs.current[index] = element; }}
-            onClick={() => { onNavigate(o.tab === "chat" ? "home" : o.tab); if (o.tab === "chat") onClose(); else onClose(); }}
+            onClick={() => { onNavigate(o.tab); onClose(); }}
             onKeyDown={(event) => moveFocusWithArrows(event, optionRefs.current.filter(Boolean) as HTMLButtonElement[])}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 16, padding: "16px 4px", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.05)", textAlign: "left" }}
             aria-label={`${o.label}. ${o.sub}`}
@@ -1586,10 +1529,6 @@ export default function ClientDashboard() {
   const [activeNav, setActiveNav] = useState("home");
   const [copied, setCopied] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
-  const [message, setMessage] = useState("");
-  const [chatDraftAttachment, setChatDraftAttachment] = useState<{ type: "image" | "pdf"; name: string; url: string } | null>(null);
-  const [coachTyping, setCoachTyping] = useState(false);
-  const [pendingMessageSentAt, setPendingMessageSentAt] = useState<number | null>(null);
   const [dateRange, setDateRange] = useState("");
   const [taskPeriod, setTaskPeriod] = useState("Week");
   const [demoMode, setDemoMode] = useState(false);
@@ -1598,7 +1537,7 @@ export default function ClientDashboard() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchType, setSearchType] = useState<"all" | "workouts" | "nutrition" | "messages" | "exercises">("all");
+  const [searchType, setSearchType] = useState<"all" | "workouts" | "nutrition" | "exercises">("all");
   const [muscleFilter, setMuscleFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [durationFilter, setDurationFilter] = useState("all");
@@ -1609,7 +1548,6 @@ export default function ClientDashboard() {
   const [homeSections, setHomeSections] = useState({
     workoutSummary: true,
     nutritionToday: true,
-    recentMessages: true,
     goals: false,
   });
   const [mounted, setMounted] = useState(false);
@@ -1637,16 +1575,10 @@ export default function ClientDashboard() {
   const finishedCount = useCountUp(CLIENT_DATA.stats.finished, 1100);
   const effCount = useCountUp(93, 1200);
 
-  const { data: messages, isLoading: messagesLoading } = useListMessages(memberId);
-  const sendMutation = useSendMessage();
-  const chatInputRef = useRef<HTMLInputElement>(null);
-  const chatPanelRef = useRef<HTMLElement>(null);
   const sideNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const bottomNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const taskModalRef = useRef<HTMLDivElement>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
-  const previousUnreadRef = useRef(0);
-  const coachTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCelebrationRef = useRef("");
   const pendingSyncCount = useProgressDashboardStore((state) => state.pendingCount);
   const [taskFormError, setTaskFormError] = useState<string | null>(null);
@@ -1656,8 +1588,6 @@ export default function ClientDashboard() {
   const { data: nutritionLogs = [] } = useListCalorieLogs(memberId || undefined);
   const { data: workouts = [] } = useListWorkouts(memberId || undefined);
   const galleryPhotos = Array.isArray(photos) ? photos.filter((p: any) => p.category === "gallery") : [];
-
-  const unreadMessages = messages ? messages.filter((msg: any) => !msg.read && msg.sender_type === 'coach').length : 0;
 
   const { data: dbTasks, isLoading: tasksLoading } = useListTasks(memberId || undefined);
 
@@ -1674,18 +1604,11 @@ export default function ClientDashboard() {
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { titleId: taskModalTitleId, descriptionId: taskModalDescriptionId } = useAccessibleDialog(
     isTaskModalOpen,
     taskModalRef,
     () => setIsTaskModalOpen(false)
-  );
-  const { titleId: chatTitleId, descriptionId: chatDescriptionId } = useAccessibleDialog(
-    isChatOpen,
-    chatPanelRef,
-    () => setIsChatOpen(false),
-    chatInputRef
   );
 
   const displayTasks = dbTasks || [];
@@ -1713,14 +1636,12 @@ export default function ClientDashboard() {
     displayTasks.length === 0 &&
     workouts.length === 0 &&
     nutritionLogs.length === 0 &&
-    unreadMessages === 0 &&
     galleryPhotos.length === 0 &&
     (!announcements || announcements.length === 0);
   const checklistItems = [
     { key: "profile", label: "Complete your profile", done: Boolean(currentMember?.name && memberCode) },
     { key: "workout", label: "Finish your first workout", done: workouts.length > 0 },
     { key: "meal", label: "Log your first meal", done: nutritionLogs.length > 0 },
-    isPrivate ? { key: "coach", label: "Connect with your coach", done: unreadMessages > 0 } : null,
     { key: "goal", label: "Set your first goal", done: workouts.length > 0 || nutritionLogs.length > 0 },
   ].filter(Boolean) as { key: string; label: string; done: boolean }[];
   const nextWorkoutTask = (displayTasks.find((task: any) => task.type === "workout" && task.status !== "done") || null) as any;
@@ -1730,7 +1651,6 @@ export default function ClientDashboard() {
   const nutritionRisk = todayCalories > 0 && (todayCalories < 1600 || todayProtein < 120);
   const urgentItems = [
     nextWorkoutTask ? { key: "workout", label: "Workout pending", detail: nextWorkoutTask.title } : null,
-    unreadMessages > 0 ? { key: "message", label: "Unread coach message", detail: `${unreadMessages} waiting` } : null,
     nutritionRisk ? { key: "nutrition", label: "Nutrition risk", detail: "Calories or protein too low today" } : null,
   ].filter(Boolean) as { key: string; label: string; detail: string }[];
   const dailyScoreValue = Math.min(
@@ -1817,14 +1737,6 @@ export default function ClientDashboard() {
       subtitle: `${entry.result?.totals?.calories || 0} kcal • ${entry.result?.totals?.protein || 0}g protein`,
     }))
     .filter((item) => !normalizedSearchQuery || `${item.title} ${item.subtitle}`.toLowerCase().includes(normalizedSearchQuery));
-  const searchMessageResults = (messages || [])
-    .map((msg: any, index: number) => ({
-      id: `${msg.id || index}`,
-      sender: msg.sender_type === "coach" ? CLIENT_DATA.coach.name : "You",
-      content: msg.content || "",
-      createdAt: msg.created_at ? new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Now",
-    }))
-    .filter((item) => !normalizedSearchQuery || `${item.sender} ${item.content}`.toLowerCase().includes(normalizedSearchQuery));
   const searchExerciseResults = EXERCISE_LIBRARY.filter((item) => {
     const matchesQuery =
       !normalizedSearchQuery ||
@@ -1834,57 +1746,9 @@ export default function ClientDashboard() {
     const matchesMuscle = muscleFilter === "all" || item.muscleGroup === muscleFilter;
     return matchesQuery && matchesMuscle;
   });
-  const homeMessages = (messages && messages.length > 0
-    ? messages.slice(-3).reverse().map((msg: any) => ({
-        id: msg.id,
-        sender: msg.sender_type === "coach" ? CLIENT_DATA.coach.name : "You",
-        content: msg.content,
-        time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now",
-        unread: !msg.read && msg.sender_type === "coach",
-      }))
-    : isPrivate
-      ? CLIENT_DATA.activities
-        .filter((activity) => activity.type === "message" || activity.type === "assignment")
-        .slice(0, 3)
-        .map((activity) => ({
-          id: activity.id,
-          sender: activity.actor,
-          content: activity.type === "message" ? activity.message : activity.action,
-          time: activity.time,
-          unread: Boolean(activity.priority),
-        }))
-      : []);
-  const quickReplies = ["Great!", "I have a question", "See you tomorrow"];
-  const chatMessages = (messages || []).map((msg: any, index: number, array: any[]) => {
-    const isCoach = msg.sender_type === "coach";
-    const nextCoachReply = array.slice(index + 1).some((candidate) => candidate.sender_type === "coach");
-    const status = isCoach
-      ? null
-      : sendMutation.isPending && index === array.length - 1
-        ? "Sending"
-        : nextCoachReply
-          ? "Read"
-          : pendingMessageSentAt && Date.now() - pendingMessageSentAt < 8000 && index === array.length - 1
-            ? "Delivered"
-            : "Delivered";
-    const attachment = msg.image_url
-      ? { type: "image" as const, url: msg.image_url, name: "Shared image" }
-      : typeof msg.content === "string" && /(https?:\/\/\S+\.(png|jpg|jpeg|webp))/i.test(msg.content)
-        ? { type: "image" as const, url: (msg.content.match(/https?:\/\/\S+/i) || [null])[0] || "", name: "Shared image" }
-      : typeof msg.content === "string" && msg.content.toLowerCase().includes(".pdf")
-        ? { type: "pdf" as const, url: msg.content, name: msg.content.split("/").pop() || "Document.pdf" }
-        : null;
-
-    return {
-      ...msg,
-      status,
-      attachment,
-    };
-  });
   const goalItems = [
     { key: "renewal", label: "Subscription runway", value: memberStatus === "expired" ? `Expired ${Math.abs(rawDaysRemaining)} days ago` : `${daysRemaining} of ${totalDays} days left`, urgent: daysLow },
     { key: "protein", label: "Protein target", value: `${todayProtein}g of 180g`, urgent: nutritionRisk },
-    { key: "coach", label: "Coach accountability", value: unreadMessages > 0 ? `${unreadMessages} unread message${unreadMessages > 1 ? "s" : ""}` : "Inbox clear", urgent: unreadMessages > 0 },
   ];
   const celebrationSignature = `${unlockedAchievements.map((badge) => badge.key).join("|")}:${weeklyChallenge.completed ? "challenge" : "in-progress"}:${dailyScoreValue >= 90 ? "score" : "score-pending"}`;
   const currentTour = ONBOARDING_STEPS[tourStep];
@@ -1948,27 +1812,6 @@ export default function ClientDashboard() {
       setActiveNav("home");
     }
   }, [hydrated, currentMember, isEmptyDashboard]);
-
-  useEffect(() => {
-    if (unreadMessages > previousUnreadRef.current) {
-      setLiveAnnouncement(`You have ${unreadMessages} unread coach ${unreadMessages === 1 ? "message" : "messages"}.`);
-    }
-    previousUnreadRef.current = unreadMessages;
-  }, [unreadMessages]);
-
-  useEffect(() => {
-    if ((messages || []).some((msg: any) => msg.sender_type === "coach")) {
-      setCoachTyping(false);
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    return () => {
-      if (coachTypingTimeoutRef.current) {
-        clearTimeout(coachTypingTimeoutRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -2120,36 +1963,6 @@ export default function ClientDashboard() {
     router.push("/client/login");
   };
 
-  const handleSendMessage = () => {
-    if (!message.trim() || !memberId) return;
-    const sentContent = message;
-    sendMutation.mutate(
-      { memberId, content: chatDraftAttachment ? `${message}\n${chatDraftAttachment.url}` : message },
-      {
-        onSuccess: () => {
-          toast.success("Message sent to your coach.");
-          setLiveAnnouncement("Message sent to your coach.");
-          setMessage("");
-          setChatDraftAttachment(null);
-          setPendingMessageSentAt(Date.now());
-          setCoachTyping(true);
-          if (coachTypingTimeoutRef.current) clearTimeout(coachTypingTimeoutRef.current);
-          coachTypingTimeoutRef.current = setTimeout(() => {
-            setCoachTyping(false);
-            setLiveAnnouncement("Coach replied status updated.");
-          }, 2600);
-          if (sentContent.toLowerCase().includes("question")) {
-            setCoachTyping(true);
-          }
-        },
-        onError: (error) => {
-          toast.error(getErrorMessage(error, "Message failed to send."));
-          setLiveAnnouncement("Message failed to send.");
-        },
-      }
-    );
-  };
-
   const cardVariants = {
     hidden: { opacity: 0, y: disableHeavyAnimations ? 0 : 20 },
     visible: (i: number) => ({
@@ -2190,11 +2003,10 @@ export default function ClientDashboard() {
         onDurationFilterChange={setDurationFilter}
         workoutResults={searchWorkoutResults}
         nutritionResults={searchNutritionResults}
-        messageResults={searchMessageResults}
         exerciseResults={searchExerciseResults}
         workoutTags={workoutTags}
         onAddTag={addWorkoutTag}
-        onNavigate={(tab) => setActiveNav(tab === "coach" && !isPrivate ? "home" : tab)}
+        onNavigate={(tab) => setActiveNav(tab)}
       />
       {showTour && currentTour && (
         <div style={{ position: "sticky", top: 0, zIndex: 120, background: "rgba(13,13,16,0.96)", borderBottom: "1px solid rgba(124,252,0,0.16)", backdropFilter: "blur(14px)", padding: "14px 18px" }}>
@@ -2624,6 +2436,52 @@ export default function ClientDashboard() {
                       : "Your subscription is expiring soon. Renew to keep access."}
                   </div>
                 )}
+                              {/* Renew Now Button — shows when ≤5 days remaining or expired */}
+                {(daysRemaining <= 5 || memberStatus === "expired") && (
+                  <motion.a
+                    href={`https://wa.me/${GYM_WHATSAPP}?text=${encodeURIComponent(`Hi, I'd like to renew my ${memberType} membership (${memberCode}). My plan expires ${memberStatus === "expired" ? `(${Math.abs(rawDaysRemaining)} days ago)` : `in ${daysRemaining} days`}.`)}}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      marginTop: 12,
+                      padding: "13px 20px",
+                      background: "linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)",
+                      borderRadius: 14,
+                      color: "#FFFFFF",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      textDecoration: "none",
+                      cursor: "pointer",
+                      border: "none",
+                      boxShadow: "0 4px 16px rgba(76, 175, 80, 0.25)",
+                      width: "100%",
+                      transition: "box-shadow 0.2s ease",
+                    }}
+                  >
+                    <WhatsAppIcon size={18} color="#FFFFFF" />
+                    Renew Now
+                    <motion.span
+                      animate={{ opacity: [1, 0.4, 1] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      style={{
+                        fontSize: 10,
+                        background: "rgba(255,255,255,0.25)",
+                        borderRadius: 20,
+                        padding: "2px 8px",
+                        fontWeight: 800,
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      {memberStatus === "expired" ? "URGENT" : `${daysRemaining}D LEFT`}
+                    </motion.span>
+                  </motion.a>
+                )}  
               </div>
 
               {/* Coach Row (private only) */}
@@ -2663,13 +2521,7 @@ export default function ClientDashboard() {
                       </div>
                     </div>
                     <button
-                      onClick={() => {
-                        if (window.innerWidth < 1024) setIsChatOpen(true);
-                        else {
-                          const input = document.querySelector('input[placeholder="Type to coach..."]') as HTMLInputElement;
-                          if (input) input.focus();
-                        }
-                      }}
+                      onClick={() => setActiveNav("home")}
                       style={{
                         display: "flex", alignItems: "center", gap: 6,
                         background: "rgba(124,252,0,0.1)",
@@ -2679,8 +2531,7 @@ export default function ClientDashboard() {
                         cursor: "pointer",
                       }}
                     >
-                      <MessageCircle size={14} color="#7CFC00" />
-                      Message
+                      View Dashboard
                     </button>
                   </div>
                 </>
@@ -2795,37 +2646,7 @@ export default function ClientDashboard() {
                 style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}
               >
                 <div className="grid grid-cols-1 xl:grid-cols-[1.2fr,0.8fr] gap-4">
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-                      <div>
-                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800 }}>Priority First</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>Next Workout</div>
-                      </div>
-                      {urgentItems.some((item) => item.key === "workout") && (
-                        <div style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.24)", color: "#FCA5A5", fontSize: 12, fontWeight: 800 }}>
-                          Urgent
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF" }}>
-                      {nextWorkoutTask?.title || "No workout queued yet"}
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 14, color: "var(--color-text-secondary)" }}>
-                      {nextWorkoutTask ? `${nextWorkoutTask.duration || "45 min"} • ${nextWorkoutTask.assignedBy || "Coach assigned"}` : "Start with a coached session to unlock your weekly rhythm."}
-                    </div>
-                    <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveNav("workouts")}
-                        style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, cursor: "pointer" }}
-                      >
-                        Open Workouts
-                      </button>
-                      <div style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", fontSize: 13 }}>
-                        {taskStats.completed} completed tasks this cycle
-                      </div>
-                    </div>
-                  </div>
+
 
                   <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
@@ -2859,7 +2680,6 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                <DailyScore score={dailyScoreValue} />
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   {urgentItems.map((item) => (
@@ -3028,10 +2848,10 @@ export default function ClientDashboard() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setActiveNav("coach")}
+                      onClick={() => setActiveNav("home")}
                       style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(124,252,0,0.22)", background: "rgba(124,252,0,0.1)", color: "#7CFC00", fontWeight: 700, cursor: "pointer" }}
                     >
-                      Open Coach Connection
+                      View Dashboard
                     </button>
                   </div>
                 )}
@@ -3163,272 +2983,15 @@ export default function ClientDashboard() {
                   ))}
                 </div>
                 <div style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6, borderLeft: "3px solid #7CFC00", paddingLeft: 16 }}>
-                  Specializes in strength & hypertrophy training. Use the chat on the right to send a message directly to your coach anytime.
+                  Specializes in strength & hypertrophy training. Your coach is here to guide you through workouts, nutrition, and accountability.
                 </div>
               </div>
             </motion.div>
           )}
         </main>
 
-        {/* ─── Right Sidebar / Chat Panel ──────────────────────────────────────── */}
-        <aside
-          style={{
-            background: "#16161A",
-            borderLeft: "1px solid rgba(255,255,255,0.06)",
-            flexDirection: "column",
-            flexShrink: 0,
-            height: "calc(100vh - " + (isPrivate && bannerVisible ? "40px" : "0px") + ")",
-            overflowY: "auto",
-          }}
-          className={cn(
-            "fixed inset-0 z-[200] flex lg:sticky lg:top-0 lg:w-[320px] lg:z-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isChatOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 lg:translate-y-0 lg:opacity-100",
-            !isChatOpen && "pointer-events-none lg:pointer-events-auto"
-          )}
-          ref={chatPanelRef}
-          role={isChatOpen ? "dialog" : undefined}
-          aria-modal={isChatOpen ? "true" : undefined}
-          aria-labelledby={isChatOpen ? chatTitleId : undefined}
-          aria-describedby={isChatOpen ? chatDescriptionId : undefined}
-          tabIndex={isChatOpen ? -1 : undefined}
-        >
-          {/* Mobile Back Button */}
-          <div className="lg:hidden p-4 border-bottom border-white/5 flex items-center justify-between">
-            <button onClick={() => setIsChatOpen(false)} className="text-white flex items-center gap-2" aria-label="Close coach chat">
-              <X size={20} /> Close Chat
-            </button>
-          </div>
-
-          {/* Profile Card */}
-          <motion.div
-            custom={8}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
-            style={{
-              padding: 24,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
-            <div style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 2 }}>{memberType}</div>
-
-            {isPrivate && (
-              <motion.div
-                animate={{
-                  boxShadow: [
-                    "0 0 0 0 rgba(124,252,0,0.4)",
-                    "0 0 0 8px rgba(124,252,0,0)",
-                    "0 0 0 0 rgba(124,252,0,0.4)",
-                  ],
-                }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                style={{
-                  width: "100%",
-                  background: "#7CFC00",
-                  borderRadius: 8,
-                  padding: "6px 0",
-                  marginTop: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                <Crown size={14} color="#000" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  PRIVATE TRAINING CLIENT
-                </span>
-              </motion.div>
-            )}
-
-            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              {[
-                { icon: <Phone size={16} />, label: "Call" },
-                { icon: <Video size={16} />, label: "Video" },
-                { icon: <MoreHorizontal size={16} />, label: "More" },
-              ].map((btn) => (
-                <button
-                  key={btn.label}
-                  title={btn.label}
-                  style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: "#16161A",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", color: "var(--color-text-secondary)", transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(124,252,0,0.4)";
-                    e.currentTarget.style.color = "#7CFC00";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-                    e.currentTarget.style.color = "var(--color-text-secondary)";
-                  }}
-                >
-                  {btn.icon}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Activity Feed */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-              <span id={chatTitleId} style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Activity</span>
-              <span id={chatDescriptionId} className="sr-only">Coach conversation drawer. Press Escape to close it on mobile.</span>
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 12, paddingTop: 16 }} aria-live="polite" aria-relevant="additions text">
-              {chatMessages.map((msg) => {
-                const isCoach = msg.sender_type === "coach";
-                return (
-                  <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isCoach ? "flex-start" : "flex-end" }}>
-                    <div style={{ fontSize: 11, color: "#5A5A5A", marginBottom: 4, marginLeft: isCoach ? 4 : 0, marginRight: isCoach ? 0 : 4 }}>
-                      {isCoach ? (CLIENT_DATA.coach.name || "Coach") : "You"} • {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
-                    </div>
-                    <div style={{
-                      maxWidth: "85%",
-                      background: isCoach ? "rgba(255,255,255,0.05)" : "rgba(124,252,0,0.1)",
-                      color: isCoach ? "#FFFFFF" : "#7CFC00",
-                      border: isCoach ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(124,252,0,0.2)",
-                      padding: "10px 14px",
-                      borderRadius: 16,
-                      borderTopLeftRadius: isCoach ? 4 : 16,
-                      borderTopRightRadius: isCoach ? 16 : 4,
-                      fontSize: 14,
-                      lineHeight: 1.4,
-                    }}>
-                      {msg.content}
-                      {msg.attachment?.type === "image" && (
-                        <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <img src={msg.attachment.url} alt={msg.attachment.name} style={{ width: "100%", maxWidth: 220, display: "block", objectFit: "cover" }} />
-                        </div>
-                      )}
-                      {msg.attachment?.type === "pdf" && (
-                        <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
-                          <FileText size={18} color="#8B5CF6" />
-                          <div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF" }}>{msg.attachment.name}</div>
-                            <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>PDF attachment</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {!isCoach && msg.status && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: msg.status === "Read" ? "#7CFC00" : "var(--color-text-secondary)" }}>
-                        {msg.status}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {coachTyping && (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 11, color: "#5A5A5A", marginBottom: 4, marginLeft: 4 }}>
-                    {CLIENT_DATA.coach.name} • typing...
-                  </div>
-                  <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", padding: "10px 14px", borderRadius: 16, borderTopLeftRadius: 4, display: "inline-flex", gap: 6 }}>
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <motion.span
-                        key={index}
-                        animate={{ opacity: [0.35, 1, 0.35], y: [0, -2, 0] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: index * 0.12 }}
-                        style={{ width: 6, height: 6, borderRadius: "50%", background: "#FFFFFF", display: "inline-block" }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(!messages || messages.length === 0) && !coachTyping && (
-                <div style={{ textAlign: "center", color: "#5A5A5A", fontSize: 13, marginTop: 40 }}>
-                  No messages yet. Say hi to your coach!
-                </div>
-              )}
-            </div>
-
-            {/* Message Input */}
-            <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                {quickReplies.map((reply) => (
-                  <button
-                    key={reply}
-                    type="button"
-                    onClick={() => setMessage(reply)}
-                    style={{ minHeight: 36, padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                  >
-                    {reply}
-                  </button>
-                ))}
-              </div>
-              {chatDraftAttachment && (
-                <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {chatDraftAttachment.type === "image" ? <Camera size={18} color="#7CFC00" /> : <FileText size={18} color="#8B5CF6" />}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF" }}>{chatDraftAttachment.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{chatDraftAttachment.type === "image" ? "Image preview ready" : "PDF preview ready"}</div>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => setChatDraftAttachment(null)} style={{ background: "none", border: "none", color: "var(--color-text-secondary)", cursor: "pointer", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-              <div style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                padding: "10px 14px",
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setChatDraftAttachment((current) => current?.type === "image"
-                    ? { type: "pdf", name: "Weekly-Plan.pdf", url: "https://example.com/weekly-plan.pdf" }
-                    : { type: "image", name: "checkin-progress.jpg", url: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80" })}
-                  aria-label="Add an attachment preview"
-                  style={{ background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
-                >
-                  <Paperclip size={18} color="#5A5A5A" style={{ flexShrink: 0 }} />
-                </button>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                  placeholder="Type to coach..."
-                  aria-label="Message your coach"
-                  style={{
-                    flex: 1, background: "none", border: "none", outline: "none",
-                    fontSize: 14, color: "#FFFFFF", fontFamily: "'Inter', sans-serif",
-                  }}
-                />
-                <Smile size={18} color="#5A5A5A" style={{ flexShrink: 0, cursor: "pointer" }} />
-                <button
-                  type="button"
-                  onClick={handleSendMessage}
-                  aria-label="Send message to coach"
-                  style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
-                >
-                  <Send
-                    size={18}
-                    color={isPrivate ? "#7CFC00" : "#5A5A5A"}
-                    style={{ flexShrink: 0 }}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
 
-      {/* ─── Private Floating DM Button ──────────────────────────────────────── */}
       <MobileBottomNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenSettings={() => setIsSettingsOpen(true)} />
 
       {/* ─── Task Modal ──────────────────────────────────────── */}
@@ -3619,4 +3182,3 @@ export default function ClientDashboard() {
     </div>
   );
 }
-

@@ -7,8 +7,7 @@ import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/perf
 import { getErrorMessage, showConfirmToast } from "@/lib/feedback";
 import {
   Dumbbell, Crown, Play, CheckCircle2, Clock, ChevronDown,
-  ChevronUp, Flame, Target, RotateCcw, Plus, Minus, Timer,
-  Trophy, Zap, Edit3, Trash2, Mic, MicOff, X, Pause,
+  ChevronUp, Flame, Target, Plus, Zap, Edit3, Trash2,
 } from "lucide-react";
 import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout } from "@/lib/api-hooks";
 import { WorkoutExerciseCard } from "@/components/ui/WorkoutExerciseCard";
@@ -77,6 +76,7 @@ const WEEK_PLAN = [
 ];
 
 const TODAY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+
 
 const difficultyColor: Record<string, string> = {
   Easy: "#10B981",
@@ -197,6 +197,17 @@ function getDefaultExercise(language: string, exerciseIndex: number) {
   };
 }
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return mobile;
+}
+
 type UndoEntry = {
   id: string;
   label: string;
@@ -260,322 +271,6 @@ function WorkoutsLoadingState() {
   );
 }
 
-// ─── Floating Rest Timer FAB ───────────────────────────────────────────────────
-function playTimerAlert() {
-  if (typeof window === "undefined") return;
-  const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-  if (!AudioContextCtor) return;
-  const context = new AudioContextCtor();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.value = 880;
-  gain.gain.value = 0.04;
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-  oscillator.start();
-  oscillator.stop(context.currentTime + 0.18);
-  oscillator.onended = () => {
-    context.close().catch(() => undefined);
-  };
-}
-
-function FloatingRestTimer() {
-  const [active, setActive] = useState(false);
-  const [seconds, setSeconds] = useState(90);
-  const [initial, setInitial] = useState(90);
-  const [expanded, setExpanded] = useState(false);
-  const [customSeconds, setCustomSeconds] = useState("150");
-
-  const applyPreset = useCallback((value: number) => {
-    setInitial(value);
-    setSeconds(value);
-    setExpanded(false);
-  }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    if (seconds <= 0) {
-      setActive(false);
-      playTimerAlert();
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
-      }
-      toast.success("Rest complete. Time for the next set.");
-      return;
-    }
-    const t = setTimeout(() => setSeconds(s => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [active, seconds]);
-
-  const pct = (seconds / initial) * 100;
-  const r = 22;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  const timeColor = seconds <= 10 ? "#EF4444" : "#7CFC00";
-  const min = Math.floor(seconds / 60);
-  const sec = seconds % 60;
-  const timeStr = min > 0 ? `${min}:${sec.toString().padStart(2, "0")}` : `${seconds}s`;
-  const presets = [
-    { label: "60s", value: 60 },
-    { label: "90s", value: 90 },
-    { label: "2m", value: 120 },
-    { label: "3m", value: 180 },
-  ];
-  const timerShellStyle = {
-    background: "var(--dashboard-surface)",
-    border: "1px solid var(--dashboard-border)",
-    borderRadius: 16,
-    boxShadow: "var(--dashboard-shadow)",
-  } as const;
-
-  return (
-    <div style={{ position: "sticky", top: 12, zIndex: 65 }}>
-      <div
-        style={{
-          ...timerShellStyle,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ position: "relative", width: 56, height: 56, flexShrink: 0 }}>
-            <svg width={56} height={56} style={{ transform: "rotate(-90deg)" }}>
-              <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={5} />
-              <circle cx={28} cy={28} r={22} fill="none" stroke={timeColor} strokeWidth={5}
-                strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-                style={{ transition: "stroke-dashoffset 1s linear, stroke 0.3s" }} />
-            </svg>
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: timeColor }}>{timeStr}</div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Rest Timer</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--dashboard-text-primary)", marginTop: 2 }}>Persistent between sets</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>Preset: {initial >= 60 ? `${Math.floor(initial / 60)}m ${initial % 60 === 0 ? "" : `${initial % 60}s`}`.trim() : `${initial}s`}</div>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={() => setExpanded((current) => !current)}
-              style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              aria-label="Toggle timer presets"
-            >
-              <ChevronDown size={16} />
-            </button>
-            <button onClick={() => setSeconds(s => Math.min(s + 15, 240))}
-              style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Plus size={14} />
-            </button>
-            <button onClick={() => { if (active) { setActive(false); setSeconds(initial); } else { setSeconds(initial); setActive(true); if (navigator.vibrate) navigator.vibrate(40); } }}
-              style={{ width: 44, height: 44, borderRadius: 12, background: active ? "rgba(239,68,68,0.2)" : "rgba(124,252,0,0.18)", border: `1px solid ${active ? "rgba(239,68,68,0.4)" : "rgba(124,252,0,0.3)"}`, color: active ? "#EF4444" : "#7CFC00", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {active ? <RotateCcw size={16} /> : <Play size={16} />}
-            </button>
-          </div>
-        </div>
-
-        <AnimatePresence>
-          {expanded && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {presets.map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => applyPreset(preset.value)}
-                    style={{ minHeight: 40, padding: "9px 12px", borderRadius: 12, border: preset.value === initial ? "1px solid rgba(124,252,0,0.28)" : "1px solid rgba(255,255,255,0.08)", background: preset.value === initial ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.04)", color: preset.value === initial ? "#D9FFBF" : "#FFFFFF", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexWrap: "wrap" }}>
-                  <input
-                    value={customSeconds}
-                    onChange={(event) => setCustomSeconds(event.target.value.replace(/[^0-9]/g, ""))}
-                    inputMode="numeric"
-                    placeholder="Custom sec"
-                    style={{ width: 110, minHeight: 40, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", padding: "0 12px" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const parsed = Number(customSeconds);
-                      if (!parsed || parsed < 15) {
-                        toast.error("Custom rest must be at least 15 seconds.");
-                        return;
-                      }
-                      applyPreset(Math.min(parsed, 600));
-                    }}
-                    style={{ minHeight: 40, padding: "9px 12px", borderRadius: 12, border: "1px solid rgba(245,158,11,0.28)", background: "rgba(245,158,11,0.12)", color: "#FCD34D", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    Custom
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Mobile quick action bubble */}
-      <button
-        className="fab lg:hidden"
-        onClick={() => { if (!active) { setSeconds(initial); setActive(true); } else { setActive(false); setSeconds(initial); } }}
-        style={{
-          bottom: 90,
-          right: 20,
-          width: 56,
-          height: 56,
-          background: active ? "#EF4444" : "var(--dashboard-accent)",
-        }}
-      >
-        {active ? <Pause size={22} color="#fff" /> : <Timer size={22} color="#000" />}
-      </button>
-    </div>
-  );
-}
-
-// ─── Voice Logger ──────────────────────────────────────────────────────────────
-function VoiceButton({ onResult }: { onResult: (text: string) => void }) {
-  const [listening, setListening] = useState(false);
-  const [supported, setSupported] = useState(true);
-  const recogRef = useRef<any>(null);
-
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) setSupported(false);
-  }, []);
-
-  const toggle = () => {
-    if (!supported) {
-      toast.error("Voice logging isn't supported in this browser yet.");
-      return;
-    }
-    if (listening) {
-      recogRef.current?.stop();
-      setListening(false);
-      return;
-    }
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recog = new SpeechRecognition();
-    recog.lang = "en-US";
-    recog.interimResults = false;
-    recog.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      onResult(text);
-    };
-    recog.onend = () => setListening(false);
-    recog.onerror = () => {
-      setListening(false);
-      toast.error("Voice capture stopped before we got a result.");
-    };
-    recogRef.current = recog;
-    recog.start();
-    setListening(true);
-    // Vibrate to confirm start (Android)
-    if (navigator.vibrate) navigator.vibrate(50);
-  };
-
-  return (
-    <button
-      onClick={toggle}
-      title={supported ? "Log by voice" : "Voice not supported — use keyboard mic"}
-      style={{
-        width: 36, height: 36, borderRadius: "50%",
-        background: listening ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.05)",
-        border: `1px solid ${listening ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)"}`,
-        color: listening ? "#EF4444" : "#5A5A5A",
-        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      {listening ? <MicOff size={15} /> : <Mic size={15} />}
-    </button>
-  );
-}
-
-// ─── Exercise Card (mobile-first) ─────────────────────────────────────────────
-function ExerciseCard({ ex, idx, onSetToggle, onWeightChange }: {
-  ex: any; idx: number;
-  onSetToggle: (exIdx: number, setIdx: number) => void;
-  onWeightChange: (exIdx: number, delta: number) => void;
-}) {
-  const completedSets = (ex.completedSets as boolean[]).filter(Boolean).length;
-  const isBodyweight = ex.unit === "—";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: idx * 0.05 }}
-      style={{
-        background: "#16161A",
-        border: `1px solid ${completedSets === ex.sets ? "rgba(124,252,0,0.25)" : "rgba(255,255,255,0.06)"}`,
-        borderRadius: 14,
-        padding: "16px",
-        marginBottom: 10,
-      }}
-    >
-      {/* Exercise name + voice */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: completedSets === ex.sets ? "#7CFC00" : "#FFFFFF" }}>
-            {ex.exercise}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
-            {ex.sets} sets · {ex.reps} reps{!isBodyweight ? ` · ${ex.weight}${ex.unit}` : ""}
-          </div>
-        </div>
-        <VoiceButton onResult={(text) => {
-          // parse spoken weight like "80 kilos" or "3 sets"
-          console.log("Voice input:", text);
-        }} />
-      </div>
-
-      {/* Set tap buttons */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: isBodyweight ? 0 : 12 }}>
-        {(ex.completedSets as boolean[]).map((done: boolean, si: number) => (
-          <button
-            key={si}
-            className={cn("set-btn", done && "done")}
-            onClick={() => onSetToggle(idx, si)}
-          >
-            {done ? <CheckCircle2 size={16} /> : <span style={{ fontSize: 10 }}>Set</span>}
-            {!done && <span>{si + 1}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Weight adjuster */}
-      {!isBodyweight && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            className="touch-target"
-            onClick={() => onWeightChange(idx, -2.5)}
-            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text-secondary)", cursor: "pointer", fontSize: 18 }}
-          >
-            −
-          </button>
-          <div style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>
-            {ex.weight} {ex.unit}
-          </div>
-          <button
-            className="touch-target"
-            onClick={() => onWeightChange(idx, +2.5)}
-            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text-secondary)", cursor: "pointer", fontSize: 18 }}
-          >
-            +
-          </button>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
 // ─── Workout Card ─────────────────────────────────────────────────────────────
 const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, onQueueUndo, onAddExercise, onExerciseChange, language }: {
   workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void;
@@ -584,7 +279,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   onExerciseChange?: (workout: any, exerciseIndex: number, updated: any) => void;
   language: string;
 }) {
-  const [expanded, setExpanded] = useState(workout.status === "in-progress");
+  const [expanded, setExpanded] = useState(false);
   const [editingExercise, setEditingExercise] = useState<any>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const safeWorkoutSets = Array.isArray(workout.sets) ? workout.sets : [];
@@ -611,6 +306,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   const completionPct = totalSets > 0 ? Math.round((completedTotal / totalSets) * 100) : 0;
   const sc = statusConfig[workout.status] ?? statusConfig.todo;
   const { disableHeavyAnimations } = useDashboardMotion();
+  const isMobile = useIsMobile();
 
   const queueUndo = (label: string, undo: () => void) => {
     onQueueUndo?.({
@@ -772,14 +468,14 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
         {/* Header */}
         <div
           onClick={() => setExpanded(!expanded)}
-          style={{ padding: "18px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}
+          style={{ padding: isMobile ? "14px 16px" : "18px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}
         >
-          <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Dumbbell size={20} color="#7CFC00" />
+          <div style={{ width: isMobile ? 40 : 46, height: isMobile ? 40 : 46, borderRadius: "50%", background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Dumbbell size={isMobile ? 18 : 20} color="#7CFC00" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>{workout.title}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 3 }}>
+              <span style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: "#FFFFFF" }}>{workout.title}</span>
               {workout.coachAssigned && isPrivate && (
                 <span style={{ fontSize: 10, color: "#7CFC00", background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.2)", borderRadius: 6, padding: "2px 6px", display: "flex", alignItems: "center", gap: 3 }}>
                   <Crown size={8} /> Coach
@@ -789,30 +485,31 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                 {workout.difficulty}
               </span>
             </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 11 : 12 }}>
                 <Clock size={11} /> {workout.duration}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 11 : 12 }}>
                 <Flame size={11} color="#F59E0B" /> {workout.calories} kcal
               </div>
             </div>
           </div>
           {/* Completion ring */}
-          <div style={{ position: "relative", width: 42, height: 42, flexShrink: 0 }}>
+          <div style={{ position: "relative", width: isMobile ? 44 : 46, height: isMobile ? 44 : 46, flexShrink: 0 }}>
             {(() => {
-              const r2 = 17, circ2 = 2 * Math.PI * r2;
+              const r2 = isMobile ? 17 : 18, circ2 = 2 * Math.PI * r2;
               const offset2 = circ2 - (completionPct / 100) * circ2;
+              const center = isMobile ? 22 : 23;
               return (
-                <svg width={42} height={42} style={{ transform: "rotate(-90deg)" }}>
-                  <circle cx={21} cy={21} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={4} />
-                  <circle cx={21} cy={21} r={r2} fill="none" stroke="#7CFC00" strokeWidth={4}
+                <svg width={isMobile ? 44 : 46} height={isMobile ? 44 : 46} style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx={center} cy={center} r={r2} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={4} />
+                  <circle cx={center} cy={center} r={r2} fill="none" stroke="#7CFC00" strokeWidth={4}
                     strokeDasharray={circ2} strokeDashoffset={offset2} strokeLinecap="round"
                     style={{ transition: "stroke-dashoffset 0.5s ease" }} />
                 </svg>
               );
             })()}
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#FFFFFF" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 10 : 10, fontWeight: 800, color: "#FFFFFF" }}>
               {completionPct}%
             </div>
           </div>
@@ -820,7 +517,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
         </div>
 
         {/* Full-width resume button for in-progress */}
-        {workout.status === "in-progress" && !expanded && (
+        {((workout.status === "in-progress") || completionPct > 0) && completionPct < 100 && !expanded && (
           <div style={{ padding: "0 20px 16px" }}>
             <button
               onClick={() => setExpanded(true)}
@@ -848,7 +545,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
               transition={{ duration: disableHeavyAnimations ? 0 : 0.25 }}
               style={{ overflow: "hidden" }}
             >
-              <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ padding: `0 ${isMobile ? 12 : 16}px ${isMobile ? 12 : 16}px` }}>
                 <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 14 }} />
 
                 {/* Progress bar */}
@@ -892,7 +589,6 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                         onMenuAction={(action) => handleExerciseMenuAction(action, exerciseData.id, exerciseData.name, origIdx)}
                         onSetAction={handleExerciseSetAction}
                         onChange={(updated) => {
-                          onExerciseChange?.(workout, origIdx, updated);
                           updated.sets.forEach((set, setIdx) => {
                              if (set.completed !== ex.completedSets[setIdx]) {
                                handleSetToggle(origIdx, setIdx);
@@ -907,22 +603,24 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                 {/* Exercise Edit Modal inside WorkoutCard */}
                 <AnimatePresence>
                   {editingExercise && (
-                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1100, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20 }}
                       onClick={(e) => { e.stopPropagation(); setEditingExercise(null); }}>
                       <motion.div
                         ref={editExerciseDialogRef}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
+                        initial={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, ...(isMobile ? { y: 0 } : { scale: 1 }) }}
+                        exit={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 40 }}
                         onClick={e => e.stopPropagation()}
-                        style={{ background: "#1A1A1F", border: "1px solid rgba(124,252,0,0.3)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 400 }}
+                        style={{ background: "#1A1A1F", border: "1px solid rgba(124,252,0,0.3)", borderRadius: isMobile ? "20px 20px 0 0" : "20px", padding: isMobile ? 20 : 24, width: "100%", maxWidth: isMobile ? "100%" : 400 }}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby={editExerciseTitleId}
                         aria-describedby={editExerciseDescriptionId}
                         tabIndex={-1}
                       >
-                        <h3 id={editExerciseTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                        {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />}
+                        <h3 id={editExerciseTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>
                           {isArabicLanguage(language) ? "تعديل التمرين" : "Edit Exercise"}
                         </h3>
                         <p id={editExerciseDescriptionId} className="sr-only">
@@ -947,29 +645,23 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                           });
                           setEditingExercise(null);
                         }}>
-                          <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
+                          <div style={{ marginBottom: isMobile ? 14 : 12 }}>
+                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 6 : 4 }}>
                               {isArabicLanguage(language) ? "اسم التمرين" : "Exercise Name"}
                             </label>
-                            <input aria-label="Exercise name" name="name" defaultValue={editingExercise.data.name} required style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                            <input aria-label="Exercise name" name="name" defaultValue={editingExercise.data.name} required style={{ width: "100%", padding: isMobile ? "14px 16px" : "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 40 }} />
                           </div>
-                          <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
-                              {isArabicLanguage(language) ? "النوع" : "Type (e.g. Bilateral)"}
-                            </label>
-                            <input aria-label="Exercise type" name="type" defaultValue={editingExercise.data.type} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
-                          </div>
-                          <div style={{ marginBottom: 20 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
+                          <div style={{ marginBottom: isMobile ? 20 : 20 }}>
+                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 6 : 4 }}>
                               {isArabicLanguage(language) ? "المدة (دقائق)" : "Duration (mins)"}
                             </label>
-                            <input aria-label="Exercise duration in minutes" name="duration" type="number" defaultValue={editingExercise.data.durationMinutes} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                            <input aria-label="Exercise duration in minutes" name="duration" type="number" defaultValue={editingExercise.data.durationMinutes} style={{ width: "100%", padding: isMobile ? "14px 16px" : "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 40 }} />
                           </div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>
+                          <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
+                            <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: isMobile ? 16 : 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, minHeight: isMobile ? 52 : TOUCH_TARGET_SIZE, fontSize: 16 }}>
                               {isArabicLanguage(language) ? "إلغاء" : "Cancel"}
                             </button>
-                            <button type="submit" style={{ flex: 1, padding: 10, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>
+                            <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 10, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, minHeight: isMobile ? 52 : TOUCH_TARGET_SIZE, fontSize: 16 }}>
                               {isArabicLanguage(language) ? "حفظ" : "Save Update"}
                             </button>
                           </div>
@@ -1007,6 +699,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   const updateWorkoutMutation = useUpdateWorkout();
   const deleteWorkoutMutation = useDeleteWorkout();
   const { disableHeavyAnimations } = useDashboardMotion();
+  const isMobile = useIsMobile();
   const workoutModalRef = useRef<HTMLDivElement>(null);
   const weeklyPlanModalRef = useRef<HTMLDivElement>(null);
   const tasksModalRef = useRef<HTMLDivElement>(null);
@@ -1023,6 +716,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     { id: 3, title: "Update body measurements", completed: false, priority: "low" },
     { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
   ]);
+
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [workoutFormError, setWorkoutFormError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
@@ -1081,7 +775,10 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     setLanguage(getPreferredLanguage());
   }, []);
 
-  const normalizedWorkouts = (dbWorkouts && dbWorkouts.length > 0 ? dbWorkouts : WORKOUTS).map((workout: any, index: number) => {
+  const normalizedWorkouts = (Array.isArray(dbWorkouts) && dbWorkouts.length > 0
+    ? dbWorkouts
+    : []
+  ).map((workout: any, index: number) => {
     const normalized = normalizeWorkout(workout);
     return {
       ...normalized,
@@ -1169,18 +866,17 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         </div>
       )}
 
-      {/* Floating rest timer (FAB on mobile, inline on desktop) */}
-      <FloatingRestTimer />
+      {/* FloatingRestTimer removed — use compact timer per workout instead */}
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Dumbbell size={24} color="#7CFC00" />
-          <span style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>Your Workouts</span>
+          <Dumbbell size={isMobile ? 20 : 24} color="#7CFC00" />
+          <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#FFFFFF" }}>Your Workouts</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "8px 12px" }}>
-          <Zap size={14} color="#F59E0B" />
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#F59E0B" }}>{streak}-Day Streak • {formatWeight(80, "kg")}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: isMobile ? "6px 10px" : "8px 12px" }}>
+          <Zap size={isMobile ? 12 : 14} color="#F59E0B" />
+          <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: "#F59E0B" }}>{streak}-Day Streak{isMobile ? "" : ` • ${formatWeight(80, "kg")}`}</span>
         </div>
       </div>
 
@@ -1209,8 +905,11 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   border: isToday ? "1px solid rgba(124,252,0,0.3)" : "1px solid rgba(255,255,255,0.04)",
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative",
                 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: day.done ? "#7CFC00" : "rgba(255,255,255,0.15)" }} />
-                  <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : "#5A5A5A", textAlign: "center" }}>{day.label}</span>
+                  {day.done
+                    ? <CheckCircle2 size={18} color="#7CFC00" strokeWidth={2.5} />
+                    : <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)" }} />
+                  }
+                  <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : "#5A5A5A", textAlign: "center", lineHeight: 1.2 }}>{day.label}</span>
                 </div>
               </div>
             );
@@ -1220,6 +919,27 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           <Target size={12} color="#7CFC00" />
           <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Today: <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{todayPlan.label}</span></span>
         </div>
+        {/* Weekly progress bar */}
+        {(() => {
+          const doneDays = localWeekPlan.filter(d => d.done).length;
+          const totalDays = localWeekPlan.length;
+          const weekPct = Math.round((doneDays / totalDays) * 100);
+          return (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>
+                <span>Weekly Progress</span>
+                <span style={{ color: "#7CFC00", fontWeight: 600 }}>{doneDays}/{totalDays} days ({weekPct}%)</span>
+              </div>
+              <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                <motion.div
+                  animate={{ width: `${weekPct}%` }}
+                  transition={{ duration: 0.6 }}
+                  style={{ height: "100%", background: "linear-gradient(90deg, #7CFC00, #39FF14)", borderRadius: 4 }}
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Workout cards (Assigned Workouts) moved up here */}
@@ -1230,16 +950,16 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         style={{ minHeight: 420 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>Assigned Workouts</div>
+          <div style={{ fontSize: isMobile ? 11 : 12, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>Assigned Workouts</div>
           <button
             onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: "8px 14px", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, minHeight: 40 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: isMobile ? "7px 12px" : "8px 14px", color: "#000", cursor: "pointer", fontSize: isMobile ? 12 : 13, fontWeight: 700, minHeight: isMobile ? 38 : 40 }}
           >
-            <Plus size={14} /> {isArabicLanguage(language) ? "إضافة تمرين كامل" : "Add Workout"}
+            <Plus size={isMobile ? 13 : 14} /> {isArabicLanguage(language) ? "إضافة تمرين كامل" : "Add Workout"}
           </button>
         </div>
         <LazyRenderSection
-          minHeight={360}
+          minHeight={normalizedWorkouts.length === 0 ? 200 : 360}
           fallback={
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {Array.from({ length: Math.min(normalizedWorkouts.length || 2, 3) }).map((_, index) => (
@@ -1248,8 +968,41 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             </div>
           }
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {normalizedWorkouts.map((w: any, i: number) => (
+          {normalizedWorkouts.length === 0 ? (
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: isMobile ? "40px 20px" : "60px 20px", textAlign: "center",
+            }}>
+              <div style={{
+                width: isMobile ? 64 : 80, height: isMobile ? 64 : 80,
+                borderRadius: "50%", background: "rgba(124,252,0,0.08)",
+                border: "2px solid rgba(124,252,0,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 16,
+              }}>
+                <Dumbbell size={isMobile ? 28 : 36} color="#7CFC00" strokeWidth={1.5} />
+              </div>
+              <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 6 }}>
+                No Workouts Yet
+              </div>
+              <div style={{ fontSize: isMobile ? 13 : 14, color: "var(--color-text-secondary)", marginBottom: 20, maxWidth: 280, lineHeight: 1.5 }}>
+                Start your fitness journey by creating your first workout. Your coach can also assign workouts for you.
+              </div>
+              <button
+                onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
+                style={{
+                  height: isMobile ? 48 : 44, borderRadius: 12, padding: "0 24px",
+                  background: "linear-gradient(135deg, #7CFC00, #39FF14)", border: "none",
+                  color: "#000", fontWeight: 700, fontSize: isMobile ? 14 : 15,
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
+                }}
+              >
+                <Plus size={18} /> Create Workout
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {normalizedWorkouts.map((w: any, i: number) => (
               <WorkoutCard
                 key={w.id}
                 workout={w}
@@ -1273,7 +1026,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 }
               />
             ))}
-          </div>
+            </div>
+          )}
         </LazyRenderSection>
       </motion.div>
 
@@ -1286,43 +1040,42 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           background: "#16161A",
           border: "1px solid rgba(255,255,255,0.06)",
           borderRadius: 16,
-          padding: 24,
-          minHeight: 320,
+          padding: isMobile ? 16 : 24,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Target size={20} color="#7CFC00" />
-            <span style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
-            <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
-              Done 50%
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 14 : 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+            <Target size={isMobile ? 18 : 20} color="#7CFC00" />
+            <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
+            <span style={{ fontSize: isMobile ? 12 : 14, color: "var(--color-text-secondary)" }}>
+              {localTasks.filter(t => t.completed).length}/{localTasks.length}
             </span>
           </div>
-          <button 
+          <button
             onClick={() => setIsTasksModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-secondary)", fontSize: 12, fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", transition: "color 0.2s" }}
-            onMouseOver={(e) => e.currentTarget.style.color = "#7CFC00"}
-            onMouseOut={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+            style={{ display: "flex", alignItems: "center", gap: 4, color: "#7CFC00", fontSize: isMobile ? 11 : 12, fontWeight: 600, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.15)", cursor: "pointer", borderRadius: 8, padding: isMobile ? "6px 10px" : "6px 12px" }}
           >
-            <Edit3 size={14} /> Edit
+            <Edit3 size={isMobile ? 12 : 14} /> Edit
           </button>
         </div>
 
-        {/* Task Filter */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {/* Task Filter — horizontal scroll on mobile */}
+        <div className={cn("flex gap-2", isMobile && "overflow-x-auto no-scrollbar pb-1")} style={{ marginBottom: isMobile ? 12 : 16 }}>
           {["all", "pending", "completed"].map((filter) => (
             <button
               key={filter}
               style={{
-                padding: "6px 12px",
+                padding: isMobile ? "7px 14px" : "6px 12px",
                 borderRadius: 20,
                 border: "1px solid rgba(255,255,255,0.08)",
                 background: "rgba(255,255,255,0.05)",
                 color: "var(--color-text-secondary)",
-                fontSize: 12,
+                fontSize: isMobile ? 13 : 12,
                 fontWeight: 600,
                 cursor: "pointer",
-                textTransform: "capitalize"
+                textTransform: "capitalize",
+                whiteSpace: "nowrap",
+                minHeight: 36,
               }}
             >
               {filter}
@@ -1330,7 +1083,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           ))}
         </div>
 
-        {/* Tasks List */}
+        {/* Tasks List — compact on mobile */}
         {localTasks.map((task, i) => (
           <motion.div
             key={task.id}
@@ -1340,8 +1093,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 12,
-              padding: "12px 0",
+              gap: isMobile ? 10 : 12,
+              padding: isMobile ? "10px 0" : "12px 0",
               borderBottom: i < localTasks.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"
             }}
           >
@@ -1350,32 +1103,36 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
               }}
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: 4,
+                width: isMobile ? 24 : 20,
+                height: isMobile ? 24 : 20,
+                borderRadius: 6,
                 border: `2px solid ${task.completed ? "#7CFC00" : "rgba(255,255,255,0.2)"}`,
                 background: task.completed ? "#7CFC00" : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center"
+                justifyContent: "center",
+                flexShrink: 0,
+                minWidth: isMobile ? 24 : 20,
               }}
             >
-              {task.completed && <CheckCircle2 size={12} color="#000" />}
+              {task.completed && <CheckCircle2 size={isMobile ? 14 : 12} color="#000" />}
             </button>
             <span style={{
               flex: 1,
-              fontSize: 14,
+              fontSize: isMobile ? 13 : 14,
               color: task.completed ? "var(--color-text-secondary)" : "#FFFFFF",
-              textDecoration: task.completed ? "line-through" : "none"
+              textDecoration: task.completed ? "line-through" : "none",
+              lineHeight: 1.3,
             }}>
               {task.title}
             </span>
             <div style={{
-              width: 8,
-              height: 8,
+              width: isMobile ? 10 : 8,
+              height: isMobile ? 10 : 8,
               borderRadius: "50%",
-              background: task.priority === "high" ? "#EF4444" : task.priority === "medium" ? "#F59E0B" : "#7CFC00"
+              background: task.priority === "high" ? "#EF4444" : task.priority === "medium" ? "#F59E0B" : "#7CFC00",
+              flexShrink: 0,
             }} />
           </motion.div>
         ))}
@@ -1384,8 +1141,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           onClick={() => setIsTasksModalOpen(true)}
           style={{
             width: "100%",
-            marginTop: 16,
-            height: 40,
+            marginTop: isMobile ? 12 : 16,
+            height: isMobile ? 44 : 40,
             borderRadius: 10,
             background: "rgba(255,255,255,0.05)",
             border: "1px solid rgba(255,255,255,0.08)",
@@ -1395,14 +1152,15 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            fontSize: 14
+            fontSize: isMobile ? 13 : 14
           }}
         >
-          <Edit3 size={16} /> Manage Tasks
+          <Edit3 size={isMobile ? 14 : 16} /> Manage Tasks
         </button>
       </motion.div>
 
       {/* Removed old workout cards duplicate block from here */}
+
 
       {/* Workout Modal */}
       <AnimatePresence>
@@ -1416,7 +1174,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               exit={{ opacity: 0, y: 80 }}
               transition={{ type: "spring", stiffness: 400, damping: 40 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: 28, width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto" }}
+              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: isMobile ? 20 : 28, width: "100%", maxWidth: 480, maxHeight: isMobile ? "92vh" : "85vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
               role="dialog"
               aria-modal="true"
               aria-labelledby={workoutModalTitleId}
@@ -1496,16 +1254,16 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   { name: "duration", label: isArabicLanguage(language) ? "المدة" : "Duration", type: "text", def: editingWorkout?.duration || "45 min" },
                   { name: "calories", label: isArabicLanguage(language) ? "السعرات (kcal)" : "Calories (kcal)", type: "number", def: editingWorkout?.calories || 300 },
                 ].map(f => (
-                  <div key={f.name} style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>{f.label}</label>
-                    <input aria-label={f.label} name={f.name} type={f.type} defaultValue={f.def} required style={{ width: "100%", padding: "13px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 15, fontFamily: "Inter, sans-serif", minHeight: 48 }} />
+                  <div key={f.name} style={{ marginBottom: isMobile ? 14 : 16 }}>
+                    <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 6 : 8, fontWeight: 500 }}>{f.label}</label>
+                    <input aria-label={f.label} name={f.name} type={f.type} defaultValue={f.def} required style={{ width: "100%", padding: isMobile ? "14px 16px" : "13px 14px", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, fontFamily: "Inter, sans-serif", minHeight: isMobile ? 52 : 48 }} />
                   </div>
                 ))}
-                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: 14, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>
+                <div style={{ display: "flex", gap: isMobile ? 8 : 10, marginTop: 8 }}>
+                  <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 14, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 56 : 52 }}>
                     {isArabicLanguage(language) ? "إلغاء" : "Cancel"}
                   </button>
-                  <button type="submit" disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending} style={{ flex: 1, padding: 14, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>
+                  <button type="submit" disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending} style={{ flex: 1, padding: isMobile ? 16 : 14, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 56 : 52 }}>
                     {isArabicLanguage(language) ? "حفظ" : "Save"}
                   </button>
                 </div>
@@ -1518,22 +1276,24 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
       {/* Weekly Plan Editor Modal */}
       <AnimatePresence>
         {isWeeklyPlanModalOpen && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20 }}
             onClick={() => setIsWeeklyPlanModalOpen(false)}>
             <motion.div
               ref={weeklyPlanModalRef}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, ...(isMobile ? { y: 0 } : { scale: 1 }) }}
+              exit={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 400, maxHeight: "90vh", overflowY: "auto" }}
+              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: isMobile ? "20px 20px 0 0" : "20px", padding: isMobile ? 20 : 24, width: "100%", maxWidth: isMobile ? "100%" : 400, maxHeight: isMobile ? "92vh" : "90vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
               role="dialog"
               aria-modal="true"
               aria-labelledby={weeklyPlanTitleId}
               aria-describedby={weeklyPlanDescriptionId}
               tabIndex={-1}
             >
-              <h3 id={weeklyPlanTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>Edit Weekly Plan</h3>
+              {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />}
+              <h3 id={weeklyPlanTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>Edit Weekly Plan</h3>
               <p id={weeklyPlanDescriptionId} className="sr-only">Weekly workout plan editor. Press Escape to close the dialog.</p>
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -1543,7 +1303,6 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   label: formData.get(`label-${day.day}`) as string,
                   done: formData.get(`done-${day.day}`) === "on",
                 }));
-                // Set the local color logic
                 newPlan.forEach(d => {
                   if (d.label?.toLowerCase().includes("rest")) d.color = "#5A5A5A";
                   else if (d.label?.toLowerCase().includes("leg")) d.color = "#7CFC00";
@@ -1553,21 +1312,21 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 setLocalWeekPlan(newPlan);
                 setIsWeeklyPlanModalOpen(false);
               }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 20 : 24 }}>
                   {localWeekPlan.map(day => (
-                    <div key={day.day} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.03)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div style={{ width: 40, fontSize: 13, fontWeight: 700, color: day.color }}>{day.day}</div>
-                      <input name={`label-${day.day}`} defaultValue={day.label} style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 13 }} />
-                      <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: SECONDARY_TEXT_COLOR, fontSize: 12 }}>
+                    <div key={day.day} style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, background: "rgba(255,255,255,0.03)", padding: isMobile ? "12px" : "10px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ width: isMobile ? 44 : 40, fontSize: isMobile ? 14 : 13, fontWeight: 700, color: day.color }}>{day.day}</div>
+                      <input name={`label-${day.day}`} defaultValue={day.label} style={{ flex: 1, padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: "8px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 36 }} />
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 13 : 12 }}>
                         Done
-                        <input type="checkbox" name={`done-${day.day}`} defaultChecked={day.done} style={{ width: 16, height: 16, accentColor: "#7CFC00" }} />
+                        <input type="checkbox" name={`done-${day.day}`} defaultChecked={day.done} style={{ width: isMobile ? 22 : 16, height: isMobile ? 22 : 16, accentColor: "#7CFC00" }} />
                       </label>
                     </div>
                   ))}
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" onClick={() => setIsWeeklyPlanModalOpen(false)} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: "12px" }}>Cancel</button>
-                  <button type="submit" style={{ flex: 1, padding: "12px", background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: "12px" }}>Save Plan</button>
+                <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
+                  <button type="button" onClick={() => setIsWeeklyPlanModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Cancel</button>
+                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Save Plan</button>
                 </div>
               </form>
             </motion.div>
@@ -1578,22 +1337,24 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
       {/* Tasks Editor Modal */}
       <AnimatePresence>
         {isTasksModalOpen && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20 }}
             onClick={() => setIsTasksModalOpen(false)}>
             <motion.div
               ref={tasksModalRef}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, ...(isMobile ? { y: 0 } : { scale: 1 }) }}
+              exit={isMobile ? { opacity: 0, y: 80 } : { opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
               onClick={e => e.stopPropagation()}
-              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px", padding: 24, width: "100%", maxWidth: 450, maxHeight: "90vh", overflowY: "auto" }}
+              style={{ background: "#1A1A1F", border: "1px solid rgba(255,255,255,0.1)", borderRadius: isMobile ? "20px 20px 0 0" : "20px", padding: isMobile ? 20 : 24, width: "100%", maxWidth: isMobile ? "100%" : 450, maxHeight: isMobile ? "92vh" : "90vh", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
               role="dialog"
               aria-modal="true"
               aria-labelledby={tasksModalTitleId}
               aria-describedby={tasksModalDescriptionId}
               tabIndex={-1}
             >
-              <h3 id={tasksModalTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>Edit Tasks</h3>
+              {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />}
+              <h3 id={tasksModalTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>Edit Tasks</h3>
               <p id={tasksModalDescriptionId} className="sr-only">Task management dialog. Press Escape to close the dialog.</p>
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -1603,19 +1364,17 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   title: formData.get(`task-${t.id}-title`) as string,
                   priority: formData.get(`task-${t.id}-pri`) as string,
                 }));
-                // Filter out any explicitly deleted from a state action if needed
-                // Or just save edits:
                 setLocalTasks(updatedTasks);
                 setIsTasksModalOpen(false);
               }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 20 : 24 }}>
                   {localTasks.map(task => (
-                    <div key={task.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.03)", padding: "10px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <button type="button" onClick={() => setLocalTasks(prev => prev.filter(p => p.id !== task.id))} style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                        <Trash2 size={16} />
+                    <div key={task.id} style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 8, background: "rgba(255,255,255,0.03)", padding: isMobile ? "12px" : "10px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <button type="button" onClick={() => setLocalTasks(prev => prev.filter(p => p.id !== task.id))} style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", minWidth: isMobile ? 36 : 28, minHeight: isMobile ? 44 : 32, justifyContent: "center" }}>
+                        <Trash2 size={isMobile ? 18 : 16} />
                       </button>
-                      <input name={`task-${task.id}-title`} defaultValue={task.title} style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 13 }} />
-                      <select name={`task-${task.id}-pri`} defaultValue={task.priority} style={{ padding: "8px", borderRadius: "6px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 12 }}>
+                      <input name={`task-${task.id}-title`} defaultValue={task.title} style={{ flex: 1, padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: "8px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 36 }} />
+                      <select name={`task-${task.id}-pri`} defaultValue={task.priority} style={{ padding: isMobile ? "12px" : "8px", borderRadius: "8px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: isMobile ? 14 : 12, minHeight: isMobile ? 48 : 36 }}>
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
                         <option value="high">High</option>
@@ -1626,13 +1385,13 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 
                 <button type="button" onClick={() => {
                   setLocalTasks(prev => [...prev, { id: Date.now(), title: "New Task", completed: false, priority: "medium" }]);
-                }} style={{ width: "100%", padding: "12px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: "12px", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <Plus size={16} /> Add Task
+                }} style={{ width: "100%", padding: isMobile ? "14px" : "12px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: 12, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 20 : 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: isMobile ? 48 : 40 }}>
+                  <Plus size={isMobile ? 18 : 16} /> Add Task
                 </button>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" onClick={() => setIsTasksModalOpen(false)} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: "12px", cursor: "pointer" }}>Cancel</button>
-                  <button type="submit" style={{ flex: 1, padding: "12px", background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: "12px", cursor: "pointer" }}>Save Tasks</button>
+                <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
+                  <button type="button" onClick={() => setIsTasksModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Cancel</button>
+                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Save Tasks</button>
                 </div>
               </form>
             </motion.div>
@@ -1642,4 +1401,3 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     </div>
   );
 }
-

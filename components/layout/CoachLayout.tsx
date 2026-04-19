@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   Calendar,
-  MessageCircle,
   LogOut,
   Pencil,
   Camera,
@@ -22,7 +21,6 @@ import { AnimatePresence, motion } from "framer-motion";
 const NAV_ITEMS = [
   { label: "Dashboard",  href: "/coach",          icon: Activity },
   { label: "Schedule",   href: "/coach/schedule",  icon: Calendar },
-  { label: "Messages",   href: "/coach/messages",  icon: MessageCircle },
   { label: "Nutrition",  href: "/coach/calories",  icon: Utensils },
 ];
 

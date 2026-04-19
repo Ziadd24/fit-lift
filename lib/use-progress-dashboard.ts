@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/use-auth";
-import { useListCalorieLogs, useListMessages, useListWorkouts, type CalorieLog, type ClientWorkout } from "@/lib/api-hooks";
+import { useListCalorieLogs, useListWorkouts, type CalorieLog, type ClientWorkout } from "@/lib/api-hooks";
 
 export type DashboardPeriod = "7d" | "30d" | "90d" | "1y";
 
@@ -546,7 +546,7 @@ export function useProgressDashboard(memberId?: number) {
 
   const { data: workouts = [], isLoading: workoutsLoading } = useListWorkouts(resolvedMemberId);
   const { data: calorieLogs = [], isLoading: calorieLoading } = useListCalorieLogs(resolvedMemberId);
-  const { data: messages = [], isLoading: messagesLoading } = useListMessages(resolvedMemberId || null);
+
 
   useEffect(() => {
     if (!resolvedMemberId || typeof window === "undefined") return;
@@ -681,12 +681,7 @@ export function useProgressDashboard(memberId?: number) {
         table: "calorie_logs",
         filter: `member_id=eq.${resolvedMemberId}`,
       }, invalidate)
-      .on("postgres_changes" as any, {
-        event: "*",
-        schema: "public",
-        table: "messages",
-        filter: `member_id=eq.${resolvedMemberId}`,
-      }, invalidate)
+
       .on("postgres_changes" as any, {
         event: "*",
         schema: "public",
@@ -725,11 +720,8 @@ export function useProgressDashboard(memberId?: number) {
     const caloriesBurned = workouts.reduce((sum, workout) => sum + Number(workout.calories || 0), 0);
     const efficiency = workoutStats.totalSets ? Math.round((workoutStats.completedSets / workoutStats.totalSets) * 100) : 0;
     const streak = computeStreak(workouts);
-    const coachReviewCount = messages.filter((message) => message.sender_type === "coach").length;
-    const newCoachReviewCount = messages.filter((message) => {
-      const ageMs = Date.now() - +new Date(message.created_at);
-      return message.sender_type === "coach" && ageMs <= 1000 * 60 * 60 * 24 * 3;
-    }).length;
+    const coachReviewCount = 0;
+    const newCoachReviewCount = 0;
 
     return {
       profile,
@@ -749,10 +741,10 @@ export function useProgressDashboard(memberId?: number) {
       activitySources: {
         workouts: workouts.length,
         calories: calorieLogs.length,
-        messages: messages.length,
+        messages: 0,
       },
     };
-  }, [calorieLogs, messages, period, profileQuery.data, resolvedMemberId, selectedPointKey, workouts]);
+  }, [calorieLogs, period, profileQuery.data, resolvedMemberId, selectedPointKey, workouts]);
 
   const addBodyMetric = useCallback(async (entry: Omit<BodyMetricEntry, "id" | "recordedAt"> & { recordedAt?: string }) => {
     if (!derived.profile) return;
@@ -806,7 +798,7 @@ export function useProgressDashboard(memberId?: number) {
     addBodyMetric,
     addPersonalRecord,
     flushQueue,
-    isLoading: profileQuery.isLoading || workoutsLoading || calorieLoading || messagesLoading,
+    isLoading: profileQuery.isLoading || workoutsLoading || calorieLoading,
     isError: profileQuery.isError,
     ...derived,
   };

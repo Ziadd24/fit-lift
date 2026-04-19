@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────
  * Shared Zustand store for the "currently selected client" so
  * the coach can drill into one client's data across pages
- * (Calories, Schedule, Messages, etc.) without losing context
+ * (Calories, Schedule, etc.) without losing context
  * when navigating between routes.
  *
  * Usage:
