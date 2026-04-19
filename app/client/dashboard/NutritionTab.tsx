@@ -609,7 +609,6 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
                 💡 {justLogged.result.client_suggestion}
               </div>
             )}
-            <div style={{ fontSize: 12, color: "#39FF14", marginTop: 8 }}>🔄 Synced to coach dashboard</div>
           </motion.div>
         )}
       </AnimatePresence>

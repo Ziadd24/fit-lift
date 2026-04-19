@@ -1384,7 +1384,7 @@ function SettingsModal({
   return (
     <AnimatePresence mode="wait">
       <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
-      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", inset: "8vh auto auto 50%", transform: "translateX(-50%)", width: "min(640px, calc(100vw - 24px))", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
+      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(640px, calc(100vw - 32px))", maxHeight: "calc(100vh - 32px)", overflowY: "auto", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div>
             <div id={titleId} style={{ fontSize: 20, fontWeight: 800, color: "var(--dashboard-text-primary)" }}>Dashboard Settings</div>
@@ -2689,6 +2689,102 @@ export default function ClientDashboard() {
             </DashboardErrorBoundary>
           )}
 
+          {/* ── Gym Updates & Announcements ──────────────────────────────────── */}
+          {activeNav === "home" && (
+            <DashboardErrorBoundary label="Dashboard">
+            <motion.div
+              custom={2}
+              initial="hidden"
+              animate="visible"
+              variants={cardVariants}
+              style={{
+                background: "#16161A",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 16,
+                padding: 24,
+                marginBottom: 24,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <Bell size={24} color="#7CFC00" />
+                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Gym Updates</span>
+              </div>
+
+              {(announcementsLoading || photosLoading) && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <SkeletonBlock width="42%" height={18} />
+                  <SkeletonBlock width="100%" height={88} style={{ background: "#1C1C21" }} />
+                  <SkeletonBlock width="100%" height={88} style={{ background: "#1C1C21" }} />
+                  <SkeletonBlock width="36%" height={18} style={{ marginTop: 10 }} />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <SkeletonBlock key={index} width="100%" height={120} style={{ background: "#1C1C21" }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!announcementsLoading && !photosLoading && announcements && announcements.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
+                    Latest Announcements
+                  </div>
+                  <LazyRenderSection
+                    minHeight={184}
+                    fallback={<SkeletonBlock width="100%" height={184} style={{ background: "#1C1C21" }} />}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {announcements.slice(0, 3).map((announcement: any) => (
+                        <motion.div
+                          key={announcement.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          style={{
+                            background: "rgba(255,255,255,0.02)",
+                            border: "1px solid rgba(255,255,255,0.04)",
+                            borderRadius: 12,
+                            padding: 16,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                            <div style={{
+                              width: 8, height: 8, borderRadius: "50%",
+                              background: "#7CFC00", marginTop: 6, flexShrink: 0,
+                            }} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>
+                                {announcement.title}
+                              </div>
+                              <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
+                                {announcement.content}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#666", marginTop: 8 }}>
+                                {new Date(announcement.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </LazyRenderSection>
+                </div>
+              )}
+
+
+              {!announcementsLoading && !photosLoading && (!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 8 }}>
+                    Your dashboard is ready for the first update
+                  </div>
+                  <div style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: "0 auto" }}>
+                    As soon as your coach posts an announcement or new gym photo, it will land here. Until then, take the tour or try a demo workflow to learn the space.
+                  </div>
+                </div>
+              )}
+            </motion.div>
+            </DashboardErrorBoundary>
+          )}
+
           {activeNav === "home" && !isEmptyDashboard && (
             <DashboardErrorBoundary label="Dashboard">
               <motion.div
@@ -3009,103 +3105,6 @@ export default function ClientDashboard() {
                   </div>
                 </div>
               </motion.div>
-            </DashboardErrorBoundary>
-          )}
-
-          {/* ── Gym Updates & Announcements ──────────────────────────────────── */}
-          {activeNav === "home" && (
-            <DashboardErrorBoundary label="Dashboard">
-            <motion.div
-              custom={2}
-              initial="hidden"
-              animate="visible"
-              variants={cardVariants}
-              style={{
-                background: "#16161A",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 16,
-                padding: 24,
-                marginBottom: 24,
-                minHeight: 420,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <Bell size={24} color="#7CFC00" />
-                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Gym Updates</span>
-              </div>
-
-              {(announcementsLoading || photosLoading) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <SkeletonBlock width="42%" height={18} />
-                  <SkeletonBlock width="100%" height={88} style={{ background: "#1C1C21" }} />
-                  <SkeletonBlock width="100%" height={88} style={{ background: "#1C1C21" }} />
-                  <SkeletonBlock width="36%" height={18} style={{ marginTop: 10 }} />
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <SkeletonBlock key={index} width="100%" height={120} style={{ background: "#1C1C21" }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!announcementsLoading && !photosLoading && announcements && announcements.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
-                    Latest Announcements
-                  </div>
-                  <LazyRenderSection
-                    minHeight={184}
-                    fallback={<SkeletonBlock width="100%" height={184} style={{ background: "#1C1C21" }} />}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {announcements.slice(0, 3).map((announcement: any) => (
-                        <motion.div
-                          key={announcement.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.04)",
-                            borderRadius: 12,
-                            padding: 16,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                            <div style={{
-                              width: 8, height: 8, borderRadius: "50%",
-                              background: "#7CFC00", marginTop: 6, flexShrink: 0,
-                            }} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, color: "#FFFFFF", marginBottom: 4 }}>
-                                {announcement.title}
-                              </div>
-                              <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
-                                {announcement.content}
-                              </div>
-                              <div style={{ fontSize: 11, color: "#666", marginTop: 8 }}>
-                                {new Date(announcement.created_at).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </LazyRenderSection>
-                </div>
-              )}
-
-
-              {!announcementsLoading && !photosLoading && (!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
-                <div style={{ textAlign: "center", padding: 40 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 8 }}>
-                    Your dashboard is ready for the first update
-                  </div>
-                  <div style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: "0 auto" }}>
-                    As soon as your coach posts an announcement or new gym photo, it will land here. Until then, take the tour or try a demo workflow to learn the space.
-                  </div>
-                </div>
-              )}
-            </motion.div>
             </DashboardErrorBoundary>
           )}
 
