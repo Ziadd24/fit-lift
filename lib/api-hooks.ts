@@ -16,13 +16,25 @@ type MembersPage = {
   totalPages: number;
 };
 
-export function useListMembers(page: number = 1, search?: string, status?: string, type?: string) {
+type UseListMembersOptions = {
+  pageSize?: number | "all";
+};
+
+export function useListMembers(
+  page: number = 1,
+  search?: string,
+  status?: string,
+  type?: string,
+  options?: UseListMembersOptions
+) {
   const { adminToken, coachToken, memberCode } = useAuth();
   const token = adminToken || coachToken || memberCode;
+  const pageSize = options?.pageSize;
   return useQuery<MembersPage>({
-    queryKey: ["members", page, search, status, type],
+    queryKey: ["members", page, search, status, type, pageSize],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page) });
+      if (pageSize) params.set("pageSize", String(pageSize));
       if (search) params.set("search", search);
       if (status && status !== "all") params.set("status", status);
       if (type && type !== "all") params.set("type", type);
@@ -59,7 +71,10 @@ export function useLookupMember() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ membershipCode }),
       });
-      if (!res.ok) throw new Error("Member not found");
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || "Member not found");
+      }
       return res.json();
     },
   });
@@ -131,7 +146,7 @@ export function useSearchUnassignedMembers(search: string) {
   return useQuery<MembersPage>({
     queryKey: ["members", "unassigned", search],
     queryFn: async () => {
-      const qs = new URLSearchParams({ assignmentSearch: "true" });
+      const qs = new URLSearchParams({ unassigned: "true", pageSize: "all" });
       if (search) qs.set("search", search);
       const res = await fetch(`/api/members?${qs.toString()}`, {
         headers: getAuthHeaders(coachToken),
@@ -553,8 +568,8 @@ export interface CalorieLog {
 }
 
 export function useListCalorieLogs(memberId?: number | "null" | "all") {
-  const { adminToken, coachToken, memberCode } = useAuth();
-  const token = adminToken || coachToken || memberCode;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
   return useQuery<CalorieLog[]>({
     queryKey: ["calorie_logs", memberId],
     queryFn: async () => {
@@ -596,8 +611,8 @@ export function useVerifyCalorieLog() {
 }
 
 export function useSaveCalorieLog() {
-  const { adminToken, coachToken, memberCode } = useAuth();
-  const token = adminToken || coachToken || memberCode;
+  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
   const queryClient = useQueryClient();
   return useMutation<CalorieLog, Error, Partial<CalorieLog>>({
     mutationFn: async (data) => {

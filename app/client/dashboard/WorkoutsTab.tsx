@@ -87,8 +87,115 @@ const difficultyColor: Record<string, string> = {
 const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
   todo: { bg: "rgba(255,255,255,0.1)", color: "var(--color-text-secondary)", label: "To Do" },
   "in-progress": { bg: "rgba(139,92,246,0.2)", color: "#8B5CF6", label: "In Progress" },
+  in_progress: { bg: "rgba(139,92,246,0.2)", color: "#8B5CF6", label: "In Progress" },
   done: { bg: "rgba(16,185,129,0.2)", color: "#10B981", label: "Done" },
+  completed: { bg: "rgba(16,185,129,0.2)", color: "#10B981", label: "Done" },
+  pending: { bg: "rgba(255,255,255,0.1)", color: "var(--color-text-secondary)", label: "To Do" },
 };
+
+function normalizeWorkoutStatus(status: unknown) {
+  if (status === "in_progress") return "in-progress";
+  if (status === "completed") return "done";
+  if (status === "pending") return "todo";
+  return typeof status === "string" && statusConfig[status] ? status : "todo";
+}
+
+function normalizeWorkoutSet(rawSet: any) {
+  const totalSets =
+    typeof rawSet?.sets === "number" && Number.isFinite(rawSet.sets) && rawSet.sets > 0
+      ? rawSet.sets
+      : 1;
+
+  return {
+    exercise: typeof rawSet?.exercise === "string" && rawSet.exercise.trim() ? rawSet.exercise : "Exercise",
+    sets: totalSets,
+    reps: rawSet?.reps != null ? String(rawSet.reps) : "10",
+    weight: typeof rawSet?.weight === "number" && Number.isFinite(rawSet.weight) ? rawSet.weight : 0,
+    unit: typeof rawSet?.unit === "string" && rawSet.unit.trim() ? rawSet.unit : "kg",
+    done: Boolean(rawSet?.done),
+  };
+}
+
+function normalizeWorkout(workout: any) {
+  const safeSets = Array.isArray(workout?.sets) ? workout.sets.map(normalizeWorkoutSet) : [];
+
+  return {
+    ...workout,
+    title: typeof workout?.title === "string" && workout.title.trim() ? workout.title : "Untitled Workout",
+    status: normalizeWorkoutStatus(workout?.status),
+    duration: typeof workout?.duration === "string" && workout.duration.trim() ? workout.duration : "45 min",
+    calories: typeof workout?.calories === "number" && Number.isFinite(workout.calories) ? workout.calories : 0,
+    difficulty:
+      typeof workout?.difficulty === "string" && difficultyColor[workout.difficulty]
+        ? workout.difficulty
+        : "Medium",
+    muscles: Array.isArray(workout?.muscles) ? workout.muscles.filter(Boolean) : [],
+    sets: safeSets,
+  };
+}
+
+function containsArabic(text: string) {
+  return /[\u0600-\u06FF]/.test(text);
+}
+
+function containsLatin(text: string) {
+  return /[A-Za-z]/.test(text);
+}
+
+function getPreferredLanguage() {
+  if (typeof document !== "undefined") {
+    const docLang = document.documentElement.lang?.trim().toLowerCase();
+    if (docLang) return docLang;
+  }
+  if (typeof navigator !== "undefined") {
+    return navigator.language?.toLowerCase() || "en";
+  }
+  return "en";
+}
+
+function isArabicLanguage(language: string) {
+  return language.startsWith("ar");
+}
+
+function localizeWorkoutTitle(title: string, language: string, index: number) {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return isArabicLanguage(language) ? `تمرين ${index}` : `Workout ${index}`;
+  }
+
+  if (isArabicLanguage(language)) {
+    return trimmed;
+  }
+
+  if (!containsArabic(trimmed)) {
+    return trimmed;
+  }
+
+  if (containsLatin(trimmed)) {
+    const stripped = trimmed
+      .replace(/[\u0600-\u06FF]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^[\-–—:]+|[\-–—:]+$/g, "")
+      .trim();
+
+    if (stripped) return stripped;
+  }
+
+  return `Workout ${index}`;
+}
+
+function getDefaultExercise(language: string, exerciseIndex: number) {
+  const isArabic = isArabicLanguage(language);
+  return {
+    exercise: isArabic ? `تمرين ${exerciseIndex}` : `Exercise ${exerciseIndex}`,
+    sets: 4,
+    reps: "10",
+    weight: 20,
+    unit: "kg",
+    done: false,
+  };
+}
 
 type UndoEntry = {
   id: string;
@@ -470,13 +577,17 @@ function ExerciseCard({ ex, idx, onSetToggle, onWeightChange }: {
 }
 
 // ─── Workout Card ─────────────────────────────────────────────────────────────
-const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, onQueueUndo }: {
+const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, onQueueUndo, onAddExercise, onExerciseChange, language }: {
   workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void;
   onQueueUndo?: (entry: UndoEntry) => void;
+  onAddExercise?: () => void;
+  onExerciseChange?: (workout: any, exerciseIndex: number, updated: any) => void;
+  language: string;
 }) {
   const [expanded, setExpanded] = useState(workout.status === "in-progress");
   const [editingExercise, setEditingExercise] = useState<any>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const safeWorkoutSets = Array.isArray(workout.sets) ? workout.sets : [];
   const editExerciseDialogRef = useRef<HTMLDivElement>(null);
   const { titleId: editExerciseTitleId, descriptionId: editExerciseDescriptionId } = useAccessibleDialog(
     Boolean(editingExercise),
@@ -486,7 +597,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
 
   // Per-set completion state (array of booleans per exercise)
   const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number; nameStr: string; typeStr: string; duration: number }[]>(() =>
-    workout.sets.map((s: any) => ({
+    safeWorkoutSets.map((s: any) => ({
       completedSets: Array.from({ length: s.sets }, (_, i) => i < (s.done ? s.sets : 0)),
       weight: s.weight ?? 0,
       nameStr: s.exercise,
@@ -498,7 +609,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   const totalSets = exerciseState.reduce((a, e) => a + (e ? e.completedSets.length : 0), 0);
   const completedTotal = exerciseState.reduce((a, e) => a + (e ? e.completedSets.filter(Boolean).length : 0), 0);
   const completionPct = totalSets > 0 ? Math.round((completedTotal / totalSets) * 100) : 0;
-  const sc = statusConfig[workout.status];
+  const sc = statusConfig[workout.status] ?? statusConfig.todo;
   const { disableHeavyAnimations } = useDashboardMotion();
 
   const queueUndo = (label: string, undo: () => void) => {
@@ -511,7 +622,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
 
   const handleSetToggle = (exIdx: number, setIdx: number) => {
     setExerciseState(prev => {
-      const exerciseLabel = workout.sets[exIdx]?.exercise || `Exercise ${exIdx + 1}`;
+      const exerciseLabel = safeWorkoutSets[exIdx]?.exercise || `Exercise ${exIdx + 1}`;
       const nextValue = !prev[exIdx]?.completedSets[setIdx];
       const next = prev.map((e, i) => i === exIdx
         ? { ...e, completedSets: e.completedSets.map((v, j) => j === setIdx ? !v : v) }
@@ -547,7 +658,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
       queueUndo(
         `${exerciseName} set ${setId} ${action === "complete" ? "completed" : "skipped"}`,
         () => {
-          const exerciseIndex = workout.sets.findIndex((set: any) => set.exercise === exerciseName);
+          const exerciseIndex = safeWorkoutSets.findIndex((set: any) => set.exercise === exerciseName);
           if (exerciseIndex < 0) return;
           setExerciseState(prev => prev.map((item, idx) =>
             idx === exerciseIndex
@@ -631,7 +742,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   };
 
   // Merge state into sets for display
-  const setsWithState = workout.sets.map((s: any, i: number) => ({
+  const setsWithState = safeWorkoutSets.map((s: any, i: number) => ({
     ...s,
     originalIndex: i,
     completedSets: exerciseState[i]?.completedSets ?? [],
@@ -777,10 +888,11 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                       <WorkoutExerciseCard
                         key={origIdx}
                         exercise={exerciseData}
+                        language={language}
                         onMenuAction={(action) => handleExerciseMenuAction(action, exerciseData.id, exerciseData.name, origIdx)}
                         onSetAction={handleExerciseSetAction}
                         onChange={(updated) => {
-                          // Allow internal unmanaged state to update the global card state if necessary
+                          onExerciseChange?.(workout, origIdx, updated);
                           updated.sets.forEach((set, setIdx) => {
                              if (set.completed !== ex.completedSets[setIdx]) {
                                handleSetToggle(origIdx, setIdx);
@@ -810,8 +922,14 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                         aria-describedby={editExerciseDescriptionId}
                         tabIndex={-1}
                       >
-                        <h3 id={editExerciseTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>Edit Exercise</h3>
-                        <p id={editExerciseDescriptionId} className="sr-only">Update the selected exercise details. Press Escape to close this dialog.</p>
+                        <h3 id={editExerciseTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                          {isArabicLanguage(language) ? "تعديل التمرين" : "Edit Exercise"}
+                        </h3>
+                        <p id={editExerciseDescriptionId} className="sr-only">
+                          {isArabicLanguage(language)
+                            ? "حدّث تفاصيل التمرين المحدد. اضغط Escape للإغلاق."
+                            : "Update the selected exercise details. Press Escape to close this dialog."}
+                        </p>
                         <form onSubmit={(e) => {
                           e.preventDefault();
                           const formData = new FormData(e.currentTarget);
@@ -830,20 +948,30 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                           setEditingExercise(null);
                         }}>
                           <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>Exercise Name</label>
+                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
+                              {isArabicLanguage(language) ? "اسم التمرين" : "Exercise Name"}
+                            </label>
                             <input aria-label="Exercise name" name="name" defaultValue={editingExercise.data.name} required style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
                           </div>
                           <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>Type (e.g. Bilateral)</label>
+                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
+                              {isArabicLanguage(language) ? "النوع" : "Type (e.g. Bilateral)"}
+                            </label>
                             <input aria-label="Exercise type" name="type" defaultValue={editingExercise.data.type} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
                           </div>
                           <div style={{ marginBottom: 20 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>Duration (mins)</label>
+                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 4 }}>
+                              {isArabicLanguage(language) ? "المدة (دقائق)" : "Duration (mins)"}
+                            </label>
                             <input aria-label="Exercise duration in minutes" name="duration" type="number" defaultValue={editingExercise.data.durationMinutes} style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
                           </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>Cancel</button>
-                            <button type="submit" style={{ flex: 1, padding: 10, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>Save Update</button>
+                            <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>
+                              {isArabicLanguage(language) ? "إلغاء" : "Cancel"}
+                            </button>
+                            <button type="submit" style={{ flex: 1, padding: 10, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 8, minHeight: TOUCH_TARGET_SIZE }}>
+                              {isArabicLanguage(language) ? "حفظ" : "Save Update"}
+                            </button>
                           </div>
                         </form>
                       </motion.div>
@@ -852,12 +980,15 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                 </AnimatePresence>
 
                 {/* Action row */}
-                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                  <button aria-label={`Add exercise to ${workout.title}`} onClick={onAddExercise} style={{ flex: "1 1 100%", height: 42, borderRadius: 10, background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.22)", color: "#7CFC00", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
+                    <Plus size={14} /> {isArabicLanguage(language) ? "إضافة تمرين" : "Add Exercise"}
+                  </button>
                   <button aria-label={`Edit ${workout.title}`} onClick={onEdit} style={{ flex: 1, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: SECONDARY_TEXT_COLOR, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13 }}>
-                    <Edit3 size={14} /> Edit
+                    <Edit3 size={14} /> {isArabicLanguage(language) ? "تعديل" : "Edit"}
                   </button>
                   <button aria-label={`Delete ${workout.title}`} onClick={onDelete} style={{ flex: 1, height: 40, borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13 }}>
-                    <Trash2 size={14} /> Delete
+                    <Trash2 size={14} /> {isArabicLanguage(language) ? "حذف" : "Delete"}
                   </button>
                 </div>
               </div>
@@ -895,6 +1026,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [workoutFormError, setWorkoutFormError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [language, setLanguage] = useState("en");
   const undoTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const { titleId: workoutModalTitleId, descriptionId: workoutModalDescriptionId } = useAccessibleDialog(
     isModalOpen,
@@ -912,7 +1044,6 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     () => setIsTasksModalOpen(false)
   );
 
-  const displayWorkouts = dbWorkouts && dbWorkouts.length > 0 ? dbWorkouts : WORKOUTS;
   const todayPlan = localWeekPlan[TODAY_IDX % localWeekPlan.length];
   const streak = 5;
   const formatWeight = useCallback((value: number, unit: string) => {
@@ -945,6 +1076,67 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
       Object.values(undoTimersRef.current).forEach(clearTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    setLanguage(getPreferredLanguage());
+  }, []);
+
+  const normalizedWorkouts = (dbWorkouts && dbWorkouts.length > 0 ? dbWorkouts : WORKOUTS).map((workout: any, index: number) => {
+    const normalized = normalizeWorkout(workout);
+    return {
+      ...normalized,
+      title: localizeWorkoutTitle(normalized.title, language, index + 1),
+    };
+  });
+
+  const handleAddExercise = useCallback((workout: any) => {
+    const nextExerciseNumber = Array.isArray(workout.sets) ? workout.sets.length + 1 : 1;
+    const nextSets = [...(Array.isArray(workout.sets) ? workout.sets : []), getDefaultExercise(language, nextExerciseNumber)];
+
+    updateWorkoutMutation.mutate(
+      {
+        id: workout.id,
+        data: {
+          sets: nextSets,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(isArabicLanguage(language) ? "تمت إضافة التمرين." : "Exercise added.");
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error, isArabicLanguage(language) ? "تعذر إضافة التمرين الآن." : "Couldn't add an exercise right now."));
+        },
+      }
+    );
+  }, [language, updateWorkoutMutation]);
+
+  const handleExerciseChange = useCallback((workout: any, exerciseIndex: number, updated: any) => {
+    const currentSets = Array.isArray(workout.sets) ? [...workout.sets] : [];
+    currentSets[exerciseIndex] = {
+      ...(currentSets[exerciseIndex] || {}),
+      exercise: updated.name,
+      sets: updated.sets.length,
+      reps: String(updated.sets[0]?.reps ?? 10),
+      weight: Number(updated.sets[0]?.kg ?? 0),
+      unit: currentSets[exerciseIndex]?.unit || "kg",
+      done: updated.sets.length > 0 && updated.sets.every((set: any) => Boolean(set.completed)),
+    };
+
+    updateWorkoutMutation.mutate(
+      {
+        id: workout.id,
+        data: {
+          sets: currentSets,
+        },
+      },
+      {
+        onError: (error) => {
+          toast.error(getErrorMessage(error, isArabicLanguage(language) ? "تعذر تحديث المجموعات الآن." : "Couldn't update sets right now."));
+        },
+      }
+    );
+  }, [language, updateWorkoutMutation]);
 
   if (isLoading) {
     return <WorkoutsLoadingState />;
@@ -1043,26 +1235,29 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: "8px 14px", color: "#000", cursor: "pointer", fontSize: 13, fontWeight: 700, minHeight: 40 }}
           >
-            <Plus size={14} /> Add
+            <Plus size={14} /> {isArabicLanguage(language) ? "إضافة تمرين كامل" : "Add Workout"}
           </button>
         </div>
         <LazyRenderSection
           minHeight={360}
           fallback={
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {Array.from({ length: Math.min(displayWorkouts.length || 2, 3) }).map((_, index) => (
+              {Array.from({ length: Math.min(normalizedWorkouts.length || 2, 3) }).map((_, index) => (
                 <WorkoutCardSkeleton key={index} />
               ))}
             </div>
           }
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {displayWorkouts.map((w: any, i: number) => (
+            {normalizedWorkouts.map((w: any, i: number) => (
               <WorkoutCard
                 key={w.id}
                 workout={w}
                 isPrivate={isPrivate}
                 delay={i}
+                language={language}
+                onAddExercise={() => handleAddExercise(w)}
+                onExerciseChange={handleExerciseChange}
                 onEdit={() => { setEditingWorkout(w); setIsModalOpen(true); }}
                 onQueueUndo={pushUndo}
                 onDelete={() =>
@@ -1229,8 +1424,16 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               tabIndex={-1}
             >
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 20px" }} />
-              <h2 id={workoutModalTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>{editingWorkout ? "Edit Workout" : "Add Workout"}</h2>
-              <p id={workoutModalDescriptionId} className="sr-only">Workout editor dialog. Press Escape to close the dialog.</p>
+              <h2 id={workoutModalTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
+                {editingWorkout
+                  ? (isArabicLanguage(language) ? "تعديل التدريب" : "Edit Workout")
+                  : (isArabicLanguage(language) ? "إضافة تدريب" : "Add Workout")}
+              </h2>
+              <p id={workoutModalDescriptionId} className="sr-only">
+                {isArabicLanguage(language)
+                  ? "نافذة تعديل التدريب. اضغط Escape للإغلاق."
+                  : "Workout editor dialog. Press Escape to close the dialog."}
+              </p>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 setWorkoutFormError(null);
@@ -1257,17 +1460,17 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   calories,
                   status: "todo", difficulty: "Medium",
                   muscles: ["Unknown"],
-                  sets: [{ exercise: "Sample Exercise", sets: 3, reps: "10", weight: 20, unit: "kg", done: false }],
+                  sets: [getDefaultExercise(language, 1)],
                 };
                 if (editingWorkout) {
                   updateWorkoutMutation.mutate(
                     { id: editingWorkout.id, data },
                     {
                       onSuccess: () => {
-                        toast.success("Workout updated.");
+                        toast.success(isArabicLanguage(language) ? "تم تحديث التدريب." : "Workout updated.");
                         setIsModalOpen(false);
                       },
-                      onError: (error) => setWorkoutFormError(getErrorMessage(error, "Couldn't update that workout right now.")),
+                      onError: (error) => setWorkoutFormError(getErrorMessage(error, isArabicLanguage(language) ? "تعذر تحديث التدريب الآن." : "Couldn't update that workout right now.")),
                     }
                   );
                 } else {
@@ -1275,10 +1478,10 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                     { member_id: memberId, ...data, coach_assigned: false },
                     {
                       onSuccess: () => {
-                        toast.success("Workout created.");
+                        toast.success(isArabicLanguage(language) ? "تم إنشاء التدريب." : "Workout created.");
                         setIsModalOpen(false);
                       },
-                      onError: (error) => setWorkoutFormError(getErrorMessage(error, "Couldn't create that workout right now.")),
+                      onError: (error) => setWorkoutFormError(getErrorMessage(error, isArabicLanguage(language) ? "تعذر إنشاء التدريب الآن." : "Couldn't create that workout right now.")),
                     }
                   );
                 }
@@ -1289,9 +1492,9 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   </div>
                 )}
                 {[
-                  { name: "title", label: "Workout Title", type: "text", def: editingWorkout?.title || "" },
-                  { name: "duration", label: "Duration", type: "text", def: editingWorkout?.duration || "45 min" },
-                  { name: "calories", label: "Calories (kcal)", type: "number", def: editingWorkout?.calories || 300 },
+                  { name: "title", label: isArabicLanguage(language) ? "عنوان التدريب" : "Workout Title", type: "text", def: editingWorkout?.title || "" },
+                  { name: "duration", label: isArabicLanguage(language) ? "المدة" : "Duration", type: "text", def: editingWorkout?.duration || "45 min" },
+                  { name: "calories", label: isArabicLanguage(language) ? "السعرات (kcal)" : "Calories (kcal)", type: "number", def: editingWorkout?.calories || 300 },
                 ].map(f => (
                   <div key={f.name} style={{ marginBottom: 16 }}>
                     <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>{f.label}</label>
@@ -1299,8 +1502,12 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   </div>
                 ))}
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: 14, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>Cancel</button>
-                  <button type="submit" disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending} style={{ flex: 1, padding: 14, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>Save</button>
+                  <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: 14, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>
+                    {isArabicLanguage(language) ? "إلغاء" : "Cancel"}
+                  </button>
+                  <button type="submit" disabled={createWorkoutMutation.isPending || updateWorkoutMutation.isPending} style={{ flex: 1, padding: 14, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 15, minHeight: 52 }}>
+                    {isArabicLanguage(language) ? "حفظ" : "Save"}
+                  </button>
                 </div>
               </form>
             </motion.div>
