@@ -37,6 +37,20 @@ interface AIResult {
   notes: string;
 }
 
+const MAX_PRIVATE_CLIENTS = 11;
+
+function buildPrivateClientRoster<T extends { name: string }>(members: T[]) {
+  const preferredName = "zooksh";
+  return [...members]
+    .sort((a, b) => {
+      const aPriority = a.name.trim().toLowerCase() === preferredName ? 0 : 1;
+      const bPriority = b.name.trim().toLowerCase() === preferredName ? 0 : 1;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, MAX_PRIVATE_CLIENTS);
+}
+
 
 
 /* ─── Helpers ─── */
@@ -154,8 +168,9 @@ export default function CaloriesPage() {
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
   // Client Selection & Assessment State
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
+  const privateMembers = React.useMemo(() => buildPrivateClientRoster(members), [members]);
   const { selectedClientId, setSelectedClient, clearSelectedClient } = useClientContext();
   const [assessment, setAssessment] = useState<any>(null);
   const [isAssessing, setIsAssessing] = useState(false);
@@ -188,7 +203,7 @@ export default function CaloriesPage() {
     ? allClientLogs.filter(l => l.member_id === selectedClientId)
     : allClientLogs;
   
-  const selectedMember = members.find(m => m.id === selectedClientId);
+  const selectedMember = privateMembers.find(m => m.id === selectedClientId) || members.find(m => m.id === selectedClientId);
 
   const runAssessment = async () => {
     if(!selectedClientId || !selectedMember) return;
@@ -387,49 +402,70 @@ export default function CaloriesPage() {
           <div className="flex flex-col gap-6">
             
             {!selectedClientId ? (
-              // Step 1: Client Roster Grid
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {members.map(m => {
+              <div
+                className="w-full max-w-sm"
+                style={{
+                  ...cardStyle,
+                  padding: 18,
+                  minHeight: 520,
+                  background: "rgba(20,20,26,0.96)",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-5">
+                  <Users className="w-4 h-4" style={{ color: "#7CFC00" }} />
+                  <h2
+                    className="text-sm font-black uppercase tracking-[0.18em] text-white"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    Select Client
+                  </h2>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                {privateMembers.map(m => {
                   const mLogs = allClientLogs.filter(l => l.member_id === m.id);
-                  const latestLog = mLogs.length > 0 ? new Date(Math.max(...mLogs.map(l => new Date(l.created_at).getTime()))) : null;
-                  const cTotals = mLogs.reduce((acc, e) => acc + (e.result?.totals?.calories || 0), 0);
+                  const pendingLogs = mLogs.filter(l => l.verified_status === "pending").length;
                   
                   return (
-                    <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    <motion.button
+                      type="button"
+                      key={m.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
                       onClick={() => setSelectedClient(m.id, m.name)}
-                      className="cursor-pointer flex flex-col gap-4 p-5 rounded-3xl transition-all border border-white/5 hover:border-[#7CFC00]/30 hover:bg-[#7CFC00]/5"
-                      style={cardStyle}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full border-2 border-[#7CFC00]/30 flex items-center justify-center font-bold text-[#7CFC00] bg-[#7CFC00]/10 text-lg">
-                            {m.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <h3 className="text-white font-bold text-lg">{m.name}</h3>
-                            <p className="text-xs text-gray-400">
-                              {latestLog ? `Last meal: ${latestLog.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : "No meals today"}
-                            </p>
-                          </div>
+                      className="w-full cursor-pointer transition-all text-left"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        borderRadius: 18,
+                        padding: "16px 18px",
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-white font-bold text-[1.05rem] truncate">{m.name}</h3>
+                          <p className="text-[11px]" style={{ color: "#7A7A85", marginTop: 3 }}>
+                            {mLogs.length > 0 ? `${mLogs.length} meal log${mLogs.length > 1 ? "s" : ""}` : "No meals today"}
+                          </p>
                         </div>
-                        {mLogs.some(l => l.verified_status === "pending") && (
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                        )}
-                      </div>
-                      
-                      <div className="flex justify-between items-center bg-black/30 rounded-xl p-3">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Today's kcal</span>
-                          <span className="text-white font-black text-lg">{cTotals} <span className="text-xs text-[#7CFC00]">kcal</span></span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Logged Meals</span>
-                          <span className="text-white font-bold">{mLogs.length}</span>
+                        <div
+                          className="flex-shrink-0 min-w-[32px] h-8 rounded-full flex items-center justify-center text-sm font-black"
+                          style={{
+                            background: "#7CFC00",
+                            color: "#111114",
+                            padding: "0 10px",
+                          }}
+                        >
+                          {pendingLogs > 0 ? pendingLogs : mLogs.length}
                         </div>
                       </div>
-                    </motion.div>
+                    </motion.button>
                   );
                 })}
-                {members.length === 0 && <span className="text-sm text-gray-500 col-span-full text-center py-10">No clients registered.</span>}
+                {privateMembers.length === 0 && (
+                  <span className="text-sm text-gray-500 text-center py-10">No clients registered.</span>
+                )}
+                </div>
               </div>
             ) : (
               // Step 2: Client Detail View (Drill-down)

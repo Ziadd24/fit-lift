@@ -46,7 +46,7 @@ export default function CoachMessages() {
 
   const { data: conversations } = useListConversations();
   const { data: messages } = useListMessages(selectedMemberId);
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
   const sendMutation = useSendMessage();
   const uploadImageMutation = useUploadMessageImage();

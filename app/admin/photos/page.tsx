@@ -54,7 +54,7 @@ export default function AdminPhotos() {
   const [activeTab, setActiveTab] = useState<"gallery" | "coaches" | "members">("gallery");
 
   const { data: allPhotos, isLoading: photosLoading } = useListPhotos();
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
 
   const { data: coaches = [] } = useQuery<CoachItem[]>({

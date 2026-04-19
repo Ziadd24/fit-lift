@@ -29,6 +29,7 @@ export interface WorkoutExercise {
 
 interface WorkoutExerciseCardProps {
   exercise: WorkoutExercise;
+  language?: string;
   onChange?: (updated: WorkoutExercise) => void;
   onMenuAction?: (action: string, exerciseId: string) => void;
   onSetAction?: (payload: {
@@ -39,6 +40,10 @@ interface WorkoutExerciseCardProps {
     previous: ExerciseSet;
     next: ExerciseSet;
   }) => void;
+}
+
+function isArabicLanguage(language?: string) {
+  return (language || "").toLowerCase().startsWith("ar");
 }
 
 /* ─── Set Row ───────────────────────────────────────────── */
@@ -230,10 +235,12 @@ function SetRow({
 /* ─── Main Card ─────────────────────────────────────────── */
 export function WorkoutExerciseCard({
   exercise: initialExercise,
+  language = "en",
   onChange,
   onMenuAction,
   onSetAction,
 }: WorkoutExerciseCardProps) {
+  const isArabic = isArabicLanguage(language);
   const [exercise, setExercise] = useState<WorkoutExercise>(initialExercise);
   const [notes, setNotes] = useState(initialExercise.notes ?? "");
   const [editingNotes, setEditingNotes] = useState(false);
@@ -259,6 +266,16 @@ export function WorkoutExerciseCard({
       completed: false,
     };
     const next = { ...exercise, sets: [...exercise.sets, newSet] };
+    setExercise(next);
+    onChange?.(next);
+  };
+
+  const removeSet = () => {
+    if (exercise.sets.length <= 1) return;
+    const nextSets = exercise.sets
+      .slice(0, -1)
+      .map((set, index) => ({ ...set, id: index + 1 }));
+    const next = { ...exercise, sets: nextSets };
     setExercise(next);
     onChange?.(next);
   };
@@ -457,7 +474,7 @@ export function WorkoutExerciseCard({
                 setExercise({ ...exercise, notes });
                 setEditingNotes(false);
               }}
-              placeholder="Add notes here..."
+              placeholder={isArabic ? "أضف ملاحظات هنا..." : "Add notes here..."}
               className="w-full text-xs bg-transparent outline-none text-white placeholder-[#3A3A3A]"
               style={{ borderBottom: "1px solid rgba(124,252,0,0.4)", minHeight: TOUCH_TARGET_SIZE }}
             />
@@ -469,7 +486,7 @@ export function WorkoutExerciseCard({
               aria-label={notes ? `Edit notes for ${exercise.name}` : `Add notes for ${exercise.name}`}
             >
               <span>⇌</span>
-              {notes || "Add notes here..."}
+              {notes || (isArabic ? "أضف ملاحظات هنا..." : "Add notes here...")}
             </button>
           )}
         </div>
@@ -522,7 +539,22 @@ export function WorkoutExerciseCard({
           aria-label={`Add a set to ${exercise.name}`}
         >
           <Plus className="w-4 h-4" />
-          Add Set
+          {isArabic ? "إضافة مجموعة" : "Add Set"}
+        </button>
+        <button
+          onClick={removeSet}
+          disabled={exercise.sets.length <= 1}
+          className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.18)",
+            color: "#FCA5A5",
+            minHeight: TOUCH_TARGET_SIZE,
+          }}
+          aria-label={`Remove a set from ${exercise.name}`}
+        >
+          <span style={{ fontSize: 18, lineHeight: 1 }}>-</span>
+          {isArabic ? "Ø­Ø°Ù Ù…Ø¬Ù…ÙˆØ¹Ø©" : "Remove Set"}
         </button>
         <button
           className="flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:text-white"
@@ -530,7 +562,7 @@ export function WorkoutExerciseCard({
           aria-label={`Load set history for ${exercise.name}`}
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Load from History
+          {isArabic ? "تحميل من السجل" : "Load from History"}
         </button>
       </div>
     </motion.div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { getMembershipCodeLookupCandidates } from "@/lib/member-code";
 
 interface SafeMemberResponse {
   id: number;
@@ -44,16 +45,56 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "membershipCode is required" }, { status: 400 });
   }
 
-  if (membershipCode.length > 50 || !/^[A-Za-z0-9\-_]+$/.test(membershipCode)) {
+  if (membershipCode.length > 50) {
+    return NextResponse.json({ error: "Invalid membership code format" }, { status: 400 });
+  }
+
+  const { normalized, digitsOnly, candidates } = getMembershipCodeLookupCandidates(membershipCode);
+  if (!normalized || !/^[A-Z0-9\-_]+$/.test(normalized)) {
     return NextResponse.json({ error: "Invalid membership code format" }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("members")
-    .select("id, name, membership_type, sub_expiry_date, membership_code")
-    .eq("membership_code", membershipCode)
-    .single();
+  let data: SafeMemberResponse | null = null;
+  let error: { message?: string } | null = null;
+
+  for (const candidate of candidates) {
+    const result = await supabase
+      .from("members")
+      .select("id, name, membership_type, sub_expiry_date, membership_code")
+      .ilike("membership_code", candidate)
+      .maybeSingle();
+
+    if (result.data) {
+      data = result.data;
+      error = null;
+      break;
+    }
+
+    if (result.error) {
+      error = result.error;
+      break;
+    }
+  }
+
+  if (!data && digitsOnly.length === 4) {
+    const fallback = await supabase
+      .from("members")
+      .select("id, name, membership_type, sub_expiry_date, membership_code")
+      .ilike("membership_code", `%${digitsOnly}`)
+      .limit(2);
+
+    if (fallback.error) {
+      error = fallback.error;
+    } else if ((fallback.data ?? []).length === 1) {
+      data = fallback.data![0];
+    } else if ((fallback.data ?? []).length > 1) {
+      return NextResponse.json(
+        { error: "Multiple members match that short code. Please enter the full membership code." },
+        { status: 409 }
+      );
+    }
+  }
 
   if (error || !data) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });

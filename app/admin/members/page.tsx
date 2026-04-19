@@ -21,7 +21,7 @@ export default function AdminMembers() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { data: membersPage, isLoading } = useListMembers();
+  const { data: membersPage, isLoading } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const members = membersPage?.members || [];
   const deleteMutation = useDeleteMember();
 
@@ -160,7 +160,7 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
 
   const [formData, setFormData] = useState({
     name: "",
-    membership_code: `FL-${Math.floor(1000 + Math.random() * 9000)}`,
+    membership_code: `FIT-${Math.floor(1000 + Math.random() * 9000)}`,
     email: "",
     phone: "",
     membership_type: "Standard",
@@ -206,6 +206,9 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
             value={formData.membership_code}
             onChange={(e) => setFormData({ ...formData, membership_code: e.target.value })}
           />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Every member gets a client dashboard automatically. They can sign in with this full code or just its last 4 digits.
+          </p>
         </div>
         <div>
           <Label>Email</Label>

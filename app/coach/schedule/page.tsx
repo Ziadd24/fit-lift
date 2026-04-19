@@ -666,7 +666,7 @@ export default function CoachSchedule() {
 
   // API
   const { data: allSessions } = useListSessions();
-  const { data: membersPage } = useListMembers();
+  const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const membersList = membersPage?.members || [];
   const createMutation = useCreateSession();
   const updateMutation = useUpdateSession();

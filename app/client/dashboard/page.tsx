@@ -244,15 +244,6 @@ interface WeeklyChallenge {
   helper: string;
 }
 
-interface CompareStatCard {
-  key: string;
-  label: string;
-  current: string;
-  previous: string;
-  improvement: string;
-  tone: string;
-}
-
 interface SearchWorkoutItem {
   id: string;
   title: string;
@@ -275,7 +266,7 @@ type ThemeMode = "auto" | "dark" | "light";
 type UnitPreference = "kg" | "lbs";
 type HomeSectionKey = "workoutSummary" | "nutritionToday" | "recentMessages" | "goals";
 
-const DEFAULT_WIDGET_ORDER: HomeSectionKey[] = ["workoutSummary", "nutritionToday", "recentMessages", "goals"];
+const DEFAULT_WIDGET_ORDER: HomeSectionKey[] = ["goals"];
 
 function normalizeWidgetOrder(value: unknown): HomeSectionKey[] {
   const allowed = new Set<HomeSectionKey>(DEFAULT_WIDGET_ORDER);
@@ -1031,22 +1022,22 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
   return (
     <div
       style={{
-        padding: 16,
-        borderRadius: 18,
+        padding: 12,
+        borderRadius: 16,
         background: badge.achieved ? "linear-gradient(135deg, rgba(124,252,0,0.14), rgba(22,22,26,0.96))" : "rgba(255,255,255,0.03)",
         border: badge.achieved ? "1px solid rgba(124,252,0,0.18)" : "1px solid rgba(255,255,255,0.06)",
-        minHeight: 144,
+        minHeight: 112,
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 16,
+            width: 36,
+            height: 36,
+            borderRadius: 12,
             background: badge.achieved ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.06)",
             display: "flex",
             alignItems: "center",
@@ -1058,9 +1049,9 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
         </div>
         <span
           style={{
-            padding: "5px 10px",
+            padding: "4px 8px",
             borderRadius: 999,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 800,
             background: badge.achieved ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.06)",
             color: badge.achieved ? "#86EFAC" : "var(--color-text-secondary)",
@@ -1070,8 +1061,8 @@ function AchievementBadgeCard({ badge }: { badge: AchievementBadge }) {
         </span>
       </div>
       <div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{badge.title}</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.55, marginTop: 6 }}>{badge.description}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF" }}>{badge.title}</div>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.45, marginTop: 4 }}>{badge.description}</div>
       </div>
     </div>
   );
@@ -1082,8 +1073,8 @@ function ChallengeRing({ progress }: { progress: number }) {
     <div
       aria-hidden="true"
       style={{
-        width: 88,
-        height: 88,
+        width: 68,
+        height: 68,
         borderRadius: "50%",
         background: `conic-gradient(#7CFC00 ${progress}%, rgba(255,255,255,0.08) ${progress}% 100%)`,
         display: "grid",
@@ -1093,14 +1084,14 @@ function ChallengeRing({ progress }: { progress: number }) {
     >
       <div
         style={{
-          width: 64,
-          height: 64,
+          width: 48,
+          height: 48,
           borderRadius: "50%",
           background: "#111114",
           display: "grid",
           placeItems: "center",
           color: "#FFFFFF",
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: 800,
         }}
       >
@@ -1779,24 +1770,6 @@ export default function ClientDashboard() {
     },
   ];
   const unlockedAchievements = achievements.filter((badge) => badge.achieved);
-  const compareWithPastSelf: CompareStatCard[] = [
-    {
-      key: "work-capacity",
-      label: "Work Capacity",
-      current: `${taskStats.completed} tasks finished`,
-      previous: `${Math.max(taskStats.completed - 3, 1)} tasks 30 days ago`,
-      improvement: `+${Math.max(taskStats.completed - Math.max(taskStats.completed - 3, 1), 1)} more completed`,
-      tone: "#7CFC00",
-    },
-    {
-      key: "nutrition-consistency",
-      label: "Nutrition Consistency",
-      current: `${nutritionLogs.length} meals logged today`,
-      previous: `${Math.max(nutritionLogs.length - 2, 0)} meal logs at your old pace`,
-      improvement: nutritionLogs.length > 0 ? "Logging faster than your earlier baseline" : "Start one meal log to create your baseline",
-      tone: "#F59E0B",
-    },
-  ];
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchWorkoutResults = SEARCH_WORKOUT_LIBRARY.filter((item) => {
     const matchesQuery =
@@ -2832,46 +2805,46 @@ export default function ClientDashboard() {
 
                 <DailyScore score={dailyScoreValue} />
 
-                <div className="grid grid-cols-1 xl:grid-cols-[0.95fr,1.05fr] gap-4">
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div className="grid grid-cols-1 xl:grid-cols-[0.9fr,1.1fr] gap-3 items-start">
+                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800 }}>Weekly Challenge</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{weeklyChallenge.title}</div>
-                        <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6, marginTop: 8 }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{weeklyChallenge.title}</div>
+                        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5, marginTop: 6, maxWidth: 360 }}>
                           {weeklyChallenge.description}
                         </div>
-                        <div style={{ fontSize: 13, color: weeklyChallenge.completed ? "#86EFAC" : "#FCD34D", fontWeight: 700, marginTop: 12 }}>
+                        <div style={{ fontSize: 12, color: weeklyChallenge.completed ? "#86EFAC" : "#FCD34D", fontWeight: 700, marginTop: 10 }}>
                           {weeklyChallenge.helper}
                         </div>
                       </div>
                       <ChallengeRing progress={weeklyChallenge.progress} />
                     </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
-                      <div style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.14)", color: "#D9FFBF", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                      <div style={{ minHeight: 36, padding: "8px 12px", borderRadius: 10, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.14)", color: "#D9FFBF", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center" }}>
                         {unlockedAchievements.length} badges unlocked
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveNav("workouts")}
-                        style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, cursor: "pointer" }}
+                        style={{ minHeight: 36, padding: "8px 12px", borderRadius: 10, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
                       >
                         Keep the streak alive
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                  <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
                       <div>
                         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800 }}>Achievements</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>Proof of consistency</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>Proof of consistency</div>
                       </div>
-                      <div style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.18)", color: "#B9FF8B", fontSize: 12, fontWeight: 800 }}>
+                      <div style={{ padding: "5px 9px", borderRadius: 999, background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.18)", color: "#B9FF8B", fontSize: 11, fontWeight: 800 }}>
                         {unlockedAchievements.length}/{achievements.length}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
                       {achievements.map((badge) => (
                         <AchievementBadgeCard key={badge.key} badge={badge} />
                       ))}
@@ -2917,28 +2890,8 @@ export default function ClientDashboard() {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {compareWithPastSelf.map((item) => (
-                    <div key={item.key} style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 18 }}>
-                      <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: item.tone, fontWeight: 800 }}>Compare with Past Self</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 8 }}>{item.label}</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
-                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Today</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{item.current}</div>
-                        </div>
-                        <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>30 days ago</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{item.previous}</div>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 13, color: item.tone, fontWeight: 700, marginTop: 14 }}>{item.improvement}</div>
-                    </div>
-                  ))}
-                </div>
-
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <HomeSectionCard
+                  {false && <HomeSectionCard
                     title="Workout Summary"
                     sectionKey="workoutSummary"
                     isOpen={homeSections.workoutSummary}
@@ -2961,52 +2914,7 @@ export default function ClientDashboard() {
                         <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>No workout tasks yet. Open the workouts tab to schedule your first one.</div>
                       )}
                     </div>
-                  </HomeSectionCard>
-
-                  <HomeSectionCard
-                    title="Nutrition Today"
-                    sectionKey="nutritionToday"
-                    isOpen={homeSections.nutritionToday}
-                    onToggle={toggleHomeSection}
-                    badge={nutritionRisk ? <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 11, fontWeight: 800 }}>Urgent</span> : undefined}
-                  >
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-                      {[
-                        { label: "Calories", value: `${todayCalories}`, helper: "of 2200" },
-                        { label: "Protein", value: `${todayProtein}g`, helper: "goal 180g" },
-                        { label: "Meals", value: `${nutritionLogs.length}`, helper: "logged today" },
-                      ].map((item) => (
-                        <div key={item.label} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{item.label}</div>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 6 }}>{item.value}</div>
-                          <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 4 }}>{item.helper}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </HomeSectionCard>
-
-                  <HomeSectionCard
-                    title="Recent Messages"
-                    sectionKey="recentMessages"
-                    isOpen={homeSections.recentMessages}
-                    onToggle={toggleHomeSection}
-                    badge={unreadMessages > 0 ? <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 11, fontWeight: 800 }}>{unreadMessages} unread</span> : undefined}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {homeMessages.map((item) => (
-                        <div key={item.id} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{item.sender}</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              {item.unread && <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 10, fontWeight: 800 }}>Urgent</span>}
-                              <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{item.time}</span>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{item.content}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </HomeSectionCard>
+                  </HomeSectionCard>}
 
                   <HomeSectionCard
                     title="Goals"
@@ -3271,46 +3179,6 @@ export default function ClientDashboard() {
                 </div>
               )}
 
-              {!announcementsLoading && !photosLoading && photos && photos.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
-                    Recent Photos
-                  </div>
-                  <LazyRenderSection
-                    minHeight={264}
-                    fallback={<SkeletonBlock width="100%" height={264} style={{ background: "#1C1C21" }} />}
-                  >
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-                      gap: 12,
-                    }}>
-                      {galleryPhotos.slice(0, 6).map((photo: any) => (
-                        <motion.div
-                          key={photo.id}
-                          initial={{ opacity: 0, scale: disableHeavyAnimations ? 1 : 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          whileHover={disableHeavyAnimations ? undefined : { scale: 1.05 }}
-                          style={{
-                            aspectRatio: "1",
-                            borderRadius: 8,
-                            overflow: "hidden",
-                            cursor: "pointer",
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={photo.caption || "Gym photo"}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </LazyRenderSection>
-                </div>
-              )}
 
               {!announcementsLoading && !photosLoading && (!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
                 <div style={{ textAlign: "center", padding: 40 }}>
