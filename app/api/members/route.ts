@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
+  const today = new Date().toISOString().split("T")[0];
+  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
   const supabase = getSupabaseAdmin();
   let query = supabase.from("members").select("*", { count: "exact" });
 
@@ -46,8 +49,13 @@ export async function GET(req: NextRequest) {
       );
   }
   if (type !== "all") query = query.eq("membership_type", type);
-  if (status === "active") query = query.gte("sub_expiry_date", new Date().toISOString().split("T")[0]);
-  else if (status === "expired") query = query.lt("sub_expiry_date", new Date().toISOString().split("T")[0]);
+  if (status === "active") {
+    query = query.gte("sub_expiry_date", today);
+  } else if (status === "expired") {
+    query = query.lt("sub_expiry_date", today);
+  } else if (status === "expiring_soon") {
+    query = query.gte("sub_expiry_date", today).lte("sub_expiry_date", sevenDaysLater);
+  }
 
   const { data, error, count } = await query.order("created_at", { ascending: false }).range(from, to);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -72,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, membership_code, email, phone, membership_type, sub_expiry_date, coach_id } = body;
+  const { name, membership_code, email, phone, membership_type, sub_expiry_date, start_date, coach_id } = body;
   if (!name || !membership_code || !sub_expiry_date)
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   if (name.length > 200) return NextResponse.json({ error: "Name too long" }, { status: 400 });
@@ -85,8 +93,9 @@ export async function POST(req: NextRequest) {
       membership_code: membership_code.slice(0, 50),
       email: (email || "").slice(0, 200) || null,
       phone: (phone || "").slice(0, 50) || null,
-      membership_type: (membership_type || "Basic").slice(0, 100),
+      membership_type: (membership_type || "1 Month").slice(0, 100),
       sub_expiry_date,
+      start_date: start_date || new Date().toISOString().split("T")[0],
       coach_id: coach_id || null,
     })
     .select()

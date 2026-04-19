@@ -16,13 +16,17 @@ type MembersPage = {
   totalPages: number;
 };
 
-export function useListMembers() {
+export function useListMembers(page: number = 1, search?: string, status?: string, type?: string) {
   const { adminToken, coachToken, memberCode } = useAuth();
   const token = adminToken || coachToken || memberCode;
   return useQuery<MembersPage>({
-    queryKey: ["members"],
+    queryKey: ["members", page, search, status, type],
     queryFn: async () => {
-      const res = await fetch("/api/members", {
+      const params = new URLSearchParams({ page: String(page) });
+      if (search) params.set("search", search);
+      if (status && status !== "all") params.set("status", status);
+      if (type && type !== "all") params.set("type", type);
+      const res = await fetch(`/api/members?${params.toString()}`, {
         headers: getAuthHeaders(token),
       });
       if (!res.ok) throw new Error("Failed to fetch members");

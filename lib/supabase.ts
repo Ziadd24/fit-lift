@@ -23,6 +23,7 @@ export type Member = {
   phone: string | null;
   membership_type: string;
   sub_expiry_date: string;
+  start_date: string | null;
   created_at: string;
   /** ID of the coach this member is assigned to (null = unassigned) */
   coach_id: number | null;

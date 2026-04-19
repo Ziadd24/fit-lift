@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useListMessages, useSendMessage, useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
 import { useProgressDashboardStore } from "@/lib/use-progress-dashboard";
-import { cn } from "@/lib/utils";
+import { cn, getMembershipStatus, getDaysRemainingText } from "@/lib/utils";
 import { moveFocusWithArrows, SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE, useAccessibleDialog } from "@/lib/accessibility";
 import { getErrorMessage, showConfirmToast } from "@/lib/feedback";
 import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
@@ -1609,9 +1609,15 @@ export default function ClientDashboard() {
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
 
   const expiryDate = currentMember?.sub_expiry_date ? new Date(currentMember.sub_expiry_date) : null;
-  const daysRemaining = expiryDate ? Math.max(0, Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : CLIENT_DATA.subscription.daysRemaining;
-  const totalDays = 30;
-  const daysLow = daysRemaining < 7;
+  const startDate = currentMember?.start_date ? new Date(currentMember.start_date) : null;
+
+  const rawDaysRemaining = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : CLIENT_DATA.subscription.daysRemaining;
+  const daysRemaining = Math.max(0, rawDaysRemaining);
+  const totalDays = (startDate && expiryDate)
+    ? Math.max(1, Math.ceil((expiryDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+    : 30;
+  const memberStatus = expiryDate ? getMembershipStatus(expiryDate.toISOString()) : "active";
+  const daysLow = memberStatus === "expiring_soon" || memberStatus === "expired";
 
   const finishedCount = useCountUp(CLIENT_DATA.stats.finished, 1100);
   const effCount = useCountUp(93, 1200);
@@ -1878,7 +1884,7 @@ export default function ClientDashboard() {
     };
   });
   const goalItems = [
-    { key: "renewal", label: "Subscription runway", value: `${daysRemaining} of ${totalDays} days left`, urgent: daysLow },
+    { key: "renewal", label: "Subscription runway", value: memberStatus === "expired" ? `Expired ${Math.abs(rawDaysRemaining)} days ago` : `${daysRemaining} of ${totalDays} days left`, urgent: daysLow },
     { key: "protein", label: "Protein target", value: `${todayProtein}g of 180g`, urgent: nutritionRisk },
     { key: "coach", label: "Coach accountability", value: unreadMessages > 0 ? `${unreadMessages} unread message${unreadMessages > 1 ? "s" : ""}` : "Inbox clear", urgent: unreadMessages > 0 },
   ];
@@ -2559,35 +2565,34 @@ export default function ClientDashboard() {
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {/* Active badge */}
+                      {/* Status badge — dynamic */}
                       <div style={{
                         display: "inline-flex", alignItems: "center", gap: 5,
-                        background: "rgba(16,185,129,0.15)", color: "#10B981",
+                        background: memberStatus === "active"
+                          ? "rgba(16,185,129,0.15)"
+                          : memberStatus === "expiring_soon"
+                          ? "rgba(245,158,11,0.15)"
+                          : "rgba(239,68,68,0.15)",
+                        color: memberStatus === "active"
+                          ? "#10B981"
+                          : memberStatus === "expiring_soon"
+                          ? "#F59E0B"
+                          : "#EF4444",
                         borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600,
                       }}>
-                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#10B981" }} />
-                        Active
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: memberStatus === "active" ? "#10B981" : memberStatus === "expiring_soon" ? "#F59E0B" : "#EF4444" }} />
+                        {memberStatus === "active" ? "Active" : memberStatus === "expiring_soon" ? "Expiring Soon" : "Expired"}
                       </div>
                       {/* Plan badge */}
-                      {isPrivate ? (
-                        <div style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          background: "#7CFC00", color: "#000",
-                          borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 700,
-                        }}>
-                          <Crown size={10} color="#000" />
-                          Premium
-                        </div>
-                      ) : (
-                        <div style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          background: "rgba(139,92,246,0.15)", color: "#8B5CF6",
-                          borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600,
-                        }}>
-                          <Crown size={10} color="#8B5CF6" />
-                          {memberType}
-                        </div>
-                      )}
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        background: memberStatus === "active" ? "#7CFC00" : "rgba(139,92,246,0.15)",
+                        color: memberStatus === "active" ? "#000" : "#8B5CF6",
+                        borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: memberStatus === "active" ? 700 : 600,
+                      }}>
+                        <Crown size={10} color={memberStatus === "active" ? "#000" : "#8B5CF6"} />
+                        {memberType}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2639,26 +2644,51 @@ export default function ClientDashboard() {
               <div style={{ marginBottom: isPrivate ? 20 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    Subscription
+                    {memberType} Plan
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {daysLow && <AlertTriangle size={12} color="#EF4444" />}
-                    <span style={{ fontSize: 13, color: daysLow ? "#EF4444" : "var(--color-text-secondary)", fontWeight: daysLow ? 600 : 400 }}>
-                      {daysRemaining} / {totalDays} days
+                    {daysLow && <AlertTriangle size={12} color={memberStatus === "expired" ? "#EF4444" : "#F59E0B"} />}
+                    <span style={{ fontSize: 13, color: daysLow ? (memberStatus === "expired" ? "#EF4444" : "#F59E0B") : "var(--color-text-secondary)", fontWeight: daysLow ? 600 : 400 }}>
+                      {memberStatus === "expired"
+                        ? `Expired ${Math.abs(rawDaysRemaining)} days ago`
+                        : memberStatus === "expiring_soon"
+                        ? `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} left`
+                        : `${daysRemaining} / {totalDays} days`}
                     </span>
                   </div>
                 </div>
                 <div style={{ height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(daysRemaining / totalDays) * 100}%` }}
+                    animate={{ width: `${memberStatus === "expired" ? 0 : (daysRemaining / totalDays) * 100}%` }}
                     transition={{ duration: 1, delay: 0.4 }}
-                    style={{ height: "100%", background: daysLow ? "#EF4444" : "#7CFC00", borderRadius: 4 }}
+                    style={{ height: "100%", background: memberStatus === "active" ? "#7CFC00" : memberStatus === "expiring_soon" ? "#F59E0B" : "#EF4444", borderRadius: 4 }}
                   />
                 </div>
+                {/* Start & Expiry dates */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                  {startDate && (
+                    <div>
+                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>Start</div>
+                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", fontWeight: 500 }}>
+                        {startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                    </div>
+                  )}
+                  {expiryDate && (
+                    <div style={{ textAlign: startDate ? "right" : "left" }}>
+                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>Expires</div>
+                      <div style={{ fontSize: 12, color: daysLow ? (memberStatus === "expired" ? "#EF4444" : "#F59E0B") : "var(--color-text-secondary)", fontWeight: 500 }}>
+                        {expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {daysLow && (
-                  <div style={{ fontSize: 12, color: "#EF4444", marginTop: 6 }}>
-                    Renew soon to keep premium features
+                  <div style={{ fontSize: 12, color: memberStatus === "expired" ? "#EF4444" : "#F59E0B", marginTop: 6 }}>
+                    {memberStatus === "expired"
+                      ? "Your subscription has expired. Contact us to renew."
+                      : "Your subscription is expiring soon. Renew to keep access."}
                   </div>
                 )}
               </div>
