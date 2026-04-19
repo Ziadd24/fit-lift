@@ -2171,27 +2171,6 @@ export default function ClientDashboard() {
         widgetOrder={widgetOrder}
         onMoveWidget={moveWidget}
       />
-      <GlobalSearchModal
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        query={searchQuery}
-        onQueryChange={setSearchQuery}
-        activeType={searchType}
-        onTypeChange={setSearchType}
-        muscleFilter={muscleFilter}
-        onMuscleFilterChange={setMuscleFilter}
-        difficultyFilter={difficultyFilter}
-        onDifficultyFilterChange={setDifficultyFilter}
-        durationFilter={durationFilter}
-        onDurationFilterChange={setDurationFilter}
-        workoutResults={searchWorkoutResults}
-        nutritionResults={searchNutritionResults}
-        messageResults={searchMessageResults}
-        exerciseResults={searchExerciseResults}
-        workoutTags={workoutTags}
-        onAddTag={addWorkoutTag}
-        onNavigate={setActiveNav}
-      />
       {showTour && currentTour && (
         <div style={{ position: "sticky", top: 0, zIndex: 120, background: "rgba(13,13,16,0.96)", borderBottom: "1px solid rgba(124,252,0,0.16)", backdropFilter: "blur(14px)", padding: "14px 18px" }}>
           <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
@@ -2396,128 +2375,71 @@ export default function ClientDashboard() {
               height: 64,
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
               marginBottom: 24,
               gap: 12,
             }}
           >
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>{dateRange}</div>
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(true)}
-              style={{
-                minHeight: 40,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                borderRadius: 999,
-                padding: "9px 12px",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "#FFFFFF",
-                cursor: "pointer",
-              }}
-              aria-label="Open global search"
-            >
-              <Search size={15} />
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Search</span>
-              <span style={{ padding: "3px 7px", borderRadius: 999, background: "rgba(255,255,255,0.06)", color: "var(--color-text-secondary)", fontSize: 11, fontWeight: 700 }}>
-                Ctrl+K
-              </span>
-            </button>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                borderRadius: 999,
-                padding: "8px 12px",
-                background: "rgba(245,158,11,0.12)",
-                border: "1px solid rgba(245,158,11,0.24)",
-                color: "#FCD34D",
-                fontSize: 12,
-                fontWeight: 800,
-              }}
-              aria-label={`${streakDays} day workout streak`}
-            >
-              <motion.span
-                animate={prefersReducedMotion || disableHeavyAnimations ? undefined : { scale: [1, 1.08, 1] }}
-                transition={{ duration: 1.8, repeat: Infinity }}
-                style={{ display: "inline-flex" }}
-              >
-                <Flame size={14} />
-              </motion.span>
-              {streakDays}-day streak
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                borderRadius: 999,
-                padding: "8px 12px",
-                background: pendingSyncCount > 0 ? "rgba(245,158,11,0.12)" : "rgba(124,252,0,0.12)",
-                border: pendingSyncCount > 0 ? "1px solid rgba(245,158,11,0.22)" : "1px solid rgba(124,252,0,0.22)",
-                color: pendingSyncCount > 0 ? "#FDE68A" : "#B9FF8B",
-                fontSize: 12,
-                fontWeight: 800,
-              }}
-              aria-live="polite"
-            >
-              <Activity size={14} />
-              {pendingSyncCount > 0 ? `${pendingSyncCount} pending sync` : "Synced"}
-            </div>
-            {demoMode && (
-              <button
-                type="button"
-                onClick={disableDemoMode}
-                style={{
-                  minHeight: 36,
-                  borderRadius: 999,
-                  border: "1px solid rgba(139,92,246,0.24)",
-                  background: "rgba(139,92,246,0.14)",
-                  color: "#DDD6FE",
-                  padding: "8px 12px",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                Demo Mode On
-              </button>
-            )}
-            <button
-              style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", color: "var(--color-text-secondary)",
-              }}
-              onClick={() => setIsSettingsOpen(true)}
-              aria-label="Open dashboard settings"
-            >
-              <Settings size={16} />
-            </button>
-            <button
-              style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", color: "var(--color-text-secondary)", position: "relative",
-              }}
-            >
-              <Bell size={16} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div
                 style={{
-                  position: "absolute", top: 6, right: 6,
-                  width: 7, height: 7, borderRadius: "50%",
-                  background: "#7CFC00", border: "1px solid #0D0D10",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  background: "rgba(245,158,11,0.12)",
+                  border: "1px solid rgba(245,158,11,0.24)",
+                  color: "#FCD34D",
+                  fontSize: 12,
+                  fontWeight: 800,
                 }}
-              />
-            </button>
+                aria-label={`${streakDays} day workout streak`}
+              >
+                <motion.span
+                  animate={prefersReducedMotion || disableHeavyAnimations ? undefined : { scale: [1, 1.08, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                  style={{ display: "inline-flex" }}
+                >
+                  <Flame size={14} />
+                </motion.span>
+                {streakDays}-day streak
+              </div>
+              {demoMode && (
+                <button
+                  type="button"
+                  onClick={disableDemoMode}
+                  style={{
+                    minHeight: 36,
+                    borderRadius: 999,
+                    border: "1px solid rgba(139,92,246,0.24)",
+                    background: "rgba(139,92,246,0.14)",
+                    color: "#DDD6FE",
+                    padding: "8px 12px",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Demo Mode On
+                </button>
+              )}
+              <button
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", color: "var(--color-text-secondary)",
+                }}
+                onClick={() => setIsSettingsOpen(true)}
+                aria-label="Open dashboard settings"
+              >
+                <Settings size={16} />
+              </button>
+            </div>
           </motion.div>
 
           {/* ── Unified Member Card ───────────────────────────────────────────── */}
@@ -3387,309 +3309,10 @@ export default function ClientDashboard() {
             </motion.div>
           )}
         </main>
-
-        {/* ─── Right Sidebar / Chat Panel ──────────────────────────────────────── */}
-        <aside
-          style={{
-            background: "#16161A",
-            borderLeft: "1px solid rgba(255,255,255,0.06)",
-            flexDirection: "column",
-            flexShrink: 0,
-            height: "calc(100vh - " + (isPrivate && bannerVisible ? "40px" : "0px") + ")",
-            overflowY: "auto",
-          }}
-          className={cn(
-            "fixed inset-0 z-[200] flex lg:sticky lg:top-0 lg:w-[320px] lg:z-auto transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
-            isChatOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 lg:translate-y-0 lg:opacity-100",
-            !isChatOpen && "pointer-events-none lg:pointer-events-auto"
-          )}
-          ref={chatPanelRef}
-          role={isChatOpen ? "dialog" : undefined}
-          aria-modal={isChatOpen ? "true" : undefined}
-          aria-labelledby={isChatOpen ? chatTitleId : undefined}
-          aria-describedby={isChatOpen ? chatDescriptionId : undefined}
-          tabIndex={isChatOpen ? -1 : undefined}
-        >
-          {/* Mobile Back Button */}
-          <div className="lg:hidden p-4 border-bottom border-white/5 flex items-center justify-between">
-            <button onClick={() => setIsChatOpen(false)} className="text-white flex items-center gap-2" aria-label="Close coach chat">
-              <X size={20} /> Close Chat
-            </button>
-          </div>
-
-          {/* Profile Card */}
-          <motion.div
-            custom={8}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
-            style={{
-              padding: 24,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 80, height: 80, borderRadius: "50%",
-                  background: "linear-gradient(135deg, #7CFC00, #4CAF50)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 28, fontWeight: 700, color: "#000",
-                  border: "3px solid #7CFC00",
-                  boxShadow: "0 0 20px rgba(124,252,0,0.3)",
-                }}
-              >
-                {memberName.slice(0, 2).toUpperCase()}
-              </div>
-            </div>
-
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>{memberName}</div>
-            <div style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 2 }}>{memberType}</div>
-
-            {isPrivate && (
-              <motion.div
-                animate={{
-                  boxShadow: [
-                    "0 0 0 0 rgba(124,252,0,0.4)",
-                    "0 0 0 8px rgba(124,252,0,0)",
-                    "0 0 0 0 rgba(124,252,0,0.4)",
-                  ],
-                }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                style={{
-                  width: "100%",
-                  background: "#7CFC00",
-                  borderRadius: 8,
-                  padding: "6px 0",
-                  marginTop: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                <Crown size={14} color="#000" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  PRIVATE TRAINING CLIENT
-                </span>
-              </motion.div>
-            )}
-
-            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              {[
-                { icon: <Phone size={16} />, label: "Call" },
-                { icon: <Video size={16} />, label: "Video" },
-                { icon: <MoreHorizontal size={16} />, label: "More" },
-              ].map((btn) => (
-                <button
-                  key={btn.label}
-                  title={btn.label}
-                  style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: "#16161A",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", color: "var(--color-text-secondary)", transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(124,252,0,0.4)";
-                    e.currentTarget.style.color = "#7CFC00";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-                    e.currentTarget.style.color = "var(--color-text-secondary)";
-                  }}
-                >
-                  {btn.icon}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Activity Feed */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-              <span id={chatTitleId} style={{ fontSize: 18, fontWeight: 600, color: "#FFFFFF" }}>Activity</span>
-              <span id={chatDescriptionId} className="sr-only">Coach conversation drawer. Press Escape to close it on mobile.</span>
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 12, paddingTop: 16 }} aria-live="polite" aria-relevant="additions text">
-              {chatMessages.map((msg) => {
-                const isCoach = msg.sender_type === "coach";
-                return (
-                  <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isCoach ? "flex-start" : "flex-end" }}>
-                    <div style={{ fontSize: 11, color: "#5A5A5A", marginBottom: 4, marginLeft: isCoach ? 4 : 0, marginRight: isCoach ? 0 : 4 }}>
-                      {isCoach ? (CLIENT_DATA.coach.name || "Coach") : "You"} • {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
-                    </div>
-                    <div style={{
-                      maxWidth: "85%",
-                      background: isCoach ? "rgba(255,255,255,0.05)" : "rgba(124,252,0,0.1)",
-                      color: isCoach ? "#FFFFFF" : "#7CFC00",
-                      border: isCoach ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(124,252,0,0.2)",
-                      padding: "10px 14px",
-                      borderRadius: 16,
-                      borderTopLeftRadius: isCoach ? 4 : 16,
-                      borderTopRightRadius: isCoach ? 16 : 4,
-                      fontSize: 14,
-                      lineHeight: 1.4,
-                    }}>
-                      {msg.content}
-                      {msg.attachment?.type === "image" && (
-                        <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <img src={msg.attachment.url} alt={msg.attachment.name} style={{ width: "100%", maxWidth: 220, display: "block", objectFit: "cover" }} />
-                        </div>
-                      )}
-                      {msg.attachment?.type === "pdf" && (
-                        <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
-                          <FileText size={18} color="#8B5CF6" />
-                          <div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF" }}>{msg.attachment.name}</div>
-                            <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>PDF attachment</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {!isCoach && msg.status && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: msg.status === "Read" ? "#7CFC00" : "var(--color-text-secondary)" }}>
-                        {msg.status}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {coachTyping && (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 11, color: "#5A5A5A", marginBottom: 4, marginLeft: 4 }}>
-                    {CLIENT_DATA.coach.name} • typing...
-                  </div>
-                  <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", padding: "10px 14px", borderRadius: 16, borderTopLeftRadius: 4, display: "inline-flex", gap: 6 }}>
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <motion.span
-                        key={index}
-                        animate={{ opacity: [0.35, 1, 0.35], y: [0, -2, 0] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: index * 0.12 }}
-                        style={{ width: 6, height: 6, borderRadius: "50%", background: "#FFFFFF", display: "inline-block" }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(!messages || messages.length === 0) && !coachTyping && (
-                <div style={{ textAlign: "center", color: "#5A5A5A", fontSize: 13, marginTop: 40 }}>
-                  No messages yet. Say hi to your coach!
-                </div>
-              )}
-            </div>
-
-            {/* Message Input */}
-            <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                {quickReplies.map((reply) => (
-                  <button
-                    key={reply}
-                    type="button"
-                    onClick={() => setMessage(reply)}
-                    style={{ minHeight: 36, padding: "8px 12px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                  >
-                    {reply}
-                  </button>
-                ))}
-              </div>
-              {chatDraftAttachment && (
-                <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {chatDraftAttachment.type === "image" ? <Camera size={18} color="#7CFC00" /> : <FileText size={18} color="#8B5CF6" />}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#FFFFFF" }}>{chatDraftAttachment.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{chatDraftAttachment.type === "image" ? "Image preview ready" : "PDF preview ready"}</div>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => setChatDraftAttachment(null)} style={{ background: "none", border: "none", color: "var(--color-text-secondary)", cursor: "pointer", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}>
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-              <div style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                padding: "10px 14px",
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setChatDraftAttachment((current) => current?.type === "image"
-                    ? { type: "pdf", name: "Weekly-Plan.pdf", url: "https://example.com/weekly-plan.pdf" }
-                    : { type: "image", name: "checkin-progress.jpg", url: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80" })}
-                  aria-label="Add an attachment preview"
-                  style={{ background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
-                >
-                  <Paperclip size={18} color="#5A5A5A" style={{ flexShrink: 0 }} />
-                </button>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                  placeholder="Type to coach..."
-                  aria-label="Message your coach"
-                  style={{
-                    flex: 1, background: "none", border: "none", outline: "none",
-                    fontSize: 14, color: "#FFFFFF", fontFamily: "'Inter', sans-serif",
-                  }}
-                />
-                <Smile size={18} color="#5A5A5A" style={{ flexShrink: 0, cursor: "pointer" }} />
-                <button
-                  type="button"
-                  onClick={handleSendMessage}
-                  aria-label="Send message to coach"
-                  style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", minWidth: TOUCH_TARGET_SIZE, minHeight: TOUCH_TARGET_SIZE }}
-                >
-                  <Send
-                    size={18}
-                    color={isPrivate ? "#7CFC00" : "#5A5A5A"}
-                    style={{ flexShrink: 0 }}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
 
       {/* ─── Private Floating DM Button ──────────────────────────────────────── */}
       <MobileBottomNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenSettings={() => setIsSettingsOpen(true)} />
-
-      {isPrivate && (
-        <motion.button
-          onClick={() => {
-            if (window.innerWidth < 1024) {
-              setIsChatOpen(true);
-            } else {
-              const input = document.querySelector('input[placeholder="Type to coach..."]') as HTMLInputElement;
-              if (input) input.focus();
-            }
-          }}
-          animate={{
-            boxShadow: [
-              "0 0 0 0 rgba(124,252,0,0.7)",
-              "0 0 0 12px rgba(124,252,0,0)",
-              "0 0 0 0 rgba(124,252,0,0.7)",
-            ],
-          }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          className="fixed bottom-24 lg:bottom-8 right-6 lg:right-340 w-14 h-14 rounded-full bg-[#7CFC00] flex items-center justify-center z-[90] shadow-2xl"
-          aria-label="Open coach chat"
-        >
-          <MessageCircle size={26} color="#000000" />
-        </motion.button>
-      )}
 
       {/* ─── Task Modal ──────────────────────────────────────── */}
       <AnimatePresence>
