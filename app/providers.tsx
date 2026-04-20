@@ -8,13 +8,13 @@ import { useAuth } from "@/lib/use-auth";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "We couldn't load that right now."));
+    onError: () => {
+      // Silent — no toast on query errors (prevents spam)
     },
   }),
   mutationCache: new MutationCache({
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "We couldn't save that change."));
+    onError: () => {
+      // Silent — no toast on mutation errors (prevents spam)
     },
   }),
   defaultOptions: {

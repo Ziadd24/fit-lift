@@ -14,10 +14,12 @@ import {
   Search, Edit2, UserPlus, X, Plus,
   Flame,
   Utensils, ChevronRight as ArrowRight,
+  Upload,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/use-auth";
 import type { Member } from "@/lib/supabase";
+import UploadsTab from "./UploadsTab";
 
 /* Semi-circle Gauge for Nutrition */
 function SemiGauge({ percent = 95.5 }: { percent?: number }) {
@@ -78,6 +80,7 @@ export default function CoachDashboard() {
   const totalPages = membersPage?.totalPages || 1;
 
   /* UI State */
+  const [activeTab, setActiveTab] = useState<"dashboard" | "uploads">("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [displayLimit, setDisplayLimit] = useState(50); // Show 50 at a time in table
 
@@ -214,6 +217,35 @@ export default function CoachDashboard() {
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+            style={{
+              background: activeTab === "dashboard" ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)",
+              border: activeTab === "dashboard" ? "1px solid rgba(124,252,0,0.3)" : "1px solid rgba(255,255,255,0.1)",
+              color: activeTab === "dashboard" ? "#7CFC00" : "#FFFFFF",
+            }}
+          >
+            <Activity size={16} /> Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab("uploads")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+            style={{
+              background: activeTab === "uploads" ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)",
+              border: activeTab === "uploads" ? "1px solid rgba(124,252,0,0.3)" : "1px solid rgba(255,255,255,0.1)",
+              color: activeTab === "uploads" ? "#7CFC00" : "#FFFFFF",
+            }}
+          >
+            <Upload size={16} /> Uploads
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "dashboard" ? (
+          <>
         {/* ══ NUTRITION OVERVIEW ══ */}
         <div className="mb-8">
           <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }} className="max-w-md">
@@ -606,6 +638,10 @@ export default function CoachDashboard() {
             )}
           </div>
         </div>
+          </>
+        ) : (
+          <UploadsTab coachId={currentCoach?.id || 0} />
+        )}
       </div>
 
       {/* ══ ASSIGN CLIENT MODAL ══ */}
