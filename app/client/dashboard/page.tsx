@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from "react";
 import NutritionTab from "./NutritionTab";
 import WorkoutsTab from "./WorkoutsTab";
 import ProgressTab from "./ProgressTab";
+import CoachUploadsTab from "./CoachUploadsTab";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
@@ -60,6 +61,7 @@ import {
   Activity,
   Search,
   BookOpen,
+  Upload,
 } from "lucide-react";
 
 // ─── Motion Sensitivity Hook ─────────────────────────────────────────────────
@@ -1596,6 +1598,7 @@ export default function ClientDashboard() {
     { key: "workouts",  label: "Workouts",  icon: <Dumbbell size={20} /> },
     { key: "nutrition", label: "Nutrition", icon: <Utensils size={20} /> },
     { key: "progress",  label: "Progress",  icon: <TrendingUp size={20} /> },
+    { key: "coach_uploads", label: "Coach uploads", icon: <Upload size={20} /> },
   ];
 
   const createTaskMutation = useCreateTask();
@@ -2946,6 +2949,14 @@ export default function ClientDashboard() {
           {activeNav === "progress" && (
             <DashboardErrorBoundary label="Progress">
               <ProgressTab isPrivate={isPrivate} memberId={memberId!} />
+            </DashboardErrorBoundary>
+          )}
+
+          {activeNav === "coach_uploads" && (
+            <DashboardErrorBoundary label="Coach Uploads">
+              <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                <CoachUploadsTab isPrivate={isPrivate} memberId={memberId!} />
+              </motion.div>
             </DashboardErrorBoundary>
           )}
 
