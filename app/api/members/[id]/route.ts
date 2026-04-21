@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
+import { normalizeMaybeMojibake } from "@/lib/text";
 
 export async function GET(
   req: NextRequest,
@@ -38,10 +39,19 @@ export async function PUT(
   }
 
   const body = await req.json();
+  const normalizedBody = {
+    ...body,
+    ...(typeof body.name === "string" ? { name: normalizeMaybeMojibake(body.name).slice(0, 200) } : {}),
+    ...(typeof body.email === "string" ? { email: normalizeMaybeMojibake(body.email).slice(0, 200) || null } : {}),
+    ...(typeof body.phone === "string" ? { phone: normalizeMaybeMojibake(body.phone).slice(0, 50) || null } : {}),
+    ...(typeof body.membership_type === "string"
+      ? { membership_type: normalizeMaybeMojibake(body.membership_type).slice(0, 100) }
+      : {}),
+  };
   const supabase = getSupabaseAdmin();
 
   // Coaches can only update members they own
-  let query = supabase.from("members").update(body).eq("id", parseInt(idParam));
+  let query = supabase.from("members").update(normalizedBody).eq("id", parseInt(idParam));
   if (!isAdmin && coachId) {
     query = query.eq("coach_id", coachId);
   }
