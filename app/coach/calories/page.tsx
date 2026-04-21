@@ -5,7 +5,7 @@ import { CoachLayout } from "@/components/layout/CoachLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame, Zap, Wheat, Droplets, Plus, Trash2, Clock,
-  Sparkles, Target, RotateCcw, CheckCircle,
+  Sparkles, RotateCcw, CheckCircle,
   AlertCircle, Loader2, UtensilsCrossed, TrendingUp, Camera, X, Users, Bell, ShieldAlert, ChevronDown, Brain
 } from "lucide-react";
 import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCalorieLog, CalorieLog, useListMembers } from "@/lib/api-hooks";
@@ -161,7 +161,7 @@ export default function CaloriesPage() {
   const { mutate: deleteCalorieLog } = useDeleteCalorieLog();
   const { mutate: verifyLog, isPending: isVerifying } = useVerifyCalorieLog();
   const [goals, setGoals] = useState({ calories: 2500, protein: 150, carbs: 300, fat: 80 });
-  const [showGoals, setShowGoals] = useState(false);
+  const showGoals = false;
   const [image, setImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -340,22 +340,6 @@ export default function CaloriesPage() {
             </p>
           </div>
 
-          {/* Daily Budget Pill */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl"
-              style={{ background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.2)" }}>
-              <Target className="w-4 h-4" style={{ color: "#7CFC00" }} />
-              <span className="text-sm font-bold" style={{ color: "#7CFC00" }}>
-                {totals.calories.toLocaleString()}
-              </span>
-              <span className="text-xs" style={{ color: "#5A5A5A" }}>/ {goals.calories.toLocaleString()} kcal</span>
-            </div>
-            <button onClick={() => setShowGoals(!showGoals)}
-              className="px-4 py-2.5 rounded-2xl text-xs font-bold transition-all"
-              style={{ background: showGoals ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)", color: showGoals ? "#7CFC00" : "#8B8B8B", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {showGoals ? "Hide Goals" : "Set Goals"}
-            </button>
-          </div>
         </div>
 
         {/* ── TAB SWITCHER ── */}

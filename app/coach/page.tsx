@@ -10,7 +10,7 @@ import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
   Users, Activity,
   MessageSquare, ChevronLeft, ChevronRight,
-  Tag, Calendar, Smartphone, Mail, User, Star, MapPin,
+  Tag, Calendar, Smartphone, User, Star,
   Search, Edit2, UserPlus, X, Plus,
   Flame,
   Utensils, ChevronRight as ArrowRight,
@@ -200,19 +200,6 @@ export default function CoachDashboard() {
               style={{ background: "#7CFC00", boxShadow: "0 0 20px rgba(124,252,0,0.3)", fontFamily: "Inter,sans-serif" }}
             >
               <UserPlus className="w-4 h-4" /> Add Client
-            </button>
-            <button
-              onClick={() => {
-                if (activeClient) {
-                  router.push(`/coach/messages?memberId=${activeClient.id}`);
-                } else {
-                  router.push("/coach/messages");
-                }
-              }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white border transition-all hover:border-white/30"
-              style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "Inter,sans-serif" }}
-            >
-              <MessageSquare className="w-4 h-4" /> Message
             </button>
           </div>
         </div>
@@ -496,9 +483,7 @@ export default function CoachDashboard() {
                         { Icon: Tag, val: activeClient.membership_code || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â" },
                         { Icon: Calendar, val: `Joined ${new Date(activeClient.created_at || Date.now()).toLocaleDateString()}` },
                         { Icon: Smartphone, val: activeClient.phone || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â" },
-                        { Icon: Mail, val: activeClient.email || "No email" },
                         { Icon: User, val: `Type: ${activeClient.membership_type}` },
-                        { Icon: MapPin, val: "Local Branch" },
                       ].map(({ Icon, val }, i) => (
                         <div key={i} className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
