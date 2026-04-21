@@ -208,7 +208,7 @@ interface ExerciseLibraryItem {
   videoUrl: string;
 }
 
-type ThemeMode = "auto" | "dark" | "light";
+type ThemeMode = "auto" | "dark";
 type UnitPreference = "kg" | "lbs";
 type HomeSectionKey = "workoutSummary" | "nutritionToday" | "goals";
 
@@ -1294,7 +1294,7 @@ function SettingsModal({
         </div>
         <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800, marginBottom: 12 }}>Theme</div>
-          <div style={{ display: "flex", gap: 8 }}>{(["auto", "dark", "light"] as ThemeMode[]).map((mode) => <button key={mode} type="button" onClick={() => onThemeModeChange(mode)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: themeMode === mode ? "1px solid rgba(124,252,0,0.4)" : "1px solid rgba(255,255,255,0.1)", background: themeMode === mode ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)", color: themeMode === mode ? "#7CFC00" : "#FFFFFF", fontWeight: 700, cursor: "pointer", textTransform: "capitalize", fontSize: 14 }}>{mode}</button>)}</div>
+          <div style={{ display: "flex", gap: 8 }}>{(["auto", "dark"] as ThemeMode[]).map((mode) =><button key={mode} type="button" onClick={() => onThemeModeChange(mode)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: themeMode === mode ? "1px solid rgba(124,252,0,0.4)" : "1px solid rgba(255,255,255,0.1)", background: themeMode === mode ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)", color: themeMode === mode ? "#7CFC00" : "#FFFFFF", fontWeight: 700, cursor: "pointer", textTransform: "capitalize", fontSize: 14 }}>{mode}</button>)}</div>
         </div>
         <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", marginTop: 12 }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800, marginBottom: 12 }}>Units</div>
@@ -1735,7 +1735,8 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!hydrated) return;
     if (!currentMember) {
-      router.replace("/");
+      // Again, replace "/" with your main website's URL
+      window.location.replace("/");
       return;
     }
     setMemberId(currentMember.id);
@@ -1900,7 +1901,9 @@ export default function ClientDashboard() {
 
   const handleLogout = () => {
     logoutMember();
-    router.push("/");
+    // Replace "/" with the actual URL path of your main website.
+    // Using window.location breaks the SPA history loop.
+    window.location.replace("/"); 
   };
 
   const cardVariants = {
@@ -2216,7 +2219,7 @@ export default function ClientDashboard() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ fontSize: 18, fontWeight: 600, color: "#888888", lineHeight: 1.3 }}>
-                        أهلا
+                       , أهلا
                       </div>
                       <div style={{ fontSize: 26, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2, letterSpacing: 0.5 }}>
                         {memberName}

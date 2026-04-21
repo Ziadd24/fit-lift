@@ -53,7 +53,8 @@ export default function ClientLoginPage() {
   useEffect(() => {
     if (!hydrated) return;
     if (currentMember) {
-      router.push("/client/dashboard");
+      // FIX: Use replace() instead of push() to prevent the history loop
+      router.replace("/client/dashboard");
     }
   }, [currentMember, router, hydrated]);
 
