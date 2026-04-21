@@ -7,11 +7,19 @@ import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/perf
 import { getErrorMessage, showConfirmToast } from "@/lib/feedback";
 import {
   Dumbbell, Crown, Play, CheckCircle2, Clock, ChevronDown,
-  ChevronUp, Flame, Target, Plus, Zap, Edit3, Trash2,
+  ChevronUp, Flame, Target, Plus, Edit3, Trash2, RotateCcw,
 } from "lucide-react";
 import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout } from "@/lib/api-hooks";
 import { WorkoutExerciseCard } from "@/components/ui/WorkoutExerciseCard";
 import { toast } from "react-hot-toast";
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface LocalTask {
+  id: number;
+  title: string;
+  completed: boolean;
+  priority: string;
+}
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const WORKOUTS = [
@@ -272,12 +280,13 @@ function WorkoutsLoadingState() {
 }
 
 // ─── Workout Card ─────────────────────────────────────────────────────────────
-const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, onQueueUndo, onAddExercise, onExerciseChange, language }: {
+const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdit, onDelete, onQueueUndo, onAddExercise, onExerciseChange, language, updateWorkoutMutation }: {
   workout: any; isPrivate: boolean; delay: number; onEdit?: () => void; onDelete?: () => void;
   onQueueUndo?: (entry: UndoEntry) => void;
   onAddExercise?: () => void;
   onExerciseChange?: (workout: any, exerciseIndex: number, updated: any) => void;
   language: string;
+  updateWorkoutMutation?: any;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editingExercise, setEditingExercise] = useState<any>(null);
@@ -293,13 +302,37 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   // Per-set completion state (array of booleans per exercise)
   const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number; nameStr: string; typeStr: string; duration: number }[]>(() =>
     safeWorkoutSets.map((s: any) => ({
-      completedSets: Array.from({ length: s.sets }, (_, i) => i < (s.done ? s.sets : 0)),
+      completedSets: Array(s.sets).fill(false),
       weight: s.weight ?? 0,
       nameStr: s.exercise,
       typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
       duration: 5,
     }))
   );
+
+  const exerciseStateRef = useRef(exerciseState);
+  exerciseStateRef.current = exerciseState;
+
+  // Sync exerciseState when workout.sets changes (add/remove exercises)
+  useEffect(() => {
+    const currentLength = exerciseStateRef.current.length;
+    const newLength = safeWorkoutSets.length;
+    
+    if (newLength > currentLength) {
+      // Add new exercises with empty completion state
+      const newExercises = safeWorkoutSets.slice(currentLength).map((s: any) => ({
+        completedSets: Array(s.sets).fill(false),
+        weight: s.weight ?? 0,
+        nameStr: s.exercise,
+        typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
+        duration: 5,
+      }));
+      setExerciseState(prev => [...prev, ...newExercises]);
+    } else if (newLength < currentLength) {
+      // Remove exercises that no longer exist
+      setExerciseState(prev => prev.slice(0, newLength));
+    }
+  }, [safeWorkoutSets.length]);
 
   const totalSets = exerciseState.reduce((a, e) => a + (e ? e.completedSets.length : 0), 0);
   const completedTotal = exerciseState.reduce((a, e) => a + (e ? e.completedSets.filter(Boolean).length : 0), 0);
@@ -327,6 +360,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
       // Vibrate on mobile
       if (navigator.vibrate) navigator.vibrate(30);
       setLiveAnnouncement(`${exerciseLabel}, set ${setIdx + 1} ${nextValue ? "completed" : "marked incomplete"}.`);
+      
       return next;
     });
   };
@@ -335,16 +369,19 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     if (action === "complete" || action === "skip") {
       const exerciseIndex = setsWithState.findIndex((item: any) => item.exercise === exerciseName);
       if (exerciseIndex >= 0) {
-        setExerciseState(prev => prev.map((item, idx) =>
-          idx === setsWithState[exerciseIndex].originalIndex
-            ? {
-                ...item,
-                completedSets: item.completedSets.map((value, setIndex) =>
-                  setIndex === setId - 1 ? next.completed : value
-                ),
-              }
-            : item
-        ));
+        setExerciseState(prev => {
+          const updated = prev.map((item, idx) =>
+            idx === setsWithState[exerciseIndex].originalIndex
+              ? {
+                  ...item,
+                  completedSets: item.completedSets.map((value, setIndex) =>
+                    setIndex === setId - 1 ? next.completed : value
+                  ),
+                }
+              : item
+          );
+          return updated;
+        });
       }
 
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -383,17 +420,13 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     }
 
     if (action === "skip") {
-      const previousState = exerciseState[origIdx];
+      // Mark all sets as completed (so it counts toward 100%) - session only, not saved to DB
       setExerciseState(prev => prev.map((item, idx) =>
         idx === origIdx
-          ? { ...item, completedSets: item.completedSets.map(() => false) }
+          ? { ...item, completedSets: item.completedSets.map(() => true) }
           : item
       ));
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([20, 20, 20]);
-      queueUndo(`Skipped ${exerciseName}`, () => {
-        setExerciseState(prev => prev.map((item, idx) => idx === origIdx ? previousState : item));
-        setLiveAnnouncement(`${exerciseName} restored.`);
-      });
       setLiveAnnouncement(`${exerciseName} skipped.`);
       return;
     }
@@ -403,20 +436,13 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
         message: `Remove ${exerciseName} from this workout?`,
         confirmLabel: "Remove",
         onConfirm: () => {
-          const previousState = exerciseState[origIdx];
-          setExerciseState(prev => {
-            const next = [...prev];
-            next[origIdx] = null as any;
-            return next;
+          // Permanently remove from database - directly call mutation
+          const currentSets = workout.sets.filter((_: any, idx: number) => idx !== origIdx);
+          updateWorkoutMutation.mutate({
+            id: workout.id,
+            data: { sets: currentSets },
           });
-          queueUndo(`Removed ${exerciseName}`, () => {
-            setExerciseState(prev => {
-              const next = [...prev];
-              next[origIdx] = previousState;
-              return next;
-            });
-            setLiveAnnouncement(`${exerciseName} restored.`);
-          });
+          setExerciseState(prev => prev.filter((_: any, idx: number) => idx !== origIdx));
           toast.success(`${exerciseName} removed.`);
         },
       });
@@ -435,6 +461,25 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     setExerciseState(prev => prev.map((e, i) =>
       i === exIdx ? { ...e, weight: Math.max(0, +(e.weight + delta).toFixed(1)) } : e
     ));
+  };
+
+  const handleFinishWorkout = () => {
+    if (workout.status === "done") {
+      toast.success("Workout already completed!");
+      return;
+    }
+    // Mark workout as done and save
+    onExerciseChange?.(workout, 0, { 
+      ...workout, 
+      status: "done",
+      done: true,
+      sets: workout.sets 
+    });
+    // Reset exercise completion state for next session
+    setExerciseState(prev => prev.map(e => e ? { ...e, completedSets: e.completedSets.map(() => false) } : e));
+    // Close/collapse the workout after finishing
+    setExpanded(false);
+    toast.success(`${workout.title} finished! Great work!`);
   };
 
   // Merge state into sets for display
@@ -513,6 +558,27 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
               {completionPct}%
             </div>
           </div>
+          {workout.status !== "done" && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleFinishWorkout(); }}
+              disabled={completionPct < 100}
+              style={{
+                marginLeft: 8,
+                padding: "6px 12px",
+                background: completionPct >= 100 ? "#7CFC00" : "rgba(124,252,0,0.3)",
+                color: completionPct >= 100 ? "#000" : "rgba(0,0,0,0.5)",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: completionPct >= 100 ? "pointer" : "not-allowed",
+                flexShrink: 0,
+                opacity: completionPct >= 100 ? 1 : 0.6,
+              }}
+            >
+              Finish
+            </button>
+          )}
           {expanded ? <ChevronUp size={16} color={SECONDARY_TEXT_COLOR} /> : <ChevronDown size={16} color={SECONDARY_TEXT_COLOR} />}
         </div>
 
@@ -589,11 +655,19 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                         onMenuAction={(action) => handleExerciseMenuAction(action, exerciseData.id, exerciseData.name, origIdx)}
                         onSetAction={handleExerciseSetAction}
                         onChange={(updated) => {
+                          let hasChanges = false;
                           updated.sets.forEach((set, setIdx) => {
                              if (set.completed !== ex.completedSets[setIdx]) {
                                handleSetToggle(origIdx, setIdx);
+                               hasChanges = true;
                              }
                           });
+                          // Auto-save when all sets in exercise are completed
+                          if (hasChanges && updated.sets.every((s: any) => s.completed)) {
+                            const currentSets = [...workout.sets];
+                            currentSets[origIdx] = { ...currentSets[origIdx], done: true };
+                            onExerciseChange?.(workout, origIdx, { ...workout, sets: currentSets });
+                          }
                         }}
                       />
                     );
@@ -637,8 +711,6 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                               next[editingExercise.index] = {
                                 ...next[editingExercise.index],
                                 nameStr: formData.get("name") as string,
-                                typeStr: formData.get("type") as string,
-                                duration: parseInt(formData.get("duration") as string),
                               };
                             }
                             return next;
@@ -650,12 +722,6 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                               {isArabicLanguage(language) ? "اسم التمرين" : "Exercise Name"}
                             </label>
                             <input aria-label="Exercise name" name="name" defaultValue={editingExercise.data.name} required style={{ width: "100%", padding: isMobile ? "14px 16px" : "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 40 }} />
-                          </div>
-                          <div style={{ marginBottom: isMobile ? 20 : 20 }}>
-                            <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 6 : 4 }}>
-                              {isArabicLanguage(language) ? "المدة (دقائق)" : "Duration (mins)"}
-                            </label>
-                            <input aria-label="Exercise duration in minutes" name="duration" type="number" defaultValue={editingExercise.data.durationMinutes} style={{ width: "100%", padding: isMobile ? "14px 16px" : "10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 40 }} />
                           </div>
                           <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
                             <button type="button" onClick={() => setEditingExercise(null)} style={{ flex: 1, padding: isMobile ? 16 : 10, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, minHeight: isMobile ? 52 : TOUCH_TARGET_SIZE, fontSize: 16 }}>
@@ -710,12 +776,26 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   const [isWeeklyPlanModalOpen, setIsWeeklyPlanModalOpen] = useState(false);
   const [localWeekPlan, setLocalWeekPlan] = useState(WEEK_PLAN);
 
-  const [localTasks, setLocalTasks] = useState([
-    { id: 1, title: "Complete leg day workout", completed: true, priority: "high" },
-    { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
-    { id: 3, title: "Update body measurements", completed: false, priority: "low" },
-    { id: 4, title: "Review coach feedback", completed: true, priority: "high" },
-  ]);
+  // Load tasks from localStorage or use defaults
+  const [localTasks, setLocalTasks] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    const saved = localStorage.getItem('workoutTabTasks');
+    const lastReset = localStorage.getItem('workoutTabTasksLastReset');
+    const today = new Date().toDateString();
+    
+    // Auto-reset if it's a new day
+    if (saved && lastReset === today) {
+      return JSON.parse(saved);
+    }
+    
+    // Default tasks (all unchecked)
+    return [
+      { id: 1, title: "Complete leg day workout", completed: false, priority: "high" },
+      { id: 2, title: "Log daily calories", completed: false, priority: "medium" },
+      { id: 3, title: "Update body measurements", completed: false, priority: "low" },
+      { id: 4, title: "Review coach feedback", completed: false, priority: "high" },
+    ];
+  });
 
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [workoutFormError, setWorkoutFormError] = useState<string | null>(null);
@@ -739,7 +819,6 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   );
 
   const todayPlan = localWeekPlan[TODAY_IDX % localWeekPlan.length];
-  const streak = 5;
   const formatWeight = useCallback((value: number, unit: string) => {
     if (unit === "—" || unit === "â€”") return unitPreference === "lbs" ? "bodyweight" : "bodyweight";
     if (unitPreference === "lbs") return `${Math.round(value * 2.20462)} lbs`;
@@ -774,6 +853,20 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   useEffect(() => {
     setLanguage(getPreferredLanguage());
   }, []);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localTasks.length > 0) {
+      localStorage.setItem('workoutTabTasks', JSON.stringify(localTasks));
+      localStorage.setItem('workoutTabTasksLastReset', new Date().toDateString());
+    }
+  }, [localTasks]);
+
+  // Manual reset function
+  const handleResetLocalTasks = () => {
+    setLocalTasks((prev: LocalTask[]) => prev.map((t: LocalTask) => ({ ...t, completed: false })));
+    toast.success("All tasks reset");
+  };
 
   const normalizedWorkouts = (Array.isArray(dbWorkouts) && dbWorkouts.length > 0
     ? dbWorkouts
@@ -866,17 +959,11 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         </div>
       )}
 
-      {/* FloatingRestTimer removed — use compact timer per workout instead */}
-
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Dumbbell size={isMobile ? 20 : 24} color="#7CFC00" />
           <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#FFFFFF" }}>Your Workouts</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: isMobile ? "6px 10px" : "8px 12px" }}>
-          <Zap size={isMobile ? 12 : 14} color="#F59E0B" />
-          <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: "#F59E0B" }}>{streak}-Day Streak{isMobile ? "" : ` • ${formatWeight(80, "kg")}`}</span>
         </div>
       </div>
 
@@ -1013,6 +1100,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 onExerciseChange={handleExerciseChange}
                 onEdit={() => { setEditingWorkout(w); setIsModalOpen(true); }}
                 onQueueUndo={pushUndo}
+                updateWorkoutMutation={updateWorkoutMutation}
                 onDelete={() =>
                   showConfirmToast({
                     message: `Delete "${w.title}"?`,
@@ -1048,15 +1136,25 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             <Target size={isMobile ? 18 : 20} color="#7CFC00" />
             <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
             <span style={{ fontSize: isMobile ? 12 : 14, color: "var(--color-text-secondary)" }}>
-              {localTasks.filter(t => t.completed).length}/{localTasks.length}
+              {localTasks.filter((t: LocalTask) => t.completed).length}/{localTasks.length}
             </span>
           </div>
-          <button
-            onClick={() => setIsTasksModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: 4, color: "#7CFC00", fontSize: isMobile ? 11 : 12, fontWeight: 600, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.15)", cursor: "pointer", borderRadius: 8, padding: isMobile ? "6px 10px" : "6px 12px" }}
-          >
-            <Edit3 size={isMobile ? 12 : 14} /> Edit
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {localTasks.some((t: LocalTask) => t.completed) && (
+              <button
+                onClick={handleResetLocalTasks}
+                style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-secondary)", fontSize: isMobile ? 11 : 12, fontWeight: 600, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", borderRadius: 8, padding: isMobile ? "6px 10px" : "6px 12px" }}
+              >
+                <RotateCcw size={isMobile ? 12 : 14} /> Reset
+              </button>
+            )}
+            <button
+              onClick={() => setIsTasksModalOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 4, color: "#7CFC00", fontSize: isMobile ? 11 : 12, fontWeight: 600, background: "rgba(124,252,0,0.08)", border: "1px solid rgba(124,252,0,0.15)", cursor: "pointer", borderRadius: 8, padding: isMobile ? "6px 10px" : "6px 12px" }}
+            >
+              <Edit3 size={isMobile ? 12 : 14} /> Edit
+            </button>
+          </div>
         </div>
 
         {/* Task Filter — horizontal scroll on mobile */}
@@ -1084,7 +1182,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         </div>
 
         {/* Tasks List — compact on mobile */}
-        {localTasks.map((task, i) => (
+        {localTasks.map((task: LocalTask, i: number) => (
           <motion.div
             key={task.id}
             initial={{ opacity: 0, x: -10 }}
@@ -1100,7 +1198,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           >
             <button
               onClick={() => {
-                setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+                setLocalTasks((prev: LocalTask[]) => prev.map((t: LocalTask) => t.id === task.id ? { ...t, completed: !t.completed } : t));
               }}
               style={{
                 width: isMobile ? 24 : 20,
@@ -1359,7 +1457,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const updatedTasks = localTasks.map(t => ({
+                const updatedTasks = localTasks.map((t: LocalTask) => ({
                   ...t,
                   title: formData.get(`task-${t.id}-title`) as string,
                   priority: formData.get(`task-${t.id}-pri`) as string,
@@ -1368,9 +1466,9 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 setIsTasksModalOpen(false);
               }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 20 : 24 }}>
-                  {localTasks.map(task => (
+                  {localTasks.map((task: LocalTask) => (
                     <div key={task.id} style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 8, background: "rgba(255,255,255,0.03)", padding: isMobile ? "12px" : "10px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                      <button type="button" onClick={() => setLocalTasks(prev => prev.filter(p => p.id !== task.id))} style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", minWidth: isMobile ? 36 : 28, minHeight: isMobile ? 44 : 32, justifyContent: "center" }}>
+                      <button type="button" onClick={() => setLocalTasks((prev: LocalTask[]) => prev.filter((p: LocalTask) => p.id !== task.id))} style={{ color: "#EF4444", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", minWidth: isMobile ? 36 : 28, minHeight: isMobile ? 44 : 32, justifyContent: "center" }}>
                         <Trash2 size={isMobile ? 18 : 16} />
                       </button>
                       <input name={`task-${task.id}-title`} defaultValue={task.title} style={{ flex: 1, padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: "8px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 36 }} />
@@ -1384,7 +1482,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 </div>
                 
                 <button type="button" onClick={() => {
-                  setLocalTasks(prev => [...prev, { id: Date.now(), title: "New Task", completed: false, priority: "medium" }]);
+                  setLocalTasks((prev: LocalTask[]) => [...prev, { id: Date.now(), title: "New Task", completed: false, priority: "medium" }]);
                 }} style={{ width: "100%", padding: isMobile ? "14px" : "12px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: 12, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 20 : 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: isMobile ? 48 : 40 }}>
                   <Plus size={isMobile ? 18 : 16} /> Add Task
                 </button>

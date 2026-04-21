@@ -408,7 +408,6 @@ export function WorkoutExerciseCard({
                 >
                   {[
                     { label: "Edit exercise", icon: "✏️", action: "edit" },
-                    { label: "Replace exercise", icon: "🔄", action: "replace" },
                     { label: "Skip exercise", icon: "⏭️", action: "skip" },
                     { label: "Add note", icon: "📝", action: "note" },
                     { label: "Remove", icon: "🗑️", action: "remove" },

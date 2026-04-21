@@ -68,7 +68,7 @@ export default function ClientLoginPage() {
           setMemberAuth(member.membership_code, member);
           setMemberName(member.name);
           setLoginSuccess(true);
-          setTimeout(() => router.push("/client/dashboard"), 1200);
+          setTimeout(() => router.replace("/client/dashboard"), 1200);
         },
         onError: (err) => {
           setError(err.message || "Member not found. Please check your code.");

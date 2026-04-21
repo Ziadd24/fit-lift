@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, BarChart2, Eye, EyeOff, Flame, Info, Plus, Signal, Star, Target, TrendingDown, TrendingUp, Trophy, WifiOff, Zap } from "lucide-react";
+import { Activity, BarChart2, Eye, EyeOff, Flame, Info, Plus, Signal, Star, Target, TrendingDown, TrendingUp, Trophy, Trash, WifiOff, Zap } from "lucide-react";
 import { useProgressDashboard, type CoachGoal } from "@/lib/use-progress-dashboard";
 import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
 import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
@@ -150,32 +150,6 @@ function TrendChart({
   );
 }
 
-function promptForMetric() {
-  const metric = window.prompt("Metric name", "Body Weight");
-  if (!metric) return null;
-  const valueRaw = window.prompt("Value", "78.4");
-  if (!valueRaw) return null;
-  const unit = window.prompt("Unit", metric === "Body Fat" ? "%" : "kg") || "";
-  const source = window.prompt("Source", "manual") || "manual";
-  return { metric, value: Number(valueRaw), unit, source, note: null };
-}
-
-function promptForRecord() {
-  const exercise = window.prompt("Exercise", "Squat");
-  if (!exercise) return null;
-  const weight = window.prompt("Best weight", "120");
-  if (!weight) return null;
-  const videoUrl = window.prompt("Video evidence URL (optional)", "") || null;
-  const notes = window.prompt("Notes (optional)", "") || null;
-  return { exercise, weight: Number(weight), unit: "kg", videoUrl, notes };
-}
-
-function promptForGoals(goals: Array<CoachGoal & { current: number; completion: number; risk: string }>) {
-  return goals.map((goal) => {
-    const nextValue = window.prompt(`${goal.label} target (${goal.unit || "value"})`, String(goal.target));
-    return { ...goal, target: nextValue ? Number(nextValue) : goal.target };
-  }).map(({ current, completion, risk, ...goal }) => goal);
-}
 
 export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolean; memberId?: number }) {
   const {
@@ -186,6 +160,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
     selectedPoint,
     selectedPointKey,
     bodyMetricCards,
+    profile,
     personalRecords,
     goals,
     goalHistory,
@@ -202,6 +177,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
     setShowComparison,
     setSelectedPointKey,
     addBodyMetric,
+    deleteBodyMetric,
     addPersonalRecord,
     saveGoals,
   } = useProgressDashboard(memberId);
@@ -251,14 +227,12 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
             <span>{tone.label}</span>
             {pendingCount > 0 && <span style={{ color: "#FFFFFF" }}>{pendingCount} pending</span>}
           </div>
-          <button onClick={async () => { const metric = promptForMetric(); if (metric) await addBodyMetric(metric); }} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white" aria-label="Add a new body metric">
-            <span className="inline-flex items-center gap-2"><Plus size={14} /> Add metric</span>
-          </button>
-          <button onClick={async () => { const record = promptForRecord(); if (record) await addPersonalRecord(record); }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]" aria-label="Add a new personal record">
-            <span className="inline-flex items-center gap-2"><Trophy size={14} /> Add PR</span>
+          <button onClick={async () => { const weight = window.prompt("Enter your weight (kg)", ""); if (weight && !isNaN(Number(weight))) { try { await addBodyMetric({ metric: "Body Weight", value: Number(weight), unit: "kg", source: "manual", note: null }); alert("Weight saved!"); } catch (e) { alert("Error saving weight. Please try again."); } } }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]" aria-label="Add weight">
+            <span className="inline-flex items-center gap-2"><Plus size={14} /> Add Weight</span>
           </button>
         </div>
       </div>
+      <div style={{ fontSize: 12, color: "#5A5A5A", marginTop: 4 }}>Click "Add Weight" to log your body weight. Track progress over time in the chart below.</div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
@@ -285,6 +259,88 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
           </motion.div>
         ))}
       </div>
+
+      {/* Weight Tracking Section */}
+      {bodyMetricCards && bodyMetricCards.length > 0 && (
+        <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: 20 }}>
+          {(() => {
+            const weightCard = bodyMetricCards.find((m) => m.label === "Body Weight");
+            if (!weightCard) return null;
+            const points = weightCard.history || [];
+            const hasEnoughData = points.length >= 2;
+            return (
+              <>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <TrendingDown size={20} color="#7CFC00" />
+                    <span style={{ color: "#FFFFFF", fontSize: 16, fontWeight: 700 }}>Weight Progress</span>
+                  </div>
+                  <div style={{ color: "#8B8B8B", fontSize: 13 }}>
+                    {weightCard.latest?.value} {weightCard.latest?.unit}
+                  </div>
+                </div>
+                
+                {/* Simple Weight Chart */}
+                <div style={{ height: 120, marginBottom: 16 }}>
+                  {!hasEnoughData ? (
+                    <div style={{ color: "#5A5A5A", fontSize: 13, textAlign: "center", padding: 40 }}>
+                      Add at least 2 weight entries to see your trend chart
+                    </div>
+                  ) : (
+                    (() => {
+                      const chartPoints = points.slice(-7);
+                      const min = Math.min(...chartPoints);
+                      const max = Math.max(...chartPoints);
+                      const range = max - min || 1;
+                      const width = 280;
+                      const height = 80;
+                      const path = chartPoints.map((value, index) => {
+                        const x = (index / Math.max(chartPoints.length - 1, 1)) * width;
+                        const y = height - ((value - min) / range) * (height - 10) - 5;
+                        return `${index === 0 ? "M" : "L"}${x},${y}`;
+                      }).join(" ");
+                      
+                      return (
+                        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "100%" }}>
+                          <path d={path} fill="none" stroke="#7CFC00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                          {chartPoints.map((value, index) => {
+                            const x = (index / Math.max(chartPoints.length - 1, 1)) * width;
+                            const y = height - ((value - min) / range) * (height - 10) - 5;
+                            return <circle key={index} cx={x} cy={y} r={4} fill="#7CFC00" />;
+                          })}
+                        </svg>
+                      );
+                    })()
+                  )}
+                </div>
+
+                {/* Recent Weight History */}
+                <div>
+                  <div style={{ fontSize: 11, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Recent Entries</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(() => {
+                      const weightMetrics = (profile?.body_metrics || []).filter((m: any) => m.metric === "Body Weight").slice(-5).reverse();
+                      return weightMetrics.map((entry: any) => (
+                        <div key={entry.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10 }}>
+                          <span style={{ color: "#8B8B8B", fontSize: 13 }}>
+                            {entry.recordedAt ? new Date(entry.recordedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Unknown"}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: 14 }}>{entry.value} {entry.unit}</span>
+                            <button onClick={() => deleteBodyMetric(entry.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#5A5A5A" }} aria-label="Delete weight entry">
+                              <Trash size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

@@ -763,6 +763,12 @@ export function useProgressDashboard(memberId?: number) {
     await saveProfilePatch({ body_metrics: nextMetrics });
   }, [derived.profile, saveProfilePatch]);
 
+  const deleteBodyMetric = useCallback(async (metricId: string) => {
+    if (!derived.profile) return;
+    const nextMetrics = derived.profile.body_metrics.filter((m) => m.id !== metricId);
+    await saveProfilePatch({ body_metrics: nextMetrics });
+  }, [derived.profile, saveProfilePatch]);
+
   const saveGoals = useCallback(async (goals: CoachGoal[]) => {
     if (!derived.profile) return;
     await saveProfilePatch({ coach_goals: goals });
@@ -796,6 +802,7 @@ export function useProgressDashboard(memberId?: number) {
     setSelectedPointKey,
     saveGoals,
     addBodyMetric,
+    deleteBodyMetric,
     addPersonalRecord,
     flushQueue,
     isLoading: profileQuery.isLoading || workoutsLoading || calorieLoading,
