@@ -349,10 +349,7 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                     </div>
                   </div>
                   <a
-                    href={upload.file_url}
-                    download={upload.file_name}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`${upload.file_url}?download=${encodeURIComponent(upload.file_name)}`}
                     className={`${isMobile ? "flex items-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs" : "flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm"} transition-all hover:opacity-80`}
                     style={{
                       background: "rgba(124,252,0,0.15)",

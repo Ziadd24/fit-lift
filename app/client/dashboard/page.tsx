@@ -1510,7 +1510,11 @@ export default function ClientDashboard() {
   const [taskFilter, setTaskFilter] = useState("all");
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
   const { currentMember, logoutMember } = useAuth();
-  const memberName = currentMember?.name ?? "Member";
+  const memberName = (() => {
+  const name = currentMember?.name ?? "Member";
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 2 ? `${parts[0]} ${parts[1]}` : name;
+})();
   const memberCode = currentMember?.membership_code ?? "";
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
   const isPrivate = hasPrivateAccess(currentMember?.membership_type);
@@ -2206,13 +2210,16 @@ export default function ClientDashboard() {
                 marginBottom: 24,
               }}
             >
-              {/* Top: Greeting + Badges */}
+            {/* Top: Greeting + Badges */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                     <div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", lineHeight: 1.2 }}>
-                        Hello, {memberName}
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#888888", lineHeight: 1.3 }}>
+                        أهلا
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.2, letterSpacing: 0.5 }}>
+                        {memberName}
                       </div>
                       {isPrivate && (
                         <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 3 }}>

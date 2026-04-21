@@ -247,6 +247,29 @@ export function WorkoutExerciseCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sync internal state when prop set count changes (e.g., after DB update from add/remove set)
+  const prevSetCountRef = useRef(initialExercise.sets.length);
+  const exerciseRef = useRef(exercise);
+  exerciseRef.current = exercise;
+
+  useEffect(() => {
+    const newCount = initialExercise.sets.length;
+    const oldCount = prevSetCountRef.current;
+    if (newCount !== oldCount) {
+      // Merge: preserve completion state for existing sets, use prop values for new ones
+      const currentExercise = exerciseRef.current;
+      const mergedSets = initialExercise.sets.map((newSet, idx) => {
+        const existing = currentExercise.sets[idx];
+        if (existing && idx < oldCount) {
+          return { ...newSet, completed: existing.completed };
+        }
+        return newSet;
+      });
+      setExercise({ ...initialExercise, sets: mergedSets });
+      prevSetCountRef.current = newCount;
+    }
+  }, [initialExercise]);
+
   const updateSet = (updated: ExerciseSet) => {
     const newSets = exercise.sets.map((s) =>
       s.id === updated.id ? updated : s
@@ -310,7 +333,6 @@ export function WorkoutExerciseCard({
 
   return (
     <motion.div
-      layout
       className="rounded-2xl overflow-hidden"
       style={{
         background: "rgba(18,18,22,0.95)",
@@ -439,27 +461,6 @@ export function WorkoutExerciseCard({
 
       {/* ── METADATA ROW ── */}
       <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          style={{
-            background: "rgba(124,252,0,0.1)",
-            color: "#7CFC00",
-            border: "1px solid rgba(124,252,0,0.2)",
-          }}
-        >
-          <Clock className="w-3 h-3" />
-          {exercise.durationMinutes}m
-        </div>
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            color: SECONDARY_TEXT_COLOR,
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          ⇌ {exercise.type}
-        </div>
 
         {/* Notes */}
         <div className="w-full mt-1">

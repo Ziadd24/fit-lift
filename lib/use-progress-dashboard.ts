@@ -197,17 +197,27 @@ function parseNumericReps(reps: unknown) {
 }
 
 function getCompletedSetCount(setEntry: Record<string, any>) {
+  // The DB stores sets as { exercise, sets: N, reps, weight, unit, done }
+  // "done" is exercise-level: true means ALL sets were completed by the user
+  if (typeof setEntry.done === "boolean" && setEntry.done) {
+    const totalSets = typeof setEntry.sets === "number" && setEntry.sets > 0 ? setEntry.sets : 1;
+    return totalSets;
+  }
+  // If there's a completedSets array (from newer format), use it
   if (Array.isArray(setEntry.completedSets)) {
     return setEntry.completedSets.filter(Boolean).length;
   }
-  if (typeof setEntry.sets === "number" && setEntry.done) return setEntry.sets;
+  // If sets count is 0 or negative, treat as no completion possible
+  if (typeof setEntry.sets === "number" && setEntry.sets <= 0) return 0;
   return 0;
 }
 
 function getTotalSetCount(setEntry: Record<string, any>) {
-  if (typeof setEntry.sets === "number") return setEntry.sets;
-  if (Array.isArray(setEntry.completedSets)) return setEntry.completedSets.length;
-  return 0;
+  if (typeof setEntry.sets === "number" && setEntry.sets > 0) return setEntry.sets;
+  if (Array.isArray(setEntry.completedSets)) return Math.max(setEntry.completedSets.length, 1);
+  // Guard against missing or malformed data
+  if (!setEntry.exercise && typeof setEntry.sets !== "number") return 0;
+  return 1;
 }
 
 function extractWorkoutStats(workouts: ClientWorkout[]) {
@@ -219,21 +229,27 @@ function extractWorkoutStats(workouts: ClientWorkout[]) {
   const completedWorkouts = workouts.filter((workout) => {
     if (workout.status === "completed" || workout.status === "done") return true;
     const sets = Array.isArray(workout.sets) ? workout.sets : [];
+    if (sets.length === 0) return false;
     return sets.some((entry) => getCompletedSetCount(entry as Record<string, any>) > 0);
   });
 
   workouts.forEach((workout) => {
     const sets = Array.isArray(workout.sets) ? workout.sets : [];
+    // Skip workouts with empty or malformed sets arrays
+    if (sets.length === 0) return;
     sets.forEach((entry) => {
       const row = entry as Record<string, any>;
       const setCount = getTotalSetCount(row);
       const doneCount = getCompletedSetCount(row);
+      // Skip entries with invalid set counts
+      if (setCount <= 0) return;
       const reps = parseNumericReps(row.reps);
       const weight = Number(row.weight || 0);
-      const exercise = typeof row.exercise === "string" ? row.exercise : "Exercise";
+      const exercise = typeof row.exercise === "string" && row.exercise.trim() ? row.exercise : "Exercise";
       totalSets += setCount;
       completedSets += doneCount;
-      totalVolume += Math.max(doneCount || setCount, 0) * reps * Math.max(weight, 0);
+      // Volume = completed sets * reps * weight (not total sets)
+      totalVolume += doneCount * reps * Math.max(weight, 0);
       const attempts = attemptsByExercise.get(exercise) || [];
       attempts.push({
         weight,
@@ -718,7 +734,7 @@ export function useProgressDashboard(memberId?: number) {
     const goalHistory = buildGoalHistory(profile?.coach_goals || [], period, chartPoints, calorieLogs, bodyMetricCards);
 
     const caloriesBurned = workouts.reduce((sum, workout) => sum + Number(workout.calories || 0), 0);
-    const efficiency = workoutStats.totalSets ? Math.round((workoutStats.completedSets / workoutStats.totalSets) * 100) : 0;
+    const efficiency = workoutStats.totalSets > 0 ? Math.round((workoutStats.completedSets / workoutStats.totalSets) * 100) : 0;
     const streak = computeStreak(workouts);
     const coachReviewCount = 0;
     const newCoachReviewCount = 0;

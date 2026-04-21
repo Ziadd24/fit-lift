@@ -74,9 +74,9 @@ const WORKOUTS = [
 ];
 
 const WEEK_PLAN = [
-  { day: "Mon", label: "Legs", done: true, color: "#7CFC00" },
-  { day: "Tue", label: "Rest", done: true, color: "#5A5A5A" },
-  { day: "Wed", label: "Upper", done: true, color: "#8B5CF6" },
+  { day: "Mon", label: "Legs", done: false, color: "#7CFC00" },
+  { day: "Tue", label: "Rest", done: false, color: "#5A5A5A" },
+  { day: "Wed", label: "Upper", done: false, color: "#8B5CF6" },
   { day: "Thu", label: "Cardio", done: false, color: "#F59E0B" },
   { day: "Fri", label: "Upper", done: false, color: "#8B5CF6" },
   { day: "Sat", label: "Legs", done: false, color: "#7CFC00" },
@@ -300,39 +300,99 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   );
 
   // Per-set completion state (array of booleans per exercise)
-  const [exerciseState, setExerciseState] = useState<{ completedSets: boolean[]; weight: number; nameStr: string; typeStr: string; duration: number }[]>(() =>
-    safeWorkoutSets.map((s: any) => ({
+  // Persisted in localStorage so checks survive page refresh until Finish is pressed
+  const setsStorageKey = `workoutSets_${workout.id}`;
+  type ExerciseStateEntry = { completedSets: boolean[]; weight: number; nameStr: string; typeStr: string; duration: number };
+  const [exerciseState, setExerciseState] = useState<ExerciseStateEntry[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(setsStorageKey);
+        if (saved) {
+          const parsed: ExerciseStateEntry[] = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length === safeWorkoutSets.length) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return safeWorkoutSets.map((s: any) => ({
       completedSets: Array(s.sets).fill(false),
       weight: s.weight ?? 0,
       nameStr: s.exercise,
       typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
       duration: 5,
-    }))
-  );
+    }));
+  });
 
   const exerciseStateRef = useRef(exerciseState);
   exerciseStateRef.current = exerciseState;
 
-  // Sync exerciseState when workout.sets changes (add/remove exercises)
+  // Persist set completion to localStorage whenever it changes
   useEffect(() => {
-    const currentLength = exerciseStateRef.current.length;
+    try {
+      localStorage.setItem(setsStorageKey, JSON.stringify(exerciseState));
+    } catch {}
+  }, [exerciseState, setsStorageKey]);
+
+  // Sync exerciseState when workout.sets changes (add/remove exercises OR set count changes)
+  // Uses JSON serialization to detect actual content changes, not just reference changes
+  const prevSetsJsonRef = useRef(JSON.stringify(safeWorkoutSets.map((s: any) => ({ exercise: s.exercise, sets: s.sets }))));
+
+  useEffect(() => {
+    const current = exerciseStateRef.current;
     const newLength = safeWorkoutSets.length;
+    const newSetsSignature = JSON.stringify(safeWorkoutSets.map((s: any) => ({ exercise: s.exercise, sets: s.sets })));
+
+    // Skip if the actual exercise structure hasn't changed (avoid wiping completion on refetch)
+    if (newSetsSignature === prevSetsJsonRef.current) return;
+    prevSetsJsonRef.current = newSetsSignature;
     
-    if (newLength > currentLength) {
+    if (newLength > current.length) {
       // Add new exercises with empty completion state
-      const newExercises = safeWorkoutSets.slice(currentLength).map((s: any) => ({
-        completedSets: Array(s.sets).fill(false),
+      const newExercises = safeWorkoutSets.slice(current.length).map((s: any) => ({
+        completedSets: Array(typeof s.sets === 'number' ? s.sets : 1).fill(false),
         weight: s.weight ?? 0,
         nameStr: s.exercise,
         typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
         duration: 5,
       }));
       setExerciseState(prev => [...prev, ...newExercises]);
-    } else if (newLength < currentLength) {
+    } else if (newLength < current.length) {
       // Remove exercises that no longer exist
       setExerciseState(prev => prev.slice(0, newLength));
+    } else {
+      // Same number of exercises — check if set counts changed per exercise
+      const needsUpdate = safeWorkoutSets.some((s: any, idx: number) => {
+        const expectedCount = typeof s.sets === 'number' ? s.sets : 1;
+        return !current[idx] || current[idx].completedSets.length !== expectedCount;
+      });
+      if (needsUpdate) {
+        setExerciseState(prev =>
+          safeWorkoutSets.map((s: any, idx: number) => {
+            const expectedCount = typeof s.sets === 'number' ? s.sets : 1;
+            const prevEntry = prev[idx];
+            if (!prevEntry) {
+              return {
+                completedSets: Array(expectedCount).fill(false),
+                weight: s.weight ?? 0,
+                nameStr: s.exercise,
+                typeStr: s.unit === "—" ? "Bodyweight" : "Bilateral",
+                duration: 5,
+              };
+            }
+            const oldLen = prevEntry.completedSets.length;
+            if (oldLen === expectedCount) return prevEntry;
+            // Preserve existing completion state where possible
+            const newCompleted = Array(expectedCount).fill(false);
+            for (let i = 0; i < Math.min(oldLen, expectedCount); i++) {
+              newCompleted[i] = prevEntry.completedSets[i];
+            }
+            return { ...prevEntry, completedSets: newCompleted };
+          })
+        );
+      }
     }
-  }, [safeWorkoutSets.length]);
+  }, [safeWorkoutSets.length, safeWorkoutSets]);
 
   const totalSets = exerciseState.reduce((a, e) => a + (e ? e.completedSets.length : 0), 0);
   const completedTotal = exerciseState.reduce((a, e) => a + (e ? e.completedSets.filter(Boolean).length : 0), 0);
@@ -351,8 +411,10 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
 
   const handleSetToggle = (exIdx: number, setIdx: number) => {
     setExerciseState(prev => {
+      const entry = prev[exIdx];
+      if (!entry || setIdx < 0 || setIdx >= entry.completedSets.length) return prev;
       const exerciseLabel = safeWorkoutSets[exIdx]?.exercise || `Exercise ${exIdx + 1}`;
-      const nextValue = !prev[exIdx]?.completedSets[setIdx];
+      const nextValue = !entry.completedSets[setIdx];
       const next = prev.map((e, i) => i === exIdx
         ? { ...e, completedSets: e.completedSets.map((v, j) => j === setIdx ? !v : v) }
         : e
@@ -365,50 +427,78 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     });
   };
 
-  const handleExerciseSetAction = ({ action, exerciseName, setId, previous, next }: any) => {
-    if (action === "complete" || action === "skip") {
-      const exerciseIndex = setsWithState.findIndex((item: any) => item.exercise === exerciseName);
-      if (exerciseIndex >= 0) {
-        setExerciseState(prev => {
-          const updated = prev.map((item, idx) =>
-            idx === setsWithState[exerciseIndex].originalIndex
-              ? {
-                  ...item,
-                  completedSets: item.completedSets.map((value, setIndex) =>
-                    setIndex === setId - 1 ? next.completed : value
-                  ),
-                }
-              : item
-          );
-          return updated;
-        });
+  const handleExerciseSetAction = ({ action, exerciseName, setId, previous, next, exerciseId, exerciseOrigIdx }: any) => {
+    if (action === "complete" || action === "skip" || action === "toggle") {
+      // Use the direct origIdx passed from the render - much more reliable
+      // than parsing from the exerciseId string
+      let targetOrigIdx = -1;
+      if (typeof exerciseOrigIdx === 'number' && exerciseOrigIdx >= 0) {
+        targetOrigIdx = exerciseOrigIdx;
+      } else {
+        // Fallback: try to match by exercise name + index combo
+        if (typeof exerciseId === 'string') {
+          const idx = safeWorkoutSets.findIndex((s: any) => (s.exercise + String(safeWorkoutSets.indexOf(s))) === exerciseId);
+          if (idx >= 0) {
+            targetOrigIdx = idx;
+          }
+        }
       }
+      if (targetOrigIdx < 0) return;
+
+      setExerciseState(prev => {
+        const entry = prev[targetOrigIdx];
+        if (!entry) return prev;
+        const setIndex = setId - 1;
+        if (setIndex < 0 || setIndex >= entry.completedSets.length) return prev;
+        // For toggle: flip the value. For complete/skip: use the specific value from next.
+        const newCompleted = action === "toggle"
+          ? !entry.completedSets[setIndex]
+          : next.completed;
+        return prev.map((item, idx) =>
+          idx === targetOrigIdx
+            ? {
+                ...item,
+                completedSets: item.completedSets.map((value, si) =>
+                  si === setIndex ? newCompleted : value
+                ),
+              }
+            : item
+        );
+      });
 
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(action === "complete" ? [30, 20, 30] : [20, 20, 20]);
+        if (action === "toggle") navigator.vibrate(30);
+        else navigator.vibrate(action === "complete" ? [30, 20, 30] : [20, 20, 20]);
       }
 
       queueUndo(
-        `${exerciseName} set ${setId} ${action === "complete" ? "completed" : "skipped"}`,
+        `${exerciseName} set ${setId} ${action === "complete" ? "completed" : action === "skip" ? "skipped" : "toggled"}`,
         () => {
-          const exerciseIndex = safeWorkoutSets.findIndex((set: any) => set.exercise === exerciseName);
-          if (exerciseIndex < 0) return;
-          setExerciseState(prev => prev.map((item, idx) =>
-            idx === exerciseIndex
-              ? {
-                  ...item,
-                  completedSets: item.completedSets.map((value, setIndex) =>
-                    setIndex === setId - 1 ? previous.completed : value
-                  ),
-                }
-              : item
-          ));
+          setExerciseState(prev => {
+            const entry = prev[targetOrigIdx];
+            if (!entry) return prev;
+            const setIndex = setId - 1;
+            if (setIndex < 0 || setIndex >= entry.completedSets.length) return prev;
+            return prev.map((item, idx) =>
+              idx === targetOrigIdx
+                ? {
+                    ...item,
+                    completedSets: item.completedSets.map((value, si) =>
+                      si === setIndex ? previous.completed : value
+                    ),
+                  }
+                : item
+            );
+          });
           setLiveAnnouncement(`${exerciseName}, set ${setId} restored.`);
         }
       );
 
+      const actionLabel = action === "toggle"
+        ? (next.completed ? "completed" : "marked incomplete")
+        : (action === "complete" ? "completed" : "skipped");
       setLiveAnnouncement(
-        `${exerciseName}, set ${setId} ${action === "complete" ? "completed" : "skipped"}.`
+        `${exerciseName}, set ${setId} ${actionLabel}.`
       );
     }
   };
@@ -436,13 +526,26 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
         message: `Remove ${exerciseName} from this workout?`,
         confirmLabel: "Remove",
         onConfirm: () => {
-          // Permanently remove from database - directly call mutation
-          const currentSets = workout.sets.filter((_: any, idx: number) => idx !== origIdx);
+          // Capture the current safeWorkoutSets snapshot at confirm time
+          // to avoid race condition between local state and server refetch
+          const currentWorkoutSets = Array.isArray(workout.sets) ? workout.sets : [];
+          const currentSets = currentWorkoutSets.filter((_: any, idx: number) => idx !== origIdx);
           updateWorkoutMutation.mutate({
             id: workout.id,
             data: { sets: currentSets },
           });
-          setExerciseState(prev => prev.filter((_: any, idx: number) => idx !== origIdx));
+          // Immediately update exerciseState AND prevSetsJsonRef in sync
+          // to prevent index misalignment during the refetch window
+          setExerciseState(prev => {
+            const next = prev.filter((_: any, idx: number) => idx !== origIdx);
+            // Update the ref to match the new state immediately
+            // so the useEffect doesn't try to re-sync with stale indices
+            exerciseStateRef.current = next;
+            return next;
+          });
+          // Update the signature ref to match the post-removal state
+          // This prevents the useEffect from firing with mismatched indices
+          prevSetsJsonRef.current = JSON.stringify(currentSets.map((s: any) => ({ exercise: s.exercise, sets: s.sets })));
           toast.success(`${exerciseName} removed.`);
         },
       });
@@ -463,31 +566,58 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     ));
   };
 
-  const handleFinishWorkout = () => {
-    // Reset workout to 'todo' so users can complete it again
+    const handleFinishWorkout = () => {
+    // Mark workout as completed in the database
+    const completedSets = workout.sets.map((s: any) => ({ ...s, done: true }));
     onExerciseChange?.(workout, 0, { 
       ...workout, 
-      status: "todo",
-      done: false,
-      sets: workout.sets 
+      status: "done",
+      sets: completedSets 
     });
     // Reset exercise completion state for next session
     setExerciseState(prev => prev.map(e => e ? { ...e, completedSets: e.completedSets.map(() => false) } : e));
+    // Clear persisted set state so checks don't survive after finishing
+    try { localStorage.removeItem(setsStorageKey); } catch {}
     // Close/collapse the workout after finishing
     setExpanded(false);
     toast.success(`${workout.title} finished! Great work!`);
   };
 
   // Merge state into sets for display
-  const setsWithState = safeWorkoutSets.map((s: any, i: number) => ({
-    ...s,
-    originalIndex: i,
-    completedSets: exerciseState[i]?.completedSets ?? [],
-    weight: exerciseState[i]?.weight ?? s.weight,
-    exercise: exerciseState[i]?.nameStr ?? s.exercise,
-    type: exerciseState[i]?.typeStr ?? "Bilateral",
-    durationMinutes: exerciseState[i]?.duration ?? 5,
-  })).filter((s:any) => exerciseState[s.originalIndex] !== null);
+  // Build a name-based lookup to handle cases where exerciseState and safeWorkoutSets
+  // have different lengths (e.g., during a remove operation before DB refetch)
+  const exerciseStateByName = new Map<string, typeof exerciseState[0]>();
+  exerciseState.forEach((entry, idx) => {
+    if (entry) {
+      // Use the DB exercise name as key for matching
+      const dbExercise = safeWorkoutSets[idx]?.exercise;
+      if (dbExercise) exerciseStateByName.set(dbExercise, entry);
+    }
+  });
+
+  const setsWithState = safeWorkoutSets.map((s: any, i: number) => {
+    // First try index-based lookup (normal case)
+    const byIndex = exerciseState[i];
+    // Then try name-based lookup (handles index misalignment after removal)
+    const byName = exerciseStateByName.get(s.exercise);
+    const matched = byIndex || byName;
+    return {
+      ...s,
+      originalIndex: i,
+      completedSets: matched?.completedSets ?? [],
+      weight: matched?.weight ?? s.weight,
+      exercise: matched?.nameStr ?? s.exercise,
+      type: matched?.typeStr ?? "Bilateral",
+      durationMinutes: matched?.duration ?? 5,
+    };
+  }).filter((s: any) => {
+    const state = exerciseState[s.originalIndex];
+    return state !== undefined && state !== null;
+  });
+
+  // Keep a ref to the latest setsWithState for use in callbacks (avoids stale closures)
+  const setsWithStateRef = useRef(setsWithState);
+  setsWithStateRef.current = setsWithState;
 
   return (
     <motion.div
@@ -528,9 +658,6 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
             </div>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 11 : 12 }}>
-                <Clock size={11} /> {workout.duration}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 11 : 12 }}>
                 <Flame size={11} color="#F59E0B" /> {workout.calories} kcal
               </div>
             </div>
@@ -554,27 +681,25 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
               {completionPct}%
             </div>
           </div>
-          {workout.status !== "done" && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleFinishWorkout(); }}
-              disabled={completionPct < 100}
-              style={{
-                marginLeft: 8,
-                padding: "6px 12px",
-                background: completionPct >= 100 ? "#7CFC00" : "rgba(124,252,0,0.3)",
-                color: completionPct >= 100 ? "#000" : "rgba(0,0,0,0.5)",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: completionPct >= 100 ? "pointer" : "not-allowed",
-                flexShrink: 0,
-                opacity: completionPct >= 100 ? 1 : 0.6,
-              }}
-            >
-              Finish
-            </button>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleFinishWorkout(); }}
+            disabled={completionPct < 100}
+            style={{
+              marginLeft: 8,
+              padding: "6px 12px",
+              background: completionPct >= 100 ? "#7CFC00" : "rgba(124,252,0,0.3)",
+              color: completionPct >= 100 ? "#000" : "rgba(0,0,0,0.5)",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: completionPct >= 100 ? "pointer" : "not-allowed",
+              flexShrink: 0,
+              opacity: completionPct >= 100 ? 1 : 0.6,
+            }}
+          >
+            Finish
+          </button>
           {expanded ? <ChevronUp size={16} color={SECONDARY_TEXT_COLOR} /> : <ChevronDown size={16} color={SECONDARY_TEXT_COLOR} />}
         </div>
 
@@ -626,24 +751,49 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
                     
                     return (
                       <WorkoutExerciseCard
-                        key={origIdx}
+                        key={`ex-${origIdx}-${ex.exercise}`}
                         exercise={exerciseData}
                         language={language}
                         onMenuAction={(action) => handleExerciseMenuAction(action, exerciseData.id, exerciseData.name, origIdx)}
-                        onSetAction={handleExerciseSetAction}
+                        onSetAction={(payload) => handleExerciseSetAction({ ...payload, exerciseId: exerciseData.id, exerciseOrigIdx: origIdx })}
                         onChange={(updated) => {
-                          let hasChanges = false;
-                          updated.sets.forEach((set, setIdx) => {
-                             if (set.completed !== ex.completedSets[setIdx]) {
-                               handleSetToggle(origIdx, setIdx);
-                               hasChanges = true;
-                             }
-                          });
+                          // NOTE: Completion state is handled exclusively by onSetAction → handleExerciseSetAction
+                          // to prevent double-toggle bugs. This handler only deals with structural changes.
+
+                          // Detect and sync set count changes (add/remove sets)
+                          const newSetCount = updated.sets.length;
+                          const oldSetCount = ex.completedSets.length;
+                          if (newSetCount !== oldSetCount) {
+                            // Update exerciseState to match the new set count
+                            setExerciseState(prev => {
+                              const entry = prev[origIdx];
+                              if (!entry) return prev;
+                              const newCompleted = Array(newSetCount).fill(false);
+                              for (let i = 0; i < Math.min(oldSetCount, newSetCount); i++) {
+                                newCompleted[i] = updated.sets[i]?.completed || entry.completedSets[i] || false;
+                              }
+                              // Also handle any remaining completed from the updated.sets
+                              for (let i = 0; i < newSetCount; i++) {
+                                if (updated.sets[i]?.completed) newCompleted[i] = true;
+                              }
+                              return prev.map((e, idx) => idx === origIdx ? { ...e, completedSets: newCompleted } : e);
+                            });
+                            // Persist the new set count to the DB
+                            const dbSets = [...workout.sets];
+                            if (dbSets[origIdx]) {
+                              dbSets[origIdx] = { ...dbSets[origIdx], sets: newSetCount };
+                              onExerciseChange?.(workout, origIdx, { ...workout, sets: dbSets });
+                            }
+                          }
                           // Auto-save when all sets in exercise are completed
-                          if (hasChanges && updated.sets.every((s: any) => s.completed)) {
+                          if (updated.sets.length > 0 && updated.sets.every((s: any) => s.completed)) {
                             const currentSets = [...workout.sets];
-                            currentSets[origIdx] = { ...currentSets[origIdx], done: true };
-                            onExerciseChange?.(workout, origIdx, { ...workout, sets: currentSets });
+                            if (currentSets[origIdx]) {
+                              // Use the DB set count, falling back to updated.sets length
+                              const dbSetCount = currentSets[origIdx].sets || updated.sets.length;
+                              currentSets[origIdx] = { ...currentSets[origIdx], done: true, sets: dbSetCount };
+                              onExerciseChange?.(workout, origIdx, { ...workout, sets: currentSets });
+                            }
                           }
                         }}
                       />
@@ -751,7 +901,22 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   const [editingWorkout, setEditingWorkout] = useState<any>(null);
   
   const [isWeeklyPlanModalOpen, setIsWeeklyPlanModalOpen] = useState(false);
-  const [localWeekPlan, setLocalWeekPlan] = useState(WEEK_PLAN);
+  const [localWeekPlan, setLocalWeekPlan] = useState(() => {
+    if (typeof window === 'undefined') return WEEK_PLAN;
+    const saved = localStorage.getItem('workoutTabWeekPlan');
+    const version = localStorage.getItem('workoutTabWeekPlanVersion');
+    // Version "2" ensures stale data with hardcoded done:true values is cleared
+    if (saved && version === '2') {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 7) return parsed;
+      } catch {}
+    }
+    // Clear stale data and start fresh with all days unchecked
+    localStorage.removeItem('workoutTabWeekPlan');
+    localStorage.setItem('workoutTabWeekPlanVersion', '2');
+    return WEEK_PLAN;
+  });
 
   // Load tasks from localStorage or use defaults
   const [localTasks, setLocalTasks] = useState(() => {
@@ -839,6 +1004,14 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     }
   }, [localTasks]);
 
+  // Save weekly plan to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localWeekPlan.length > 0) {
+      localStorage.setItem('workoutTabWeekPlan', JSON.stringify(localWeekPlan));
+      localStorage.setItem('workoutTabWeekPlanVersion', '2');
+    }
+  }, [localWeekPlan]);
+
   // Manual reset function
   const handleResetLocalTasks = () => {
     setLocalTasks((prev: LocalTask[]) => prev.map((t: LocalTask) => ({ ...t, completed: false })));
@@ -879,15 +1052,52 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   }, [language, updateWorkoutMutation]);
 
   const handleExerciseChange = useCallback((workout: any, exerciseIndex: number, updated: any) => {
+    // If the updated object comes from handleFinishWorkout (has status field), handle differently
+    if (updated.status) {
+      updateWorkoutMutation.mutate(
+        {
+          id: workout.id,
+          data: {
+            status: updated.status,
+            sets: updated.sets,
+          },
+        },
+        {
+          onError: (error) => {
+            toast.error(getErrorMessage(error, isArabicLanguage(language) ? "تعذر تحديث التمرين الآن." : "Couldn't update workout right now."));
+          },
+        }
+      );
+      return;
+    }
+
     const currentSets = Array.isArray(workout.sets) ? [...workout.sets] : [];
+    // Use the most common reps/weight across all sets, falling back to set #0
+    const allSets = Array.isArray(updated.sets) ? updated.sets : [];
+    const firstSet = allSets[0] || {};
+    // Find the most frequently used reps and weight values
+    const repsCount: Record<string, number> = {};
+    const weightCount: Record<number, number> = {};
+    allSets.forEach((s: any) => {
+      if (s.reps != null) {
+        const key = String(s.reps);
+        repsCount[key] = (repsCount[key] || 0) + 1;
+      }
+      if (s.kg != null) {
+        weightCount[s.kg] = (weightCount[s.kg] || 0) + 1;
+      }
+    });
+    const mostCommonReps = Object.entries(repsCount).sort((a, b) => b[1] - a[1])[0]?.[0] || String(firstSet.reps ?? 10);
+    const mostCommonWeight = Object.entries(weightCount).sort((a, b) => b[1] - a[1])[0]?.[0] || Number(firstSet.kg ?? 0);
+
     currentSets[exerciseIndex] = {
       ...(currentSets[exerciseIndex] || {}),
       exercise: updated.name,
-      sets: updated.sets.length,
-      reps: String(updated.sets[0]?.reps ?? 10),
-      weight: Number(updated.sets[0]?.kg ?? 0),
+      sets: allSets.length,
+      reps: mostCommonReps,
+      weight: Number(mostCommonWeight),
       unit: currentSets[exerciseIndex]?.unit || "kg",
-      done: updated.sets.length > 0 && updated.sets.every((set: any) => Boolean(set.completed)),
+      done: allSets.length > 0 && allSets.every((set: any) => Boolean(set.completed)),
     };
 
     updateWorkoutMutation.mutate(
@@ -963,18 +1173,24 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             return (
               <div key={day.day} className="flex-shrink-0 w-[50px] flex flex-col items-center gap-2">
                 <div style={{ fontSize: 11, color: isToday ? "#7CFC00" : "#5A5A5A", fontWeight: isToday ? 700 : 400 }}>{day.day}</div>
-                <div style={{
-                  width: "100%", padding: "10px 0", borderRadius: 10,
-                  background: isToday ? "rgba(124,252,0,0.1)" : "rgba(255,255,255,0.03)",
-                  border: isToday ? "1px solid rgba(124,252,0,0.3)" : "1px solid rgba(255,255,255,0.04)",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative",
-                }}>
+                <button
+                  onClick={() => setLocalWeekPlan(prev => prev.map((d, idx) => idx === i ? { ...d, done: !d.done } : d))}
+                  aria-label={`${day.done ? "Unmark" : "Mark"} ${day.day} as done`}
+                  aria-pressed={day.done}
+                  style={{
+                    width: "100%", padding: "10px 0", borderRadius: 10,
+                    background: day.done ? "rgba(124,252,0,0.08)" : isToday ? "rgba(124,252,0,0.1)" : "rgba(255,255,255,0.03)",
+                    border: isToday ? "1px solid rgba(124,252,0,0.3)" : day.done ? "1px solid rgba(124,252,0,0.2)" : "1px solid rgba(255,255,255,0.04)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative",
+                    cursor: "pointer", transition: "background 0.15s, border-color 0.15s",
+                  }}
+                >
                   {day.done
                     ? <CheckCircle2 size={18} color="#7CFC00" strokeWidth={2.5} />
                     : <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)" }} />
                   }
-                  <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : "#5A5A5A", textAlign: "center", lineHeight: 1.2 }}>{day.label}</span>
-                </div>
+                  <span style={{ fontSize: 9, color: isToday ? "#7CFC00" : day.done ? "#7CFC00" : "#5A5A5A", textAlign: "center", lineHeight: 1.2 }}>{day.label}</span>
+                </button>
               </div>
             );
           })}
@@ -1272,15 +1488,10 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 setWorkoutFormError(null);
                 const formData = new FormData(e.currentTarget);
                 const title = String(formData.get("title") || "").trim();
-                const duration = String(formData.get("duration") || "").trim();
                 const caloriesRaw = String(formData.get("calories") || "").trim();
                 const calories = parseInt(caloriesRaw, 10);
                 if (title.length < 3) {
                   setWorkoutFormError("Workout title should be at least 3 characters.");
-                  return;
-                }
-                if (!duration) {
-                  setWorkoutFormError("Add a duration like 45 min.");
                   return;
                 }
                 if (Number.isNaN(calories) || calories <= 0) {
@@ -1289,7 +1500,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 }
                 const data = {
                   title,
-                  duration,
+                  duration: "—",
                   calories,
                   status: "todo", difficulty: "Medium",
                   muscles: ["Unknown"],
@@ -1326,7 +1537,6 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 )}
                 {[
                   { name: "title", label: isArabicLanguage(language) ? "عنوان التدريب" : "Workout Title", type: "text", def: editingWorkout?.title || "" },
-                  { name: "duration", label: isArabicLanguage(language) ? "المدة" : "Duration", type: "text", def: editingWorkout?.duration || "45 min" },
                   { name: "calories", label: isArabicLanguage(language) ? "السعرات (kcal)" : "Calories (kcal)", type: "number", def: editingWorkout?.calories || 300 },
                 ].map(f => (
                   <div key={f.name} style={{ marginBottom: isMobile ? 14 : 16 }}>

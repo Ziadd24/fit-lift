@@ -53,7 +53,6 @@ const DEMO_LOGS = [
   },
 ];
 
-const FAVORITE_FOODS = ["Chicken 200g", "Protein Shake", "Rice 1 cup", "Banana"];
 const PORTION_MULTIPLIERS = [0.5, 1, 1.5, 2];
 
 function getFriendlyNutritionError(error: unknown) {
@@ -315,10 +314,20 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
       .filter((entry, index, array) => array.findIndex((candidate) => candidate.label === entry.label) === index)
       .slice(0, 6);
   }, [resolvedLogs]);
-  const favoriteQuickFoods = useMemo(
-    () => QUICK_FOODS.filter((entry) => FAVORITE_FOODS.includes(entry.label)),
-    []
-  );
+  const favoriteQuickFoods = useMemo(() => {
+  return resolvedLogs
+    .slice()
+    .sort((a: any, b: any) => (b.created_at || 0) - (a.created_at || 0))
+    .map((entry: any) => ({
+      label: entry.result?.display_title ?? entry.meal,
+      text: entry.meal,
+    }))
+    .filter(
+      (entry, index, array) =>
+        array.findIndex((c) => c.text === entry.text) === index
+    )
+    .slice(0, 5);
+}, [resolvedLogs]);
 
   const getMealCategory = (ts: number) => {
     const h = new Date(ts).getHours();
@@ -544,7 +553,9 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
       <div style={{ background: "rgba(124,252,0,0.05)", border: "1px solid rgba(124,252,0,0.2)", borderRadius: 16, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <Sparkles size={17} color="#7CFC00" />
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>Log a Meal</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>
+  Log a Meal <em style={{ fontWeight: 700, color: "var(--color-text-secondary)", fontSize: 13 }}>(demo)</em>
+</span>
         </div>
         <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 14 }}>
           Describe what you ate or tap a suggestion below — AI calculates macros instantly.
@@ -580,27 +591,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Scan food photo with AI"
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 18,
-              background: "rgba(124,252,0,0.12)",
-              border: "1px solid rgba(124,252,0,0.24)",
-              color: "#7CFC00",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: 56,
-              minHeight: 56,
-            }}
-          >
-            <Camera size={22} />
-          </button>
+          
         </div>
 
         <div
@@ -791,69 +782,37 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         }
       >
       <div className="space-y-4">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <h2 className="text-white text-lg font-bold mb-0">Today's Meals</h2>
-          <button
-            type="button"
-            onClick={() => setShowAllMeals((value) => !value)}
-            style={{
-              minHeight: 40,
-              padding: "8px 12px",
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: showAllMeals ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.04)",
-              color: showAllMeals ? "#D9FFBF" : "var(--color-text-secondary)",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-            aria-pressed={showAllMeals}
-          >
-            {showAllMeals ? "Show Current Meal" : "See All Meals"}
-          </button>
-        </div>
-        <MealSection
-          title="Breakfast"
-          icon={<Apple size={16} color="#F59E0B" />}
-          meals={mealsByCategory.breakfast}
-          color="#F59E0B"
-          expanded={showAllMeals || expandedMealSection === "breakfast"}
-          onToggle={() => setExpandedMealSection((current) => current === "breakfast" && !showAllMeals ? "" : "breakfast")}
-        />
-        <MealSection
-          title="Lunch"
-          icon={<Apple size={16} color="#7CFC00" />}
-          meals={mealsByCategory.lunch}
-          color="#7CFC00"
-          expanded={showAllMeals || expandedMealSection === "lunch"}
-          onToggle={() => setExpandedMealSection((current) => current === "lunch" && !showAllMeals ? "" : "lunch")}
-        />
-        <MealSection
-          title="Dinner"
-          icon={<Apple size={16} color="#8B5CF6" />}
-          meals={mealsByCategory.dinner}
-          color="#8B5CF6"
-          expanded={showAllMeals || expandedMealSection === "dinner"}
-          onToggle={() => setExpandedMealSection((current) => current === "dinner" && !showAllMeals ? "" : "dinner")}
-        />
-        <MealSection
-          title="Snacks"
-          icon={<Apple size={16} color="#10B981" />}
-          meals={mealsByCategory.snack}
-          color="#10B981"
-          expanded={showAllMeals || expandedMealSection === "snack"}
-          onToggle={() => setExpandedMealSection((current) => current === "snack" && !showAllMeals ? "" : "snack")}
-        />
+  <h2 className="text-white text-lg font-bold mb-0">Today's Meals</h2>
 
-        {resolvedLogs.length === 0 && (
-          <div className="bg-[#16161A] border border-white/5 rounded-xl p-8 text-center">
-            <Apple size={32} color="var(--color-text-secondary)" className="mx-auto mb-3" />
-            <p className="text-[var(--color-text-secondary)] text-sm">
-              Your nutrition log is empty for now. Start with one meal above and the dashboard will build your daily picture automatically.
-            </p>
+  {resolvedLogs.length === 0 ? (
+    <div className="bg-[#16161A] border border-white/5 rounded-xl p-8 text-center">
+      <Apple size={32} color="var(--color-text-secondary)" className="mx-auto mb-3" />
+      <p className="text-[var(--color-text-secondary)] text-sm">
+        Your nutrition log is empty for now. Start with one meal above and the dashboard will build your daily picture automatically.
+      </p>
+    </div>
+  ) : (
+    resolvedLogs
+      .slice()
+      .sort((a: any, b: any) => (b.created_at || 0) - (a.created_at || 0))
+      .map((meal: any, index: number) => (
+        <div key={meal.id || index} className="bg-[#16161A] border border-white/5 rounded-xl p-4">
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-white text-sm font-medium">{meal.result?.display_title ?? meal.meal}</p>
+            <span className="text-[#7CFC00] text-sm font-bold">
+              {meal.result?.totals?.calories || 0} kcal
+            </span>
           </div>
-        )}
-      </div>
+          <p className="text-[var(--color-text-secondary)] text-xs mb-2">{meal.meal}</p>
+          <div className="flex gap-4 text-xs text-[var(--color-text-secondary)]">
+            <span>P: {meal.result?.totals?.protein || 0}g</span>
+            <span>C: {meal.result?.totals?.carbs || 0}g</span>
+            <span>F: {meal.result?.totals?.fat || 0}g</span>
+          </div>
+        </div>
+      ))
+  )}
+</div>
       </LazyRenderSection>
     </div>
   );
