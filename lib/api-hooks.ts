@@ -836,3 +836,34 @@ export function useDeleteWorkout() {
     }
   });
 }
+
+export function useListWeeklyPlans(memberId?: number) {
+  return useQuery<any[]>({
+    queryKey: ["weekly_plans", memberId],
+    queryFn: async () => {
+      const qs = memberId ? `?member_id=${memberId}` : "";
+      const res = await fetch(`/api/weekly-plans${qs}`);
+      if (!res.ok) throw new Error("Failed to fetch weekly plans");
+      return res.json();
+    },
+    enabled: !!memberId,
+  });
+}
+
+export function useSaveWeeklyPlan() {
+  const queryClient = useQueryClient();
+  return useMutation<any[], Error, { member_id: number; plans: any[] }>({
+    mutationFn: async ({ member_id, plans }) => {
+      const res = await fetch("/api/weekly-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member_id, plans }),
+      });
+      if (!res.ok) throw new Error("Failed to save weekly plan");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["weekly_plans"] });
+    }
+  });
+}

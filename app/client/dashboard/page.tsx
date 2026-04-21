@@ -2012,17 +2012,20 @@ export default function ClientDashboard() {
           >
             <div
               style={{
-                width: 40,
-                height: 40,
-                background: "rgba(124,252,0,0.1)",
-                border: "1px solid rgba(124,252,0,0.3)",
-                borderRadius: 12,
+                width: 48,
+                height: 48,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                overflow: "hidden",
+                flexShrink: 0,
               }}
             >
-              <Dumbbell size={20} color="#7CFC00" />
+              <img
+                src="/images/logo.png"
+                alt="Fit & Lift"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
             </div>
             <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "2px", color: "#FFFFFF" }}>
               FIT & LIFT
