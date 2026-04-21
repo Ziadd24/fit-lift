@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Apple, Camera, Loader2, Sparkles, Send, CheckCircle, AlertCircle, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Apple, Camera, Loader2, Sparkles, Send, CheckCircle, AlertCircle, X, ChevronDown, ChevronUp, Pencil, Settings } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useListCalorieLogs, useSaveCalorieLog } from "@/lib/api-hooks";
+import { useAuth } from "@/lib/use-auth";
 import { useNutritionRealtime } from "@/lib/use-nutrition-realtime";
 import { CalorieMarkerCard } from "@/components/ui/CalorieMarkerCard";
 import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
@@ -213,6 +215,78 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
   const [logExpanded, setLogExpanded] = useState(false);
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const { disableHeavyAnimations } = useDashboardMotion();
+  const queryClient = useQueryClient();
+  const { memberCode, currentMember } = useAuth();
+
+  // ── Nutrition Goals ──
+  const [editingGoals, setEditingGoals] = useState(false);
+  const [goalDraft, setGoalDraft] = useState({ calories: 2200, protein: 180, carbs: 220, fat: 70 });
+  const [savingGoals, setSavingGoals] = useState(false);
+
+  const token = memberCode || currentMember?.membership_code || "";
+  const { data: progressProfile } = useQuery({
+    queryKey: ["progress_profile", memberId],
+    queryFn: async () => {
+      const qs = memberId ? `?memberId=${memberId}` : "";
+      const res = await fetch(`/api/progress${qs}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to load progress profile");
+      return res.json();
+    },
+    enabled: !!memberId && !!token && !demoMode,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const DEFAULT_GOALS = { calories: 2200, protein: 180, carbs: 220, fat: 70 };
+  const resolvedGoals = useMemo(() => {
+    const goals = progressProfile?.coach_goals || [];
+    const find = (metric: string) => goals.find((g: any) => g.metric === metric)?.target;
+    return {
+      calories: Number(find("calories") ?? DEFAULT_GOALS.calories),
+      protein: Number(find("protein") ?? DEFAULT_GOALS.protein),
+      carbs: Number(find("carbs") ?? DEFAULT_GOALS.carbs),
+      fat: Number(find("fat") ?? DEFAULT_GOALS.fat),
+    };
+  }, [progressProfile]);
+
+  useEffect(() => {
+    setGoalDraft(resolvedGoals);
+  }, [resolvedGoals.calories, resolvedGoals.protein, resolvedGoals.carbs, resolvedGoals.fat]);
+
+  const saveGoals = async () => {
+    if (!memberId || !token) return;
+    setSavingGoals(true);
+    try {
+      const existing = progressProfile?.coach_goals || [];
+      const updateGoal = (id: string, label: string, metric: string, target: number, unit: string) => {
+        const idx = existing.findIndex((g: any) => g.metric === metric);
+        const base = idx >= 0 ? existing[idx] : { id, label, metric, unit, dueDate: null, source: "Nutrition logs" };
+        return { ...base, id, label, metric, target, unit, updatedBy: "member" };
+      };
+      const nextGoals = [
+        updateGoal("goal-calories", "Daily Calories", "calories", goalDraft.calories, "kcal"),
+        updateGoal("goal-protein", "Daily Protein", "protein", goalDraft.protein, "g"),
+        updateGoal("goal-carbs", "Daily Carbs", "carbs", goalDraft.carbs, "g"),
+        updateGoal("goal-fat", "Daily Fat", "fat", goalDraft.fat, "g"),
+        ...existing.filter((g: any) => !["calories", "protein", "carbs", "fat"].includes(g.metric)),
+      ];
+      const res = await fetch("/api/progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ memberId, coach_goals: nextGoals }),
+      });
+      if (!res.ok) throw new Error("Failed to save goals");
+      const data = await res.json();
+      queryClient.setQueryData(["progress_profile", memberId], data);
+      toast.success("Nutrition goals updated");
+      setEditingGoals(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save goals");
+    } finally {
+      setSavingGoals(false);
+    }
+  };
 
   useNutritionRealtime({ memberId });
 
@@ -227,8 +301,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
-  const GOALS = { calories: 2200, protein: 180, carbs: 220, fat: 70 };
-  const remaining = Math.max(0, GOALS.calories - totals.calories);
+  const remaining = Math.max(0, resolvedGoals.calories - totals.calories);
   const recentQuickFoods = useMemo(() => {
     const recentMeals = resolvedLogs
       .slice()
@@ -367,12 +440,104 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
           </span>
           <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>kcal remaining</span>
           <span style={{ marginLeft: "auto", fontSize: 12, color: "#5A5A5A" }}>
-            {totals.calories} / {GOALS.calories}
+            {totals.calories} / {resolvedGoals.calories}
           </span>
+          {!demoMode && (
+            <button
+              onClick={() => setEditingGoals((s) => !s)}
+              aria-label={editingGoals ? "Close goal editor" : "Edit nutrition goals"}
+              style={{
+                marginLeft: 8,
+                background: "none",
+                border: "none",
+                color: "#5A5A5A",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Pencil size={14} />
+            </button>
+          )}
         </div>
-        <MacroBar label="Protein" value={totals.protein} max={GOALS.protein} color="#7CFC00" />
-        <MacroBar label="Carbs"   value={totals.carbs}   max={GOALS.carbs}   color="#F59E0B" />
-        <MacroBar label="Fat"     value={totals.fat}     max={GOALS.fat}     color="#8B5CF6" />
+
+        {editingGoals && !demoMode && (
+          <div style={{ marginBottom: 16, padding: 14, background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 12 }}>
+              {[
+                { key: "calories", label: "Calories (kcal)" },
+                { key: "protein", label: "Protein (g)" },
+                { key: "carbs", label: "Carbs (g)" },
+                { key: "fat", label: "Fat (g)" },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label style={{ display: "block", fontSize: 11, color: SECONDARY_TEXT_COLOR, marginBottom: 4 }}>{field.label}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={field.key === "calories" ? 50 : 5}
+                    value={goalDraft[field.key as keyof typeof goalDraft]}
+                    onChange={(e) => setGoalDraft((prev) => ({ ...prev, [field.key]: Number(e.target.value) || 0 }))}
+                    style={{
+                      width: "100%",
+                      height: 40,
+                      background: "#16161A",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 10,
+                      padding: "0 12px",
+                      color: "#FFFFFF",
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={saveGoals}
+                disabled={savingGoals}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "#7CFC00",
+                  border: "none",
+                  color: "#000",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: savingGoals ? "not-allowed" : "pointer",
+                  opacity: savingGoals ? 0.7 : 1,
+                }}
+              >
+                {savingGoals ? "Saving..." : "Save Goals"}
+              </button>
+              <button
+                onClick={() => { setEditingGoals(false); setGoalDraft(resolvedGoals); }}
+                disabled={savingGoals}
+                style={{
+                  flex: 1,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#FFFFFF",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <MacroBar label="Protein" value={totals.protein} max={resolvedGoals.protein} color="#7CFC00" />
+        <MacroBar label="Carbs"   value={totals.carbs}   max={resolvedGoals.carbs}   color="#F59E0B" />
+        <MacroBar label="Fat"     value={totals.fat}     max={resolvedGoals.fat}     color="#8B5CF6" />
       </div>
 
       {/* ── Log a Meal ── */}

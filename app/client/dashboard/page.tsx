@@ -173,29 +173,6 @@ const CLIENT_DATA = {
   ],
 };
 
-const ONBOARDING_STEPS = [
-  {
-    key: "home",
-    title: "Start with your dashboard pulse",
-    description: "This is where your stats, renewal status, and first actions stay visible so you always know what matters today.",
-    cta: "Show workout flow",
-    nav: "home",
-  },
-  {
-    key: "workouts",
-    title: "Own the workout tab",
-    description: "Your assigned sessions, swipe actions, and rest flow live here. This is the fastest path to momentum.",
-    cta: "Show nutrition logging",
-    nav: "workouts",
-  },
-  {
-    key: "nutrition",
-    title: "Log nutrition without friction",
-    description: "Quick foods, AI meal logging, and demo examples help first-time members understand the expected level of detail.",
-    cta: "Show coach connection",
-    nav: "nutrition",
-  },
-];
 
 interface AchievementBadge {
   key: string;
@@ -1510,9 +1487,7 @@ export default function ClientDashboard() {
   const [dateRange, setDateRange] = useState("");
   const [taskPeriod, setTaskPeriod] = useState("Week");
   const [demoMode, setDemoMode] = useState(false);
-  const [showTour, setShowTour] = useState(false);
-  const [tourStep, setTourStep] = useState(0);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<"all" | "workouts" | "nutrition" | "exercises">("all");
@@ -1533,6 +1508,7 @@ export default function ClientDashboard() {
   const [memberId, setMemberId] = useState<number | null>(null);
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState("all");
+  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
   const { currentMember, logoutMember } = useAuth();
   const memberName = currentMember?.name ?? "Member";
   const memberCode = currentMember?.membership_code ?? "";
@@ -1565,7 +1541,8 @@ export default function ClientDashboard() {
   const galleryPhotos = Array.isArray(photos) ? photos.filter((p: any) => p.category === "gallery") : [];
 
   const { data: dbTasks, isLoading: tasksLoading } = useListTasks(memberId ?? undefined);
-  const { bodyMetricCards: weightCards } = useProgressDashboard(memberId ?? undefined);
+  const { bodyMetricCards: weightCards, goals: progressGoals = [] } = useProgressDashboard(memberId ?? undefined);
+  const proteinGoal = progressGoals.find((g: any) => g.metric === "protein")?.target ?? 180;
 
   const navItems = [
     { key: "home",      label: "Home",      icon: <LayoutDashboard size={20} /> },
@@ -1610,8 +1587,7 @@ export default function ClientDashboard() {
       default: return true;
     }
   });
-  const onboardingKeyRef = useRef<string | null>(null);
-  const demoKeyRef = useRef<string | null>(null);
+    const demoKeyRef = useRef<string | null>(null);
   const workoutTagKeyRef = useRef<string | null>(null);
   const settingsKeyRef = useRef<string | null>(null);
   const isEmptyDashboard =
@@ -1630,6 +1606,7 @@ export default function ClientDashboard() {
   const todayCalories = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.calories || 0), 0);
   const todayProtein = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.protein || 0), 0);
   const todayWorkoutCount = displayTasks.filter((task: any) => task.type === "workout" && task.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
+  const workoutsInProgress = workouts.filter((w: any) => w.status === "in-progress" || w.status === "in_progress").length;
   const nutritionRisk = todayCalories > 0 && (todayCalories < 1600 || todayProtein < 120);
   const urgentItems = [
     nextWorkoutTask ? { key: "workout", label: "Workout pending", detail: nextWorkoutTask.title } : null,
@@ -1650,7 +1627,7 @@ export default function ClientDashboard() {
   const weightDelta = weightCard?.trendValue ? `${weightCard.trendValue >= 0 ? "+" : ""}${weightCard.trendValue.toFixed(1)} ${weightUnit}` : "--";
   const statTrendCards = [
     { key: "weight", label: "Weight", value: weightValue ? `${weightValue} ${weightUnit}` : "--", delta: weightDelta, color: "#8B5CF6", points: weightPoints.length > 0 ? weightPoints : [83.7] },
-    { key: "workouts", label: "Workouts Completed", value: `${todayWorkoutCount}`, delta: `${taskStats.completed}/${taskStats.total || 1} done`, color: "#7CFC00", points: [0, 1, 1, 2, 1, 2, Math.max(todayWorkoutCount, 1)] },
+    { key: "workouts", label: "Workouts in progress", value: `${workoutsInProgress}`, delta: "in progress", color: "#7CFC00", points: [0, 1, 1, 2, 1, 2, Math.max(workoutsInProgress, 1)] },
     { key: "calories", label: "Calories", value: `${todayCalories || 0} kcal`, delta: `${todayProtein || 0}g protein`, color: "#F59E0B", points: [1750, 1880, 1930, 2010, 1840, 2060, todayCalories || 1920] },
   ];
   const streakDays = Math.max(1, Math.min(30, workouts.length * 3 + taskStats.completed + (nutritionLogs.length > 0 ? 2 : 0)));
@@ -1658,23 +1635,23 @@ export default function ClientDashboard() {
   const weeklyChallenge: WeeklyChallenge = {
     title: "Momentum Builder",
     description: "Finish 4 meaningful actions this week across training and nutrition.",
-    progress: Math.min(100, Math.round((((todayWorkoutCount * 2) + Math.min(nutritionLogs.length, 4)) / weeklyWorkoutGoal) * 100)),
-    completed: ((todayWorkoutCount * 2) + Math.min(nutritionLogs.length, 4)) >= weeklyWorkoutGoal,
-    helper: `${Math.min(todayWorkoutCount * 2 + nutritionLogs.length, weeklyWorkoutGoal)} of ${weeklyWorkoutGoal} actions done`,
+    progress: Math.min(100, Math.round((((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) / weeklyWorkoutGoal) * 100)),
+    completed: ((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) >= weeklyWorkoutGoal,
+    helper: `${Math.min(workouts.length * 2 + nutritionLogs.length, weeklyWorkoutGoal)} of ${weeklyWorkoutGoal} actions done`,
   };
   const achievements: AchievementBadge[] = [
     {
       key: "first-workout",
       title: "First Workout",
       description: "You broke the seal and showed up for session one.",
-      achieved: workouts.length > 0 || todayWorkoutCount > 0,
+      achieved: workouts.length > 0,
       icon: <Dumbbell size={20} />,
     },
     {
       key: "ten-workouts",
       title: "10 Workouts Completed",
       description: "Consistency is starting to compound in a real way.",
-      achieved: taskStats.completed >= 10 || workouts.length >= 10,
+      achieved: workouts.length >= 10,
       icon: <Trophy size={20} />,
     },
     {
@@ -1688,14 +1665,14 @@ export default function ClientDashboard() {
       key: "first-pr",
       title: "First PR",
       description: "A new best means you are clearly stronger than yesterday.",
-      achieved: todayWorkoutCount >= 2 || taskStats.completed >= 6,
+      achieved: workouts.length >= 2,
       icon: <Star size={20} />,
     },
     {
       key: "early-bird",
       title: "Early Bird",
       description: "Up before the noise. Your first 5AM-style effort is on the board.",
-      achieved: new Date().getHours() <= 5 && todayWorkoutCount > 0,
+      achieved: new Date().getHours() <= 5 && workouts.length > 0,
       icon: <Clock size={20} />,
     },
   ];
@@ -1735,11 +1712,10 @@ export default function ClientDashboard() {
   });
   const goalItems = [
     { key: "renewal", label: "Subscription runway", value: memberStatus === "expired" ? `Expired ${Math.abs(rawDaysRemaining)} days ago` : `${daysRemaining} of ${totalDays} days left`, urgent: daysLow },
-    { key: "protein", label: "Protein target", value: `${todayProtein}g of 180g`, urgent: nutritionRisk },
+    { key: "protein", label: "Protein target", value: `${todayProtein}g of ${proteinGoal}g`, urgent: nutritionRisk },
   ];
   const celebrationSignature = `${unlockedAchievements.map((badge) => badge.key).join("|")}:${weeklyChallenge.completed ? "challenge" : "in-progress"}:${dailyScoreValue >= 90 ? "score" : "score-pending"}`;
-  const currentTour = ONBOARDING_STEPS[tourStep];
-
+  
   useEffect(() => {
     setMounted(true);
     const t = setTimeout(() => setHydrated(true), 150);
@@ -1755,7 +1731,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!hydrated) return;
     if (!currentMember) {
-      router.push("/client/login");
+      router.replace("/");
       return;
     }
     setMemberId(currentMember.id);
@@ -1765,11 +1741,9 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     if (!hydrated || !currentMember) return;
-    onboardingKeyRef.current = `fitlift:onboarding:${currentMember.id}`;
     demoKeyRef.current = `fitlift:demo:${currentMember.id}`;
     workoutTagKeyRef.current = `fitlift:workout-tags:${currentMember.id}`;
     settingsKeyRef.current = `fitlift:dashboard-settings:${currentMember.id}`;
-    const hasCompletedTour = window.localStorage.getItem(onboardingKeyRef.current) === "done";
     const demoEnabled = window.localStorage.getItem(demoKeyRef.current) === "on";
     const storedTags = workoutTagKeyRef.current ? window.localStorage.getItem(workoutTagKeyRef.current) : null;
     const storedSettings = settingsKeyRef.current ? window.localStorage.getItem(settingsKeyRef.current) : null;
@@ -1792,11 +1766,6 @@ export default function ClientDashboard() {
         setUnitPreference("kg");
         setWidgetOrder(DEFAULT_WIDGET_ORDER);
       }
-    }
-    if (!hasCompletedTour && isEmptyDashboard) {
-      setShowTour(true);
-      setTourStep(0);
-      setActiveNav("home");
     }
   }, [hydrated, currentMember, isEmptyDashboard]);
 
@@ -1867,24 +1836,6 @@ export default function ClientDashboard() {
     toast.success("Back to your live dashboard.");
   };
 
-  const finishTour = () => {
-    setShowTour(false);
-    setTourStep(0);
-    if (onboardingKeyRef.current) window.localStorage.setItem(onboardingKeyRef.current, "done");
-    toast.success("Tour finished. You can reopen it any time from here.");
-  };
-
-  const advanceTour = () => {
-    if (!currentTour) return;
-    setActiveNav(currentTour.nav);
-    if (tourStep === ONBOARDING_STEPS.length - 1) {
-      finishTour();
-      return;
-    }
-    const nextStep = tourStep + 1;
-    setTourStep(nextStep);
-    setActiveNav(ONBOARDING_STEPS[nextStep].nav);
-  };
 
   const toggleHomeSection = (key: string) => {
     setHomeSections((current) => ({ ...current, [key]: !current[key as keyof typeof current] }));
@@ -1918,7 +1869,7 @@ export default function ClientDashboard() {
     });
   };
 
-  if (!mounted || !hydrated || (!currentMember && mounted && hydrated)) {
+  if (!mounted || !hydrated) {
     return (
       <div className="min-h-screen bg-[#0D0D10] flex items-center justify-center">
         <div className="w-full max-w-3xl px-6">
@@ -1945,7 +1896,7 @@ export default function ClientDashboard() {
 
   const handleLogout = () => {
     logoutMember();
-    router.push("/client/login");
+    router.push("/");
   };
 
   const cardVariants = {
@@ -1991,29 +1942,6 @@ export default function ClientDashboard() {
         onAddTag={addWorkoutTag}
         onNavigate={(tab) => setActiveNav(tab)}
       />
-      {showTour && currentTour && (
-        <div style={{ position: "sticky", top: 0, zIndex: 120, background: "rgba(13,13,16,0.96)", borderBottom: "1px solid rgba(124,252,0,0.16)", backdropFilter: "blur(14px)", padding: "14px 18px" }}>
-          <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <div style={{ minWidth: 120 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.8px", textTransform: "uppercase", color: "#7CFC00", fontWeight: 800 }}>
-                Tour Step {tourStep + 1} / {ONBOARDING_STEPS.length}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginTop: 4 }}>{currentTour.title}</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 220, color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.5 }}>
-              {currentTour.description}
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button type="button" onClick={finishTour} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer" }}>
-                Skip
-              </button>
-              <button type="button" onClick={advanceTour} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, cursor: "pointer" }}>
-                {currentTour.cta}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Private Client Banner */}
       <AnimatePresence>
         {isPrivate && bannerVisible && (
@@ -2565,7 +2493,7 @@ export default function ClientDashboard() {
                     fallback={<SkeletonBlock width="100%" height={184} style={{ background: "#1C1C21" }} />}
                   >
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {announcements.slice(0, 3).map((announcement: any) => (
+                      {announcements.slice(0, showAllAnnouncements ? announcements.length : 3).map((announcement: any) => (
                         <motion.div
                           key={announcement.id}
                           initial={{ opacity: 0, y: 10 }}
@@ -2598,6 +2526,28 @@ export default function ClientDashboard() {
                       ))}
                     </div>
                   </LazyRenderSection>
+                  {announcements.length > 3 && (
+                    <button
+                      onClick={() => setShowAllAnnouncements(!showAllAnnouncements)}
+                      style={{
+                        marginTop: 12,
+                        padding: "8px 16px",
+                        background: "rgba(124,252,0,0.1)",
+                        border: "1px solid rgba(124,252,0,0.2)",
+                        borderRadius: 8,
+                        color: "#7CFC00",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        opacity: 0.7,
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = "0.7"}
+                    >
+                      {showAllAnnouncements ? "See less" : "See more"}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -2608,7 +2558,7 @@ export default function ClientDashboard() {
                     Your dashboard is ready for the first update
                   </div>
                   <div style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: "0 auto" }}>
-                    As soon as your coach posts an announcement or new gym photo, it will land here. Until then, take the tour or try a demo workflow to learn the space.
+                    As soon as your coach posts an announcement or new gym photo, it will land here.
                   </div>
                 </div>
               )}

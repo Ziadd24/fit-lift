@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoachLayout } from "@/components/layout/CoachLayout";
-import { useListMembers, useUpdateMember, useSearchUnassignedMembers, useAssignMember } from "@/lib/api-hooks";
+import { useListMembers, useUpdateMember, useSearchUnassignedMembers, useAssignMember, useCreateWorkout } from "@/lib/api-hooks";
 import { useClientContext } from "@/lib/use-client-context";
 import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
@@ -15,6 +15,7 @@ import {
   Flame,
   Utensils, ChevronRight as ArrowRight,
   Upload,
+  Dumbbell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/use-auth";
@@ -107,7 +108,17 @@ export default function CoachDashboard() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditClientOpen, setIsEditClientOpen] = useState(false);
+  const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Partial<Member>>({});
+  const [selectedMemberForWorkout, setSelectedMemberForWorkout] = useState<Member | null>(null);
+  const [workoutFormData, setWorkoutFormData] = useState({
+    title: "",
+    duration: "45 min",
+    difficulty: "Medium",
+    calories: 300,
+    muscles: [] as string[],
+    exercises: [] as Array<{ exercise: string; sets: number; reps: string; weight: number; unit: string }>,
+  });
   const carouselRef = useRef<HTMLDivElement>(null);
 
   /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Search & Assign Unassigned Members ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
@@ -121,6 +132,7 @@ export default function CoachDashboard() {
   const { data: unassignedPage, isLoading: isSearchingUnassigned } = useSearchUnassignedMembers(debouncedAssignSearch);
   const unassignedMembers = unassignedPage?.members || [];
   const assignMemberMutation = useAssignMember();
+  const createWorkoutMutation = useCreateWorkout();
 
   const handleEditClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -589,10 +601,29 @@ export default function CoachDashboard() {
                            setSelectedClient(m.id, m.name);
                            router.push("/coach/calories");
                          }} 
-                         className="text-xs font-bold mr-4 transition-colors hover:opacity-80" 
+                         className="text-xs font-bold mr-2 transition-colors hover:opacity-80" 
                          style={{ color: "#7CFC00" }}
                       >
                         Select
+                      </button>
+                      <button 
+                        onClick={() => { 
+                          setSelectedMemberForWorkout(m); 
+                          setIsWorkoutModalOpen(true); 
+                          setWorkoutFormData({
+                            title: "",
+                            duration: "45 min",
+                            difficulty: "Medium",
+                            calories: 300,
+                            muscles: [],
+                            exercises: [],
+                          });
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:border-white/30 mr-2"
+                        style={{ border: "1px solid rgba(124,252,0,0.2)", color: "#7CFC00" }}
+                        title="Assign Workout"
+                      >
+                        <Dumbbell className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => { setEditingClient(m); setIsEditClientOpen(true); }}
                         className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:border-white/30"
@@ -694,6 +725,192 @@ export default function CoachDashboard() {
                   <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsEditClientOpen(false)}>Cancel</Button>
                   <button type="submit" disabled={updateMemberMutation.isPending} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-black" style={{ background: "#7CFC00" }}>
                     {updateMemberMutation.isPending ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ ASSIGN WORKOUT MODAL ══ */}
+      <AnimatePresence>
+        {isWorkoutModalOpen && selectedMemberForWorkout && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsWorkoutModalOpen(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ ...cardStyle, width: "100%", maxWidth: 480, padding: 28, position: "relative" }}>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold text-white" style={{ fontFamily: "Inter,sans-serif" }}>Assign Workout</h2>
+                <button onClick={() => setIsWorkoutModalOpen(false)} style={{ color: "#8B8B8B" }}><X className="w-5 h-5" /></button>
+              </div>
+              <div className="mb-4 text-sm" style={{ color: "#8B8B8B" }}>
+                Assigning to: <span className="text-white font-semibold">{selectedMemberForWorkout.name}</span>
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!selectedMemberForWorkout.id || !workoutFormData.title.trim()) return;
+                createWorkoutMutation.mutate({
+                  member_id: selectedMemberForWorkout.id,
+                  title: workoutFormData.title,
+                  duration: workoutFormData.duration,
+                  difficulty: workoutFormData.difficulty,
+                  calories: workoutFormData.calories,
+                  muscles: workoutFormData.muscles,
+                  coach_assigned: true,
+                  status: "todo",
+                  sets: workoutFormData.exercises,
+                }, {
+                  onSuccess: () => {
+                    setIsWorkoutModalOpen(false);
+                    setSelectedMemberForWorkout(null);
+                    setWorkoutFormData({
+                      title: "",
+                      duration: "45 min",
+                      difficulty: "Medium",
+                      calories: 300,
+                      muscles: [],
+                      exercises: [],
+                    });
+                  },
+                });
+              }} className="space-y-4">
+                <div><Label>Workout Title</Label><Input value={workoutFormData.title} onChange={e => setWorkoutFormData({ ...workoutFormData, title: e.target.value })} placeholder="e.g., Leg Day - Heavy Squats" required /></div>
+                <div><Label>Duration</Label>
+                  <select
+                    value={workoutFormData.duration}
+                    onChange={e => setWorkoutFormData({ ...workoutFormData, duration: e.target.value })}
+                    className="w-full rounded-lg py-2 px-3 text-white outline-none transition-colors"
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  >
+                    <option value="30 min">30 min</option>
+                    <option value="45 min">45 min</option>
+                    <option value="60 min">60 min</option>
+                    <option value="90 min">90 min</option>
+                  </select>
+                </div>
+                <div><Label>Difficulty</Label>
+                  <select
+                    value={workoutFormData.difficulty}
+                    onChange={e => setWorkoutFormData({ ...workoutFormData, difficulty: e.target.value })}
+                    className="w-full rounded-lg py-2 px-3 text-white outline-none transition-colors"
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+                <div><Label>Estimated Calories</Label><Input type="number" value={workoutFormData.calories} onChange={e => setWorkoutFormData({ ...workoutFormData, calories: parseInt(e.target.value) || 0 })} /></div>
+                
+                {/* Exercise Editor Section */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <Label>Exercises</Label>
+                    <button
+                      type="button"
+                      onClick={() => setWorkoutFormData({
+                        ...workoutFormData,
+                        exercises: [...workoutFormData.exercises, { exercise: "", sets: 3, reps: "10", weight: 0, unit: "kg" }]
+                      })}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      style={{ background: "rgba(124,252,0,0.15)", color: "#7CFC00", border: "1px solid rgba(124,252,0,0.3)" }}
+                    >
+                      + Add Exercise
+                    </button>
+                  </div>
+                  {workoutFormData.exercises.map((ex, idx) => (
+                    <div key={idx} className="p-3 rounded-lg mb-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-semibold text-white">Exercise {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => setWorkoutFormData({
+                            ...workoutFormData,
+                            exercises: workoutFormData.exercises.filter((_, i) => i !== idx)
+                          })}
+                          className="text-xs text-red-500 hover:text-red-400"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Exercise name (e.g., Bench Press)"
+                          value={ex.exercise}
+                          onChange={e => {
+                            const newExercises = [...workoutFormData.exercises];
+                            newExercises[idx] = { ...ex, exercise: e.target.value };
+                            setWorkoutFormData({ ...workoutFormData, exercises: newExercises });
+                          }}
+                        />
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">Sets</Label>
+                            <Input
+                              type="number"
+                              value={ex.sets}
+                              onChange={e => {
+                                const newExercises = [...workoutFormData.exercises];
+                                newExercises[idx] = { ...ex, sets: parseInt(e.target.value) || 0 };
+                                setWorkoutFormData({ ...workoutFormData, exercises: newExercises });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Reps</Label>
+                            <Input
+                              value={ex.reps}
+                              onChange={e => {
+                                const newExercises = [...workoutFormData.exercises];
+                                newExercises[idx] = { ...ex, reps: e.target.value };
+                                setWorkoutFormData({ ...workoutFormData, exercises: newExercises });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Weight</Label>
+                            <Input
+                              type="number"
+                              value={ex.weight || ""}
+                              onChange={e => {
+                                const newExercises = [...workoutFormData.exercises];
+                                newExercises[idx] = { ...ex, weight: parseInt(e.target.value) || 0 };
+                                setWorkoutFormData({ ...workoutFormData, exercises: newExercises });
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Unit</Label>
+                          <select
+                            value={ex.unit}
+                            onChange={e => {
+                              const newExercises = [...workoutFormData.exercises];
+                              newExercises[idx] = { ...ex, unit: e.target.value };
+                              setWorkoutFormData({ ...workoutFormData, exercises: newExercises });
+                            }}
+                            className="w-full rounded-lg py-2 px-3 text-white outline-none transition-colors text-sm"
+                            style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}
+                          >
+                            <option value="kg">kg</option>
+                            <option value="lbs">lbs</option>
+                            <option value="—">bodyweight</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {workoutFormData.exercises.length === 0 && (
+                    <div className="text-center py-4 text-sm" style={{ color: "#5A5A5A" }}>
+                      No exercises added yet. Click "+ Add Exercise" to design your workout.
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsWorkoutModalOpen(false)}>Cancel</Button>
+                  <button type="submit" disabled={createWorkoutMutation.isPending || !workoutFormData.title.trim()} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-black" style={{ background: "#7CFC00" }}>
+                    {createWorkoutMutation.isPending ? "Assigning..." : "Assign Workout"}
                   </button>
                 </div>
               </form>

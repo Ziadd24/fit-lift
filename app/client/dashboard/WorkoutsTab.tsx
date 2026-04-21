@@ -464,15 +464,11 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
   };
 
   const handleFinishWorkout = () => {
-    if (workout.status === "done") {
-      toast.success("Workout already completed!");
-      return;
-    }
-    // Mark workout as done and save
+    // Reset workout to 'todo' so users can complete it again
     onExerciseChange?.(workout, 0, { 
       ...workout, 
-      status: "done",
-      done: true,
+      status: "todo",
+      done: false,
       sets: workout.sets 
     });
     // Reset exercise completion state for next session
@@ -581,25 +577,6 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
           )}
           {expanded ? <ChevronUp size={16} color={SECONDARY_TEXT_COLOR} /> : <ChevronDown size={16} color={SECONDARY_TEXT_COLOR} />}
         </div>
-
-        {/* Full-width resume button for in-progress */}
-        {((workout.status === "in-progress") || completionPct > 0) && completionPct < 100 && !expanded && (
-          <div style={{ padding: "0 20px 16px" }}>
-            <button
-              onClick={() => setExpanded(true)}
-              style={{
-                width: "100%", height: 48, borderRadius: 12,
-                background: "linear-gradient(135deg, #7CFC00, #39FF14)",
-                border: "none", color: "#000", fontWeight: 800,
-                fontSize: 14, cursor: "pointer", display: "flex",
-                alignItems: "center", justifyContent: "center", gap: 8,
-                letterSpacing: "0.5px",
-              }}
-            >
-              <Play size={16} fill="#000" /> RESUME WORKOUT
-            </button>
-          </div>
-        )}
 
         {/* Expanded content */}
         <AnimatePresence>
@@ -1073,7 +1050,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 No Workouts Yet
               </div>
               <div style={{ fontSize: isMobile ? 13 : 14, color: "var(--color-text-secondary)", marginBottom: 20, maxWidth: 280, lineHeight: 1.5 }}>
-                Start your fitness journey by creating your first workout. Your coach can also assign workouts for you.
+                Design your own workout program - tap on + and start now!
               </div>
               <button
                 onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}

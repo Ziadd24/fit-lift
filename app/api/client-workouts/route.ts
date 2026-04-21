@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyAdminAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -75,6 +75,19 @@ export async function POST(req: NextRequest) {
     }).select("*").single();
     if (error) throw error;
     return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// DELETE all workouts (admin only)
+export async function DELETE(req: NextRequest) {
+  try {
+    verifyAdminAuth(req);
+    const supabase = getSupabaseAdmin();
+    const { error, count } = await supabase.from("client_workouts").delete({ count: 'exact' }).neq("id", 0);
+    if (error) throw error;
+    return NextResponse.json({ success: true, deleted: count });
   } catch (error) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
