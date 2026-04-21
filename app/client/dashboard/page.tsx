@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
-import { useProgressDashboardStore } from "@/lib/use-progress-dashboard";
+import { useProgressDashboardStore, useProgressDashboard } from "@/lib/use-progress-dashboard";
 import { cn, getMembershipStatus, getDaysRemainingText } from "@/lib/utils";
 import { moveFocusWithArrows, SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE, useAccessibleDialog } from "@/lib/accessibility";
 import { getErrorMessage, showConfirmToast } from "@/lib/feedback";
@@ -106,14 +106,6 @@ const CLIENT_DATA = {
     isOnline: true,
     lastActive: "2h ago",
   },
-  stats: {
-    finished: 18,
-    finishedChange: 8,
-    tracked: "31h",
-    trackedChange: -6,
-    efficiency: "93%",
-    efficiencyChange: 12,
-  },
   tasks: [
     {
       id: 1,
@@ -203,11 +195,6 @@ const ONBOARDING_STEPS = [
     cta: "Show coach connection",
     nav: "nutrition",
   },
-];
-
-const SUCCESS_STORIES = [
-  { name: "Mariam", result: "Built a 9-week workout streak", note: "Started by checking off one simple task a day." },
-  { name: "Omar", result: "Dropped 4.5kg while keeping strength", note: "Used quick meal logs and coach check-ins to stay consistent." },
 ];
 
 interface AchievementBadge {
@@ -1306,8 +1293,6 @@ function SettingsModal({
   onThemeModeChange,
   unitPreference,
   onUnitPreferenceChange,
-  widgetOrder,
-  onMoveWidget,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1315,44 +1300,28 @@ function SettingsModal({
   onThemeModeChange: (value: ThemeMode) => void;
   unitPreference: UnitPreference;
   onUnitPreferenceChange: (value: UnitPreference) => void;
-  widgetOrder: HomeSectionKey[];
-  onMoveWidget: (key: HomeSectionKey, direction: "up" | "down") => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const { titleId, descriptionId } = useAccessibleDialog(isOpen, dialogRef, onClose);
-  const labels: Record<HomeSectionKey, string> = {
-    workoutSummary: "Workout Summary",
-    nutritionToday: "Nutrition Today",
-    goals: "Goals",
-  };
-  const normalizedWidgetOrder = normalizeWidgetOrder(widgetOrder);
   if (!isOpen) return null;
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 270 }} onClick={onClose} aria-hidden="true" />
-      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(640px, calc(100vw - 32px))", maxHeight: "calc(100vh - 32px)", overflowY: "auto", background: "var(--dashboard-surface)", border: "1px solid var(--dashboard-border)", borderRadius: 24, padding: 20, zIndex: 271, boxShadow: "var(--dashboard-shadow)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <motion.div key="dialog" ref={dialogRef} initial={{ opacity: 0, y: "100%" }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} onClick={(event) => event.stopPropagation()} style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxHeight: "80vh", overflowY: "auto", background: "#16161A", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "24px 20px 32px", zIndex: 271 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
           <div>
-            <div id={titleId} style={{ fontSize: 20, fontWeight: 800, color: "var(--dashboard-text-primary)" }}>Dashboard Settings</div>
-            <div id={descriptionId} style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>Theme, units, and home widget order all live here now.</div>
+            <div id={titleId} style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF" }}>Settings</div>
+            <div id={descriptionId} style={{ fontSize: 13, color: "#8B8B8B", marginTop: 2 }}>Customize your experience</div>
           </div>
-          <button type="button" onClick={onClose} style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid var(--dashboard-border)", background: "rgba(255,255,255,0.04)", color: "var(--dashboard-text-primary)", cursor: "pointer" }} aria-label="Close settings"><X size={18} /></button>
+          <button type="button" onClick={onClose} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer" }} aria-label="Close settings"><X size={16} /></button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5" style={{ marginTop: 18 }}>
-          <div style={{ padding: 16, borderRadius: 18, border: "1px solid var(--dashboard-border)", background: "rgba(255,255,255,0.03)" }}>
-            <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--dashboard-accent)", fontWeight: 800 }}>Theme</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>{(["auto", "dark", "light"] as ThemeMode[]).map((mode) => <button key={mode} type="button" onClick={() => onThemeModeChange(mode)} style={{ minHeight: 40, padding: "9px 12px", borderRadius: 12, border: themeMode === mode ? "1px solid rgba(124,252,0,0.28)" : "1px solid var(--dashboard-border)", background: themeMode === mode ? "rgba(124,252,0,0.12)" : "rgba(255,255,255,0.04)", color: themeMode === mode ? "#D9FFBF" : "var(--dashboard-text-primary)", fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{mode}</button>)}</div>
-          </div>
-          <div style={{ padding: 16, borderRadius: 18, border: "1px solid var(--dashboard-border)", background: "rgba(255,255,255,0.03)" }}>
-            <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800 }}>Units</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>{(["kg", "lbs"] as UnitPreference[]).map((unit) => <button key={unit} type="button" onClick={() => onUnitPreferenceChange(unit)} style={{ minHeight: 40, padding: "9px 12px", borderRadius: 12, border: unitPreference === unit ? "1px solid rgba(245,158,11,0.28)" : "1px solid var(--dashboard-border)", background: unitPreference === unit ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.04)", color: unitPreference === unit ? "#FCD34D" : "var(--dashboard-text-primary)", fontWeight: 700, cursor: "pointer" }}>{unit.toUpperCase()}</button>)}</div>
-          </div>
+        <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800, marginBottom: 12 }}>Theme</div>
+          <div style={{ display: "flex", gap: 8 }}>{(["auto", "dark", "light"] as ThemeMode[]).map((mode) => <button key={mode} type="button" onClick={() => onThemeModeChange(mode)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: themeMode === mode ? "1px solid rgba(124,252,0,0.4)" : "1px solid rgba(255,255,255,0.1)", background: themeMode === mode ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)", color: themeMode === mode ? "#7CFC00" : "#FFFFFF", fontWeight: 700, cursor: "pointer", textTransform: "capitalize", fontSize: 14 }}>{mode}</button>)}</div>
         </div>
-        <div style={{ padding: 16, borderRadius: 18, border: "1px solid var(--dashboard-border)", background: "rgba(255,255,255,0.03)", marginTop: 18 }}>
-          <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.8px", color: "#8B5CF6", fontWeight: 800 }}>Home Layout</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-            {normalizedWidgetOrder.map((key, index) => <div key={`${key}-${index}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}><div style={{ color: "var(--dashboard-text-primary)", fontWeight: 700 }}>{labels[key]}</div><div style={{ display: "flex", gap: 8 }}><button type="button" disabled={index === 0} onClick={() => onMoveWidget(key, "up")} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid var(--dashboard-border)", background: index === 0 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.05)", color: "var(--dashboard-text-primary)", cursor: index === 0 ? "not-allowed" : "pointer", opacity: index === 0 ? 0.45 : 1 }}><ChevronUp size={16} /></button><button type="button" disabled={index === normalizedWidgetOrder.length - 1} onClick={() => onMoveWidget(key, "down")} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid var(--dashboard-border)", background: index === normalizedWidgetOrder.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.05)", color: "var(--dashboard-text-primary)", cursor: index === normalizedWidgetOrder.length - 1 ? "not-allowed" : "pointer", opacity: index === normalizedWidgetOrder.length - 1 ? 0.45 : 1 }}><ChevronDown size={16} /></button></div></div>)}
-          </div>
+        <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", marginTop: 12 }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800, marginBottom: 12 }}>Units</div>
+          <div style={{ display: "flex", gap: 8 }}>{(["kg", "lbs"] as UnitPreference[]).map((unit) => <button key={unit} type="button" onClick={() => onUnitPreferenceChange(unit)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: unitPreference === unit ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.1)", background: unitPreference === unit ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)", color: unitPreference === unit ? "#FCD34D" : "#FFFFFF", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>{unit.toUpperCase()}</button>)}</div>
         </div>
       </motion.div>
     </AnimatePresence>
@@ -1430,11 +1399,12 @@ function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigat
   const options = [
     { icon: <Dumbbell size={22} color="#7CFC00" />, bg: "rgba(124,252,0,0.1)", label: "Log Workout", sub: "Mark sets done", tab: "workouts" },
     { icon: <Apple size={22} color="#10B981" />, bg: "rgba(16,185,129,0.1)", label: "Log Meal", sub: "AI nutrition tracker", tab: "nutrition" },
-    { icon: <Camera size={22} color="#F59E0B" />, bg: "rgba(245,158,11,0.12)", label: "Scan Food", sub: "Open AI food scan", tab: "nutrition" },
+    { icon: <TrendingUp size={22} color="#8B5CF6" />, bg: "rgba(139,92,246,0.1)", label: "Update your weight", sub: "Log your weight", tab: "progress" },
   ];
   return (
     <AnimatePresence>
       <motion.div
+        key="backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -1443,6 +1413,7 @@ function QuickLogSheet({ onClose, onNavigate }: { onClose: () => void; onNavigat
         aria-hidden="true"
       />
       <motion.div
+        key="sheet"
         ref={dialogRef}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
@@ -1529,6 +1500,11 @@ export default function ClientDashboard() {
   const { disableHeavyAnimations } = useDashboardMotion();
   const prefersReducedMotion = usePrefersReducedMotion();
   const [activeNav, setActiveNav] = useState("home");
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeNav]);
+
   const [copied, setCopied] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
   const [dateRange, setDateRange] = useState("");
@@ -1574,9 +1550,6 @@ export default function ClientDashboard() {
   const memberStatus = expiryDate ? getMembershipStatus(expiryDate.toISOString()) : "active";
   const daysLow = memberStatus === "expiring_soon" || memberStatus === "expired";
 
-  const finishedCount = useCountUp(CLIENT_DATA.stats.finished, 1100);
-  const effCount = useCountUp(93, 1200);
-
   const sideNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const bottomNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const taskModalRef = useRef<HTMLDivElement>(null);
@@ -1587,11 +1560,12 @@ export default function ClientDashboard() {
 
   const { data: announcements, isLoading: announcementsLoading } = useListAnnouncements({ memberId: memberId ?? undefined });
   const { data: photos, isLoading: photosLoading } = useListPhotos({ global: true, category: "gallery" });
-  const { data: nutritionLogs = [] } = useListCalorieLogs(memberId || undefined);
-  const { data: workouts = [] } = useListWorkouts(memberId || undefined);
+  const { data: nutritionLogs = [] } = useListCalorieLogs(memberId ?? undefined);
+  const { data: workouts = [] } = useListWorkouts(memberId ?? undefined);
   const galleryPhotos = Array.isArray(photos) ? photos.filter((p: any) => p.category === "gallery") : [];
 
-  const { data: dbTasks, isLoading: tasksLoading } = useListTasks(memberId || undefined);
+  const { data: dbTasks, isLoading: tasksLoading } = useListTasks(memberId ?? undefined);
+  const { bodyMetricCards: weightCards } = useProgressDashboard(memberId ?? undefined);
 
   const navItems = [
     { key: "home",      label: "Home",      icon: <LayoutDashboard size={20} /> },
@@ -1623,6 +1597,11 @@ export default function ClientDashboard() {
     personal: displayTasks.filter((t: any) => !t.coach_assigned && !t.coachAssigned).length,
   };
 
+  const finishedWorkouts = displayTasks.filter((t: any) => t.type === "workout" && t.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
+  const efficiency = displayTasks.length > 0 ? Math.round((displayTasks.filter((t: any) => t.status === "done").length / displayTasks.length) * 100) : 0;
+  const finishedCount = useCountUp(finishedWorkouts, 1100);
+  const effCount = useCountUp(efficiency, 1200);
+
   const filteredTasks = displayTasks.filter((task: any) => {
     switch (taskFilter) {
       case 'coach': return task.coach_assigned || task.coachAssigned;
@@ -1650,7 +1629,7 @@ export default function ClientDashboard() {
   const nextWorkoutTask = (displayTasks.find((task: any) => task.type === "workout" && task.status !== "done") || null) as any;
   const todayCalories = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.calories || 0), 0);
   const todayProtein = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.protein || 0), 0);
-  const todayWorkoutCount = displayTasks.filter((task: any) => task.type === "workout" && task.status === "done").length;
+  const todayWorkoutCount = displayTasks.filter((task: any) => task.type === "workout" && task.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
   const nutritionRisk = todayCalories > 0 && (todayCalories < 1600 || todayProtein < 120);
   const urgentItems = [
     nextWorkoutTask ? { key: "workout", label: "Workout pending", detail: nextWorkoutTask.title } : null,
@@ -1664,8 +1643,13 @@ export default function ClientDashboard() {
       Math.min(todayProtein / 6, 20)
     )
   );
+  const weightCard = weightCards?.find((m) => m.label === "Body Weight");
+  const weightValue = weightCard?.latest?.value;
+  const weightUnit = weightCard?.latest?.unit || "kg";
+  const weightPoints = weightCard?.history || [];
+  const weightDelta = weightCard?.trendValue ? `${weightCard.trendValue >= 0 ? "+" : ""}${weightCard.trendValue.toFixed(1)} ${weightUnit}` : "--";
   const statTrendCards = [
-    { key: "weight", label: "Weight", value: unitPreference === "lbs" ? "184.5 lbs" : "83.7 kg", delta: unitPreference === "lbs" ? "-2.0 lbs" : "-0.9 kg", color: "#8B5CF6", points: [84.6, 84.4, 84.3, 84.1, 84.0, 83.8, 83.7] },
+    { key: "weight", label: "Weight", value: weightValue ? `${weightValue} ${weightUnit}` : "--", delta: weightDelta, color: "#8B5CF6", points: weightPoints.length > 0 ? weightPoints : [83.7] },
     { key: "workouts", label: "Workouts Completed", value: `${todayWorkoutCount}`, delta: `${taskStats.completed}/${taskStats.total || 1} done`, color: "#7CFC00", points: [0, 1, 1, 2, 1, 2, Math.max(todayWorkoutCount, 1)] },
     { key: "calories", label: "Calories", value: `${todayCalories || 0} kcal`, delta: `${todayProtein || 0}g protein`, color: "#F59E0B", points: [1750, 1880, 1930, 2010, 1840, 2060, todayCalories || 1920] },
   ];
@@ -1825,11 +1809,9 @@ export default function ClientDashboard() {
     if (lastCelebrationRef.current === celebrationSignature) return;
     lastCelebrationRef.current = celebrationSignature;
     if (prefersReducedMotion || disableHeavyAnimations) {
-      toast.success("New milestone unlocked.");
       return;
     }
 
-    toast.success(weeklyChallenge.completed ? "Weekly challenge complete." : "Achievement unlocked.");
     import("canvas-confetti")
       .then(({ default: confetti }) => {
         confetti({
@@ -1988,8 +1970,6 @@ export default function ClientDashboard() {
         onThemeModeChange={setThemeMode}
         unitPreference={unitPreference}
         onUnitPreferenceChange={setUnitPreference}
-        widgetOrder={widgetOrder}
-        onMoveWidget={moveWidget}
       />
       <GlobalSearchModal
         isOpen={isSearchOpen}
@@ -2223,30 +2203,27 @@ export default function ClientDashboard() {
           >
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>{dateRange}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div
+              <button
+                onClick={handleLogout}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
                   borderRadius: 999,
                   padding: "8px 12px",
-                  background: "rgba(245,158,11,0.12)",
-                  border: "1px solid rgba(245,158,11,0.24)",
-                  color: "#FCD34D",
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.24)",
+                  color: "#EF4444",
                   fontSize: 12,
                   fontWeight: 800,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
                 }}
-                aria-label={`${streakDays} day workout streak`}
+                aria-label="Log out"
               >
-                <motion.span
-                  animate={prefersReducedMotion || disableHeavyAnimations ? undefined : { scale: [1, 1.08, 1] }}
-                  transition={{ duration: 1.8, repeat: Infinity }}
-                  style={{ display: "inline-flex" }}
-                >
-                  <Flame size={14} />
-                </motion.span>
-                {streakDays}-day streak
-              </div>
+                <LogOut size={14} />
+                Log Out
+              </button>
               {demoMode && (
                 <button
                   type="button"
@@ -2378,12 +2355,12 @@ export default function ClientDashboard() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
-                    Member Since
+                    Start Date
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>
-                    {currentMember?.created_at
-                      ? new Date(currentMember.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
-                      : "Jan 2024"}
+                    {currentMember?.start_date
+                      ? new Date(currentMember.start_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
+                      : "--"}
                   </div>
                 </div>
               </div>
@@ -2899,30 +2876,6 @@ export default function ClientDashboard() {
                           {item.done ? <Check size={13} /> : <Clock size={13} />}
                         </div>
                         <div style={{ fontSize: 14, color: item.done ? "#FFFFFF" : "var(--color-text-secondary)" }}>{item.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    background: "#16161A",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    borderRadius: 20,
-                    padding: 20,
-                    minHeight: 220,
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                    <Star size={18} color="#F59E0B" />
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Momentum Stories</div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {SUCCESS_STORIES.map((story) => (
-                      <div key={story.name} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{story.name}</div>
-                        <div style={{ fontSize: 13, color: "#7CFC00", marginTop: 4 }}>{story.result}</div>
-                        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6, lineHeight: 1.5 }}>{story.note}</div>
                       </div>
                     ))}
                   </div>
