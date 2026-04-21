@@ -52,6 +52,7 @@ function useIsVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.1)
 
 function useCarousel(itemsLength: number, intervalMs = 4000) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
 
@@ -70,19 +71,30 @@ function useCarousel(itemsLength: number, intervalMs = 4000) {
   useEffect(() => {
     if (itemsLength <= 1 || !isVisible) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((current) => {
-        const nextIndex = (current + 1) % itemsLength;
-        scrollToIndex(nextIndex);
-        return nextIndex;
-      });
+      const nextIndex = (activeIndexRef.current + 1) % itemsLength;
+      activeIndexRef.current = nextIndex;
+      setActiveIndex(nextIndex);
+      scrollToIndex(nextIndex);
     }, intervalMs);
     return () => window.clearInterval(timer);
   }, [itemsLength, scrollToIndex, isVisible, intervalMs]);
 
-  const goNext = useCallback(() => setActiveIndex((c) => { const n = (c + 1) % itemsLength; scrollToIndex(n); return n; }), [itemsLength, scrollToIndex]);
-  const goPrev = useCallback(() => setActiveIndex((c) => { const n = (c - 1 + itemsLength) % itemsLength; scrollToIndex(n); return n; }), [itemsLength, scrollToIndex]);
+  const goTo = useCallback((index: number) => {
+    activeIndexRef.current = index;
+    setActiveIndex(index);
+    scrollToIndex(index);
+  }, [scrollToIndex]);
 
-  return { activeIndex, setActiveIndex, containerRef, isVisible, scrollToIndex, goNext, goPrev };
+  // setActiveIndexOnly: update state+ref without re-scrolling (used by onScroll)
+  const setActiveIndexOnly = useCallback((index: number) => {
+    activeIndexRef.current = index;
+    setActiveIndex(index);
+  }, []);
+
+  const goNext = useCallback(() => { const n = (activeIndexRef.current + 1) % itemsLength; goTo(n); }, [itemsLength, goTo]);
+  const goPrev = useCallback(() => { const n = (activeIndexRef.current - 1 + itemsLength) % itemsLength; goTo(n); }, [itemsLength, goTo]);
+
+  return { activeIndex, setActiveIndex: goTo, setActiveIndexOnly, containerRef, isVisible, scrollToIndex, goNext, goPrev };
 }
 
 function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
@@ -104,13 +116,13 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
     { name: t.pricing.plans[4].name, price: 5000, period: t.pricing.plans[4].period, features: t.pricing.plans[4].features, highlight: false },
   ];
 
-  const { activeIndex, setActiveIndex, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length);
+  const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length, 2000);
 
   return (
     <div className="relative">
       <div
         ref={pricingCarouselRef}
-        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
         dir="ltr"
         onScroll={(e) => {
           const target = e.target as HTMLDivElement;
@@ -118,7 +130,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
           if (!firstCard) return;
           const cardWidth = firstCard.offsetWidth + 20;
           const newIndex = Math.round(target.scrollLeft / cardWidth);
-          setActiveIndex(newIndex);
+          setActiveIndexOnly(newIndex);
         }}
       >
         {displayBundles.map((bundle: any, i: number) => (
@@ -210,9 +222,14 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
         ))}
       </div>
 
-      <div className="flex justify-center gap-2 mt-4 md:hidden">
+      <div className="flex justify-center gap-2 mt-4 md:hidden" dir="ltr">
         {displayBundles.map((_b: any, i: number) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ease-out ${i === activeIndex ? "w-6 scale-y-110 bg-[#47D84B] shadow-[0_0_8px_rgba(71,216,75,0.5)]" : "w-1.5 scale-y-100 bg-white/20"}`} />
+          <button
+            key={i}
+            onClick={() => { setActiveIndex(i); }}
+            aria-label={`Go to plan ${i + 1}`}
+            className={`h-1.5 rounded-full transition-[width,background-color,box-shadow] duration-300 ease-out ${i === activeIndex ? "w-6 bg-[#47D84B] shadow-[0_0_8px_rgba(71,216,75,0.5)]" : "w-1.5 bg-white/20"}`}
+          />
         ))}
       </div>
       <button onClick={pricingPrev} aria-label="Previous plan" className="flex absolute left-2 md:left-0 top-1/2 -translate-y-1/2 md:-translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/75 md:bg-black/60 border border-white/15 text-white items-center justify-center opacity-95 md:opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
@@ -227,13 +244,22 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
 function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, string> }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
-  const { activeIndex: activeCoachIndex, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length);
+  const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 2000);
 
   return (
     <div className="relative">
       <div
         ref={coachCarouselRef}
-        className="flex overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar gap-4 md:gap-6 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth"
+        dir="ltr"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar gap-4 md:gap-6 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
+        onScroll={(e) => {
+          const target = e.target as HTMLDivElement;
+          const firstCard = target.children[0] as HTMLElement | undefined;
+          if (!firstCard) return;
+          const cardWidth = firstCard.offsetWidth + (window.innerWidth >= 768 ? 24 : 16);
+          const newIndex = Math.round(target.scrollLeft / cardWidth);
+          setActiveCoachIndexOnly(newIndex);
+        }}
       >
         {allCoaches.map((coach: any, i: number) => {
           const uploadedPhoto = coachPhotoMap[coach.name];
@@ -258,9 +284,14 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
           );
         })}
       </div>
-      <div className="flex justify-center gap-2 mt-4">
+      <div className="flex justify-center gap-2 mt-4" dir="ltr">
         {allCoaches.map((_coach: any, i: number) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ease-out ${i === activeCoachIndex ? "w-6 scale-y-110 bg-[#7CFC00] shadow-[0_0_8px_rgba(124,252,0,0.5)]" : "w-1.5 scale-y-100 bg-white/20"}`} />
+          <button
+            key={i}
+            onClick={() => { setActiveCoachIndex(i); }}
+            aria-label={`Go to coach ${i + 1}`}
+            className={`h-1.5 rounded-full transition-[width,background-color,box-shadow] duration-300 ease-out ${i === activeCoachIndex ? "w-6 bg-[#7CFC00] shadow-[0_0_8px_rgba(124,252,0,0.5)]" : "w-1.5 bg-white/20"}`}
+          />
         ))}
       </div>
       <button onClick={coachPrev} aria-label="Previous coach" className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
@@ -366,53 +397,55 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
-  const isVisible = useIsVisible(galleryRef, 0.15);
 
-  const galleryItems = photos && photos.length > 0
-    ? photos
-        .filter((p: any) => (!p.category || p.category === "gallery") && typeof p.url === "string" && p.url.trim().length > 0)
-        .map((p: any, photoIndex: number) => ({
+  const galleryItems = useMemo(() => {
+    if (photos && photos.length > 0) {
+      const filtered = photos.filter(
+        (p: any) => (!p.category || p.category === "gallery") && typeof p.url === "string" && p.url.trim().length > 0
+      );
+      if (filtered.length > 0) {
+        return filtered.map((p: any, photoIndex: number) => ({
           key: `${p.id ?? "photo"}-${photoIndex}`,
           src: p.url.trim(),
-        }))
-    : [{ key: "fallback-0", src: "/images/gym-hero.jpg" }];
+        }));
+      }
+    }
+    return [{ key: "fallback-0", src: "/images/gym-hero.jpg" }];
+  }, [photos]);
 
-  const images = galleryItems.map((item) => item.src);
+  const totalImages = galleryItems.length;
 
-  const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length]);
-  const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
+  const next = useCallback(() => setIndex((i) => (i + 1) % totalImages), [totalImages]);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + totalImages) % totalImages), [totalImages]);
 
-  const imagesLengthRef = useRef(images.length);
-  imagesLengthRef.current = images.length;
-
+  // Auto-scroll: restart whenever totalImages changes (photos finish loading)
+  // Uses document visibility so it pauses when tab is hidden
   useEffect(() => {
-    if (imagesLengthRef.current <= 1 || !isVisible) return;
-    const timer = setInterval(() => {
-      setIndex((i) => (i + 1) % imagesLengthRef.current);
-    }, 3000);
+    if (totalImages <= 1) return;
+    const tick = () => {
+      if (document.visibilityState === "hidden") return;
+      setIndex((i) => (i + 1) % totalImages);
+    };
+    const timer = setInterval(tick, 2000);
     return () => clearInterval(timer);
-  }, [isVisible]);
+  }, [totalImages]);
 
-  // Pre-load ALL images on mount for smooth crossfade
+  // Pre-load all images whenever the set changes
   useEffect(() => {
-    images.forEach((src) => {
+    galleryItems.forEach(({ src }) => {
       const img = new Image();
       img.src = src;
     });
-  }, [images]);
+  }, [galleryItems]);
 
-  if (isLoading) {
-    return (
-      <div className="rounded-2xl overflow-hidden h-80 bg-black/40 animate-pulse flex items-center justify-center border border-white/10">
-        <ImageIcon className="w-8 h-8 text-white/20" />
-      </div>
-    );
-  }
-
-  // Render all images with CSS crossfade for zero-lag transitions
-
+  // Always render the outer div (keeps ref stable); show skeleton inside
   return (
     <div ref={galleryRef} className="rounded-2xl overflow-hidden h-72 md:h-80 relative group bg-black">
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/40 animate-pulse flex items-center justify-center">
+          <ImageIcon className="w-8 h-8 text-white/20" />
+        </div>
+      )}
       {galleryItems.map((item, idx) => (
         <img
           key={item.key}
@@ -429,7 +462,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
           }}
         />
       ))}
-      {images.length > 1 && (
+      {totalImages > 1 && (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />
           <button onClick={prev} aria-label="Previous photo" className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/70 md:bg-black/50 text-white flex items-center justify-center opacity-95 md:opacity-50 transition-all hover:bg-primary hover:text-black hover:scale-110 hover:opacity-100 z-10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
@@ -439,7 +472,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
             <ChevronRight className="w-5 h-5" />
           </button>
           <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90 md:opacity-50 transition-opacity duration-300 z-10">
-            {images.map((_img: string, i: number) => (
+            {galleryItems.map((_item, i: number) => (
               <div key={i} className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-primary" : "w-1.5 bg-white/50"}`} />
             ))}
           </div>
@@ -773,7 +806,7 @@ export default function MemberPortal() {
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 60 }} whileInView={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.15 }} viewport={{ once: true, margin: "-50px" }} className="relative">
               <PhotoGallery lang={lang} />
-              <div className="absolute -bottom-6 -left-6 bg-primary text-black px-7 py-5 rounded-2xl font-bold rtl:-right-6 rtl:-left-auto z-10 w-auto min-w-[140px]" dir="ltr">
+              <div className={`absolute -bottom-6 bg-primary text-black px-7 py-5 rounded-2xl font-bold z-10 w-auto min-w-[140px] ${lang === "ar" ? "-right-6" : "-left-6"}`} dir="ltr">
                 <p className="text-4xl font-black whitespace-nowrap">500+</p>
                 <p className="text-[11px] md:text-sm uppercase tracking-widest whitespace-nowrap">{t.about.active}</p>
               </div>
