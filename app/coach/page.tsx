@@ -20,19 +20,30 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/use-auth";
 import type { Member } from "@/lib/supabase";
+import {
+  displayOrFallback,
+  getDisplayInitial,
+  normalizeMaybeMojibake,
+} from "@/lib/text";
 import UploadsTab from "./UploadsTab";
 
 /* Semi-circle Gauge for Nutrition */
 function SemiGauge({ percent = 95.5 }: { percent?: number }) {
   const w = 200, h = 100, r = 80;
   const cx = w / 2, cy = h;
-  const circ = Math.PI * r; // half circle
+  const circ = Math.PI * r;
   const offset = circ - (percent / 100) * circ;
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
       <path d={`M ${cx - r},${cy} A ${r},${r} 0 0,1 ${cx + r},${cy}`} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={12} strokeLinecap="round" />
-      <path d={`M ${cx - r},${cy} A ${r},${r} 0 0,1 ${cx + r},${cy}`} fill="none" stroke="url(#gaugeGrad)" strokeWidth={12} strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={offset}
+      <path
+        d={`M ${cx - r},${cy} A ${r},${r} 0 0,1 ${cx + r},${cy}`}
+        fill="none"
+        stroke="url(#gaugeGrad)"
+        strokeWidth={12}
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
         style={{ transition: "stroke-dashoffset 1s ease" }}
       />
       <defs>
@@ -69,7 +80,7 @@ function buildPrivateRoster(members: Member[]) {
    ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */
 export default function CoachDashboard() {
   const router = useRouter();
-  const { currentCoach } = useAuth();
+  const { currentCoach, coachToken } = useAuth();
   const { setSelectedClient } = useClientContext();
   const { data: membersPage, refetch: refetchMembers } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
   const updateMemberMutation = useUpdateMember();
@@ -96,7 +107,6 @@ export default function CoachDashboard() {
         const key = `fitgym_cal_totals_${new Date().toISOString().split("T")[0]}`;
         const raw = localStorage.getItem(key);
         if (raw) setDailyTotals(JSON.parse(raw));
-        
         const goalsRaw = localStorage.getItem("fitgym_client_goals");
         if (goalsRaw) setClientGoals(JSON.parse(goalsRaw));
       } catch {}
@@ -109,6 +119,7 @@ export default function CoachDashboard() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditClientOpen, setIsEditClientOpen] = useState(false);
   const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false);
+  const [isSendingRenewalReminder, setIsSendingRenewalReminder] = useState(false);
   const [editingClient, setEditingClient] = useState<Partial<Member>>({});
   const [selectedMemberForWorkout, setSelectedMemberForWorkout] = useState<Member | null>(null);
   const [workoutFormData, setWorkoutFormData] = useState({
@@ -147,6 +158,9 @@ export default function CoachDashboard() {
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.membership_code?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const expiredMembers = privateRoster.filter(
+    (member) => new Date(member.sub_expiry_date) < new Date(new Date().toDateString())
+  );
   
   // Paginate the filtered results for performance
   const displayedMembers = filteredMembers.slice(0, displayLimit);
@@ -164,6 +178,31 @@ export default function CoachDashboard() {
       localStorage.setItem("fitgym_client_goals", JSON.stringify(newGoals));
     }
     setIsEditingGoal(false);
+  };
+
+  const handleSendRenewalReminder = async () => {
+    if (!coachToken || expiredMembers.length === 0 || isSendingRenewalReminder) return;
+
+    setIsSendingRenewalReminder(true);
+
+    try {
+      const response = await fetch("/api/coach/renewal-reminders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${coachToken}`,
+        },
+        body: JSON.stringify({
+          memberIds: expiredMembers.map((member) => member.id),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send renewal reminders");
+      }
+    } finally {
+      setIsSendingRenewalReminder(false);
+    }
   };
 
   /* Client carousel navigation */
@@ -206,6 +245,23 @@ export default function CoachDashboard() {
                 {totalMembers} client{totalMembers !== 1 ? 's' : ''}
               </span>
             </div>
+            {expiredMembers.length > 0 && (
+              <button
+                onClick={handleSendRenewalReminder}
+                disabled={isSendingRenewalReminder}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-60"
+                style={{
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.35)",
+                  color: "#FCA5A5",
+                  fontFamily: "Inter,sans-serif",
+                }}
+              >
+                {isSendingRenewalReminder
+                  ? `Sending Reminder (${expiredMembers.length})`
+                  : `Send Renewal Reminder (${expiredMembers.length})`}
+              </button>
+            )}
             <button
               onClick={() => setIsAddOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-black transition-all"
@@ -246,7 +302,7 @@ export default function CoachDashboard() {
         {activeTab === "dashboard" ? (
           <>
         {/* ══ NUTRITION OVERVIEW ══ */}
-        <div className="mb-8">
+        <div className="mb-8 hidden">
           <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }} className="max-w-md">
             <div style={{ ...cardStyle, padding: 24, height: 280, display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div className="flex items-center justify-between w-full mb-3">
@@ -369,10 +425,11 @@ export default function CoachDashboard() {
                     onClick={() => switchClient(idx)}
                     animate={{ scale: selected ? 1.05 : 1 }}
                     whileHover={{ y: -4 }}
+                    title={normalizeMaybeMojibake(member.name)}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     className="flex-shrink-0 flex flex-col items-center gap-2 p-4 transition-all"
                     style={{
-                      width: 120, height: 160,
+                      width: 156, height: 172,
                       background: "#16161A",
                       border: selected ? `2px solid #7CFC00` : "1px solid rgba(255,255,255,0.06)",
                       borderRadius: 16,
@@ -387,10 +444,20 @@ export default function CoachDashboard() {
                         border: `2px solid ${sColor}`,
                         boxShadow: `0 0 0 3px ${sColor}33`,
                       }}>
-                      {member.name.charAt(0).toUpperCase()}
+                      {getDisplayInitial(member.name)}
                     </div>
-                    <p className="text-white font-semibold text-xs text-center w-full truncate px-1" style={{ fontFamily: "Inter,sans-serif" }}>
-                      {member.name}
+                    <p
+                      className="text-white font-semibold text-xs text-center w-full px-1"
+                      style={{
+                        fontFamily: "Inter,sans-serif",
+                        minHeight: 32,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {normalizeMaybeMojibake(member.name)}
                     </p>
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-lg"
                       style={{ background: "rgba(124,252,0,0.15)", color: "#7CFC00", fontFamily: "Inter,sans-serif" }}>
@@ -467,7 +534,7 @@ export default function CoachDashboard() {
                     <div className="flex justify-between items-start mb-5">
                       <div>
                         <p className="font-bold uppercase tracking-widest text-[10px] mb-1" style={{ color: "#7CFC00" }}>Client Spotlight</p>
-                        <h2 className="text-2xl font-bold text-white uppercase" style={{ fontFamily: "Inter,sans-serif" }}>{activeClient.name}</h2>
+                        <h2 className="text-2xl font-bold text-white uppercase" style={{ fontFamily: "Inter,sans-serif" }}>{normalizeMaybeMojibake(activeClient.name)}</h2>
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase"
@@ -492,17 +559,17 @@ export default function CoachDashboard() {
                     {/* Info grid */}
                     <div className="grid grid-cols-2 gap-x-8 gap-y-3 mb-5">
                       {[
-                        { Icon: Tag, val: activeClient.membership_code || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â" },
+                        { Icon: Tag, val: displayOrFallback(activeClient.membership_code) },
                         { Icon: Calendar, val: `Joined ${new Date(activeClient.created_at || Date.now()).toLocaleDateString()}` },
-                        { Icon: Smartphone, val: activeClient.phone || "ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â" },
-                        { Icon: User, val: `Type: ${activeClient.membership_type}` },
+                        { Icon: Smartphone, val: displayOrFallback(activeClient.phone) },
+                        { Icon: User, val: `Type: ${displayOrFallback(activeClient.membership_type, "Standard")}` },
                       ].map(({ Icon, val }, i) => (
                         <div key={i} className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{ background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.2)" }}>
                             <Icon className="w-3.5 h-3.5" style={{ color: "#7CFC00" }} />
                           </div>
-                          <span className="text-xs font-semibold text-white truncate" style={{ fontFamily: "Inter,sans-serif" }}>{val}</span>
+                          <span className="text-xs font-semibold text-white truncate" title={val} style={{ fontFamily: "Inter,sans-serif" }}>{val}</span>
                         </div>
                       ))}
                     </div>
@@ -579,9 +646,9 @@ export default function CoachDashboard() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black"
                           style={{ background: "linear-gradient(135deg, #7CFC00, #39FF14)" }}>
-                          {m.name.charAt(0)}
+                          {getDisplayInitial(m.name)}
                         </div>
-                        <span className="text-sm font-semibold text-white" style={{ fontFamily: "Inter,sans-serif" }}>{m.name}</span>
+                        <span className="text-sm font-semibold text-white" style={{ fontFamily: "Inter,sans-serif" }}>{normalizeMaybeMojibake(m.name)}</span>
                       </div>
                     </td>
                     <td className="p-4 text-xs font-mono" style={{ color: "#8B8B8B" }}>{m.membership_code}</td>
@@ -719,7 +786,7 @@ export default function CoachDashboard() {
               <form onSubmit={handleEditClient} className="space-y-4">
                 <div><Label>Full Name</Label><Input value={editingClient.name || ""} onChange={e => setEditingClient({ ...editingClient, name: e.target.value })} required /></div>
                 <div><Label>Email</Label><Input type="email" value={editingClient.email || ""} onChange={e => setEditingClient({ ...editingClient, email: e.target.value })} /></div>
-                <div><Label>Phone</Label><Input value={editingClient.phone || ""} onChange={e => setEditingClient({ ...editingClient, phone: e.target.value })} /></div>
+                <div><Label>Phone</Label><Input value={normalizeMaybeMojibake(editingClient.phone || "")} onChange={e => setEditingClient({ ...editingClient, phone: e.target.value })} /></div>
                 <div><Label>Membership Type</Label><Input value={editingClient.membership_type || ""} onChange={e => setEditingClient({ ...editingClient, membership_type: e.target.value })} /></div>
                 <div className="flex gap-3 pt-2">
                   <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsEditClientOpen(false)}>Cancel</Button>
@@ -922,3 +989,5 @@ export default function CoachDashboard() {
     </CoachLayout>
   );
 }
+
+

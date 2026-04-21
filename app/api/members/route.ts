@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 import { sanitizeSearchFilter } from "@/lib/sanitize";
 import { normalizeMembershipCode } from "@/lib/member-code";
+import { normalizeMaybeMojibake } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
@@ -97,15 +98,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid membership code" }, { status: 400 });
   }
 
+  const normalizedName = normalizeMaybeMojibake(String(name));
+  const normalizedEmail = normalizeMaybeMojibake(email || "");
+  const normalizedPhone = normalizeMaybeMojibake(phone || "");
+  const normalizedMembershipType = normalizeMaybeMojibake(membership_type || "1 Month");
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("members")
     .insert({
-      name: name.slice(0, 200),
+      name: normalizedName.slice(0, 200),
       membership_code: normalizedMembershipCode,
-      email: (email || "").slice(0, 200) || null,
-      phone: (phone || "").slice(0, 50) || null,
-      membership_type: (membership_type || "1 Month").slice(0, 100),
+      email: normalizedEmail.slice(0, 200) || null,
+      phone: normalizedPhone.slice(0, 50) || null,
+      membership_type: normalizedMembershipType.slice(0, 100),
       sub_expiry_date,
       start_date: start_date || new Date().toISOString().split("T")[0],
       coach_id: coach_id || null,
