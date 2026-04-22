@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://your-domain.com"),
@@ -41,6 +42,7 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground overflow-x-hidden">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
