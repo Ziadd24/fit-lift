@@ -1,17 +1,14 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import {
   useGetMember,
-  useListPhotos,
   useListAnnouncements,
-  useDeletePhoto,
   useDeleteAnnouncement,
   useCreateAnnouncement,
   useUpdateMember,
-  useUploadPhoto,
 } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
 import { format, addMonths, isAfter, parseISO } from "date-fns";
@@ -20,15 +17,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Megaphone,
-  Upload,
-  Trash2,
-  ImageIcon,
   RefreshCw,
   MessageCircle,
   CheckCircle,
   Edit3,
   Save,
   X,
+  Trash2,
 } from "lucide-react";
 
 const GYM_WHATSAPP = "2010099887771";
@@ -40,18 +35,11 @@ export default function AdminMemberProfile() {
   const queryClient = useQueryClient();
 
   const { data: member, isLoading: memberLoading } = useGetMember(memberId);
-  const { data: photos } = useListPhotos({ memberId });
   const { data: announcements } = useListAnnouncements({ memberId });
 
-  const deletePhotoMutation = useDeletePhoto();
   const deleteAnnouncementMutation = useDeleteAnnouncement();
   const createAnnouncementMutation = useCreateAnnouncement();
   const updateMemberMutation = useUpdateMember();
-  const uploadPhotoMutation = useUploadPhoto();
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [caption, setCaption] = useState("");
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -66,23 +54,6 @@ export default function AdminMemberProfile() {
     phone: string;
     membership_type: string;
   } | null>(null);
-
-  const handleUploadPhoto = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-
-    uploadPhotoMutation.mutate(
-      { file, caption: caption || undefined, memberId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["photos"] });
-          setFile(null);
-          setCaption("");
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        },
-      }
-    );
-  };
 
   const handlePostAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -367,89 +338,8 @@ export default function AdminMemberProfile() {
           </Card>
         </div>
 
-        {/* Right column — photos & announcements */}
+        {/* Right column — announcements */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Photo upload */}
-          <Card className="p-6">
-            <h2 className="text-xl font-display text-white mb-4 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-primary" /> Upload Progress Photo
-            </h2>
-            <form onSubmit={handleUploadPhoto} className="flex gap-4 flex-col sm:flex-row items-start">
-              <div className="flex-1 w-full">
-                <div className="border-2 border-dashed border-white/20 rounded-xl p-4 text-center hover:border-primary/50 transition-colors bg-black/20">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    id="member-photo"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    required
-                  />
-                  <label htmlFor="member-photo" className="cursor-pointer">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
-                    <span className="text-sm text-white">{file ? file.name : "Choose photo"}</span>
-                  </label>
-                </div>
-              </div>
-              <div className="flex-1 w-full space-y-2">
-                <Input
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Caption (optional)"
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={!file || uploadPhotoMutation.isPending}
-                >
-                  {uploadPhotoMutation.isPending ? "Uploading..." : "Upload"}
-                </Button>
-              </div>
-            </form>
-          </Card>
-
-          {/* Photos grid */}
-          {photos && photos.length > 0 && (
-            <div>
-              <h2 className="text-xl font-display text-white mb-4">Photos ({photos.length})</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {photos.map((photo) => (
-                  <Card key={photo.id} className="overflow-hidden group">
-                    <div className="h-36 relative overflow-hidden bg-black">
-                      <img
-                        src={photo.url}
-                        alt={photo.caption || "Photo"}
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      />
-                      <button
-                        className="absolute top-2 right-2 p-1.5 bg-destructive/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-white hover:bg-destructive"
-                        onClick={() => {
-                          if (confirm("Delete this photo?")) {
-                            deletePhotoMutation.mutate(
-                              { id: photo.id },
-                              {
-                                onSuccess: () =>
-                                  queryClient.invalidateQueries({ queryKey: ["photos"] }),
-                              }
-                            );
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {photo.caption && (
-                      <p className="p-2 text-xs text-muted-foreground line-clamp-1">
-                        {photo.caption}
-                      </p>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Announcements */}
           <div>
             <h2 className="text-xl font-display text-white mb-4">

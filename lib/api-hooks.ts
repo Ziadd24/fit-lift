@@ -25,19 +25,21 @@ export function useListMembers(
   search?: string,
   status?: string,
   type?: string,
-  options?: UseListMembersOptions
+  options?: UseListMembersOptions,
+  sortBy?: string
 ) {
   const { adminToken, coachToken, memberCode } = useAuth();
   const token = adminToken || coachToken || memberCode;
   const pageSize = options?.pageSize;
   return useQuery<MembersPage>({
-    queryKey: ["members", page, search, status, type, pageSize],
+    queryKey: ["members", page, search, status, type, pageSize, sortBy],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page) });
       if (pageSize) params.set("pageSize", String(pageSize));
       if (search) params.set("search", search);
       if (status && status !== "all") params.set("status", status);
       if (type && type !== "all") params.set("type", type);
+      if (sortBy) params.set("sortBy", sortBy);
       const res = await fetch(`/api/members?${params.toString()}`, {
         headers: getAuthHeaders(token),
       });
@@ -250,7 +252,60 @@ export function useDeletePhoto() {
   });
 }
 
-// â”€â”€â”€ Announcements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export function useReorderPhotos() {
+  const { adminToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<
+    { success: boolean },
+    Error,
+    { swaps: { id: number; display_order: number }[] }
+  >({
+    mutationFn: async ({ swaps }) => {
+      const res = await fetch("/api/photos/reorder", {
+        method: "POST",
+        headers: { ...getAuthHeaders(adminToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ swaps }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to reorder photos");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["photos"] });
+    },
+  });
+}
+
+export function useReorderCoaches() {
+  const { adminToken } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation<
+    { success: boolean },
+    Error,
+    { swaps: { id: number; display_order: number }[] }
+  >({
+    mutationFn: async ({ swaps }) => {
+      const res = await fetch("/api/coaches/reorder", {
+        method: "POST",
+        headers: { ...getAuthHeaders(adminToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ swaps }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to reorder coaches");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coaches-list"] });
+      queryClient.invalidateQueries({ queryKey: ["coaches"] });
+    },
+  });
+}
+
+// ─── Announcements ──────────────────────────────────────────────────────────────
 
 export function useListAnnouncements(params?: { memberId?: number }) {
   const { adminToken, currentMember } = useAuth();

@@ -12,6 +12,9 @@ const COACH_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const COACH_SESSION_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface AuthState {
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+
   adminToken: string | null;
   adminLoginAt: number | null;
   setAdminToken: (token: string | null) => void;
@@ -38,6 +41,9 @@ interface AuthState {
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
+
       adminToken: null,
       adminLoginAt: null,
       setAdminToken: (token) =>
@@ -119,6 +125,7 @@ export const useAuth = create<AuthState>()(
     {
       name: "fitgym-auth-storage",
       onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
         if (state && state.coachToken && state.coachToken.length < 20) {
           state.coachToken = null;
           state.currentCoach = null;
