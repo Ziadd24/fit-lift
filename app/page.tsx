@@ -35,6 +35,11 @@ const HOME_BUTTON_SECONDARY = "transition-all duration-300 hover:scale-105 hover
 const ARABIC_LANG_LABEL = "\u0639\u0631\u0628\u064a";
 const GYM_PHONE = "201009987771";
 
+const getCoachWhatsAppLink = (coachName: string, _lang: "en" | "ar") => {
+  const message = `كنت حابب اشترك برايفت مع كابتن ${coachName} وحابب اعرف التفاصيل`;
+  return `https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(message)}`;
+};
+
 function useIsVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.1) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -279,9 +284,19 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
                     onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${coach.name}`; }}
                   />
                 </div>
-                <div className="p-3 md:p-4">
+                <div className="p-3 md:p-4 flex flex-col flex-grow">
                   <h4 className="text-white font-bold text-sm md:text-lg">{coach.name}</h4>
-                  {caption && <p className="text-white/60 text-xs mt-1">{caption}</p>}
+                  <div className="h-6 mt-1">
+                    {caption ? <p className="text-white/60 text-xs line-clamp-1">{caption}</p> : <span className="invisible text-xs">&nbsp;</span>}
+                  </div>
+                  <a
+                    href={getCoachWhatsAppLink(coach.name, lang)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-auto block w-full py-2.5 rounded-full bg-[#7CFC00] text-black font-bold text-xs text-center transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(124,252,0,0.4)] active:scale-95"
+                  >
+                    {lang === "ar" ? "اشترك دلوقتي" : "Subscribe Now"}
+                  </a>
                 </div>
               </Card>
             </motion.div>
