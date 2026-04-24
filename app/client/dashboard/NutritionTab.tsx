@@ -10,6 +10,7 @@ import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
 import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
 import { getErrorMessage } from "@/lib/feedback";
 import { toast } from "react-hot-toast";
+import { useClientLanguage } from "@/lib/client-language";
 
 const QUICK_FOODS = [
   { label: "Chicken 200g", text: "200g grilled chicken breast" },
@@ -55,8 +56,7 @@ const DEMO_LOGS = [
 
 const PORTION_MULTIPLIERS = [0.5, 1, 1.5, 2];
 
-function getFriendlyNutritionError(error: unknown) {
-  const fallback = "Failed to analyze meal.";
+function getFriendlyNutritionError(error: unknown, fallback: string, busyMessage: string) {
   const message = typeof error === "string"
     ? error
     : error instanceof Error
@@ -72,7 +72,7 @@ function getFriendlyNutritionError(error: unknown) {
     normalized.includes("temporarily busy") ||
     normalized.includes("ai error")
   ) {
-    return "AI meal analysis is temporarily busy right now. Please try again in a minute.";
+    return busyMessage;
   }
 
   return message || fallback;
@@ -198,6 +198,8 @@ function MealSection({
 }
 
 export default function NutritionTab({ isPrivate, memberId, demoMode = false }: { isPrivate: boolean; memberId?: number; demoMode?: boolean }) {
+  const { language, t } = useClientLanguage();
+  const isArabic = language === "ar";
   const [meal, setMeal] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +232,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
       const res = await fetch(`/api/progress${qs}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error("Failed to load progress profile");
+      if (!res.ok) throw new Error(t("failedLoadProgressProfile"));
       return res.json();
     },
     enabled: !!memberId && !!token && !demoMode,
@@ -275,13 +277,13 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ memberId, coach_goals: nextGoals }),
       });
-      if (!res.ok) throw new Error("Failed to save goals");
+      if (!res.ok) throw new Error(t("failedSaveGoals"));
       const data = await res.json();
       queryClient.setQueryData(["progress_profile", memberId], data);
-      toast.success("Nutrition goals updated");
+      toast.success(t("nutritionGoalsUpdated"));
       setEditingGoals(false);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save goals");
+      toast.error(err?.message || t("failedSaveGoals"));
     } finally {
       setSavingGoals(false);
     }
@@ -370,7 +372,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
     setIsAnalyzing(true);
     setError(null);
     setJustLogged(null);
-    setLiveAnnouncement("Analyzing meal entry.");
+    setLiveAnnouncement(t("analyzingMeal"));
 
     try {
       const res = await fetch("/api/calories/analyze", {
@@ -379,10 +381,10 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         body: JSON.stringify({ meal: trimmed, image }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(getFriendlyNutritionError(data.error || "Analysis failed"));
+      if (!res.ok) throw new Error(getFriendlyNutritionError(data.error || t("failedAnalyzeMeal"), t("failedAnalyzeMeal"), t("aiBusy")));
 
       saveCalorieLog(
-        { member_id: memberId, meal: trimmed || "Photo Upload", result: data, category: getMealCategory(Date.now()) },
+        { member_id: memberId, meal: trimmed || t("photoUpload"), result: data, category: getMealCategory(Date.now()) },
         {
           onSuccess: (saved) => {
             setJustLogged(saved);
@@ -390,18 +392,18 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
             setImage(null);
             setShowAllMeals(false);
             setExpandedMealSection(saved.category || getMealCategory(Date.now()));
-            setLiveAnnouncement(`${saved.result?.display_title ?? "Meal"} logged successfully.`);
-            toast.success(`${saved.result?.display_title ?? "Meal"} logged.`);
+            setLiveAnnouncement(t("mealLoggedSuccess", { name: saved.result?.display_title ?? (isArabic ? "الوجبة" : "Meal") }));
+            toast.success(t("mealLogged", { name: saved.result?.display_title ?? (isArabic ? "الوجبة" : "Meal") }));
           },
           onError: (error) => {
-            const message = getErrorMessage(error, "Couldn't save that meal.");
+            const message = getErrorMessage(error, t("couldntSaveMeal"));
             setError(message);
             setLiveAnnouncement(message);
           },
         }
       );
     } catch (err: any) {
-      const message = getFriendlyNutritionError(err);
+      const message = getFriendlyNutritionError(err, t("failedAnalyzeMeal"), t("aiBusy"));
       setError(message);
       setLiveAnnouncement(message);
       toast.error(message);
@@ -437,7 +439,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
             fontWeight: 600,
           }}
         >
-          Demo preview: sample meals are shown so first-time clients can see what a complete nutrition day looks like.
+          {t("nutritionDemoBanner")}
         </div>
       )}
 
@@ -447,14 +449,14 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
           <span style={{ fontSize: 38, fontWeight: 800, color: "#7CFC00", lineHeight: 1 }}>
             {remaining}
           </span>
-          <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>kcal remaining</span>
+          <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>{t("kcalRemaining")}</span>
           <span style={{ marginLeft: "auto", fontSize: 12, color: "#5A5A5A" }}>
             {totals.calories} / {resolvedGoals.calories}
           </span>
           {!demoMode && (
             <button
               onClick={() => setEditingGoals((s) => !s)}
-              aria-label={editingGoals ? "Close goal editor" : "Edit nutrition goals"}
+              aria-label={editingGoals ? t("closeGoalEditor") : t("editNutritionGoals")}
               style={{
                 marginLeft: 8,
                 background: "none",
@@ -476,10 +478,10 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
           <div style={{ marginBottom: 16, padding: 14, background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 12 }}>
               {[
-                { key: "calories", label: "Calories (kcal)" },
-                { key: "protein", label: "Protein (g)" },
-                { key: "carbs", label: "Carbs (g)" },
-                { key: "fat", label: "Fat (g)" },
+                { key: "calories", label: t("caloriesKcal") },
+                { key: "protein", label: t("proteinG") },
+                { key: "carbs", label: t("carbsG") },
+                { key: "fat", label: t("fatG") },
               ].map((field) => (
                 <div key={field.key}>
                   <label style={{ display: "block", fontSize: 11, color: SECONDARY_TEXT_COLOR, marginBottom: 4 }}>{field.label}</label>
@@ -521,7 +523,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
                   opacity: savingGoals ? 0.7 : 1,
                 }}
               >
-                {savingGoals ? "Saving..." : "Save Goals"}
+                {savingGoals ? t("saving") : t("saveGoals")}
               </button>
               <button
                 onClick={() => { setEditingGoals(false); setGoalDraft(resolvedGoals); }}
@@ -538,15 +540,15 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </div>
         )}
 
-        <MacroBar label="Protein" value={totals.protein} max={resolvedGoals.protein} color="#7CFC00" />
-        <MacroBar label="Carbs"   value={totals.carbs}   max={resolvedGoals.carbs}   color="#F59E0B" />
-        <MacroBar label="Fat"     value={totals.fat}     max={resolvedGoals.fat}     color="#8B5CF6" />
+        <MacroBar label={t("protein")} value={totals.protein} max={resolvedGoals.protein} color="#7CFC00" />
+        <MacroBar label={t("carbs")}   value={totals.carbs}   max={resolvedGoals.carbs}   color="#F59E0B" />
+        <MacroBar label={t("fat")}     value={totals.fat}     max={resolvedGoals.fat}     color="#8B5CF6" />
       </div>
 
       {/* ── Log a Meal ── */}
@@ -554,18 +556,18 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <Sparkles size={17} color="#7CFC00" />
           <span style={{ fontSize: 15, fontWeight: 700, color: "#FFFFFF" }}>
-  Log a Meal <em style={{ fontWeight: 700, color: "var(--color-text-secondary)", fontSize: 13 }}>(demo)</em>
+  {t("logMeal")} <em style={{ fontWeight: 700, color: "var(--color-text-secondary)", fontSize: 13 }}>({t("demoLabel")})</em>
 </span>
         </div>
         <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 14 }}>
-          Describe what you ate or tap a suggestion below — AI calculates macros instantly.
+          {t("nutritionHelper")}
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
-              { key: "recent", label: "Recent" },
-              { key: "favorites", label: "Favorites" },
+              { key: "recent", label: t("recent") },
+              { key: "favorites", label: t("favorites") },
             ].map((tab) => {
               const isActive = quickFoodTab === tab.key;
               return (
@@ -607,7 +609,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
               key={food.label}
               className="food-chip"
               onClick={() => setMeal(food.text)}
-              aria-label={`Use quick food ${food.label}`}
+              aria-label={t("useQuickFood", { name: food.label })}
               style={{
                 minHeight: 48,
                 width: "100%",
@@ -636,7 +638,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
               <img src={image} alt="Upload" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <button
                 onClick={() => setImage(null)}
-                aria-label="Remove selected meal photo"
+                aria-label={t("removeMealPhoto")}
                 style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}
               >
                 <X size={13} color="white" />
@@ -647,8 +649,8 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
             value={meal}
             onChange={e => setMeal(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyze(); }}
-            placeholder="e.g. 200g grilled chicken with 1 cup brown rice..."
-            aria-label="Describe your meal for AI analysis"
+            placeholder={t("mealPlaceholder")}
+            aria-label={t("describeMealAria")}
             style={{
               width: "100%", height: 110,
               background: "#16161A",
@@ -690,7 +692,7 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         <button
           onClick={analyze}
           disabled={isAnalyzing || (!meal.trim() && !image)}
-          aria-label={isAnalyzing ? "Analyzing meal entry" : "Analyze and log meal"}
+          aria-label={isAnalyzing ? t("analyzingMeal") : t("analyzeAndLogMeal")}
           style={{
             width: "100%", height: 52, borderRadius: 14, marginTop: 12,
             background: isAnalyzing || (!meal.trim() && !image) ? "rgba(124,252,0,0.3)" : "#7CFC00",
@@ -700,8 +702,8 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
           }}
         >
           {isAnalyzing
-            ? <><Loader2 size={18} className="animate-spin" /> Analyzing...</>
-            : <><Sparkles size={17} /> Analyze & Log</>
+            ? <><Loader2 size={18} className="animate-spin" /> {t("analyzing")}</>
+            : <><Sparkles size={17} /> {t("analyzeAndLog")}</>
           }
         </button>
       </div>
@@ -757,9 +759,9 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
                 );
               })}
             </div>
-            <MacroBar label="Protein" value={adjustedJustLoggedTotals?.protein || 0} max={100} color="#7CFC00" />
-            <MacroBar label="Carbs"   value={adjustedJustLoggedTotals?.carbs || 0}   max={150} color="#F59E0B" />
-            <MacroBar label="Fat"     value={adjustedJustLoggedTotals?.fat || 0}      max={60}  color="#8B5CF6" />
+            <MacroBar label={t("protein")} value={adjustedJustLoggedTotals?.protein || 0} max={100} color="#7CFC00" />
+            <MacroBar label={t("carbs")}   value={adjustedJustLoggedTotals?.carbs || 0}   max={150} color="#F59E0B" />
+            <MacroBar label={t("fat")}     value={adjustedJustLoggedTotals?.fat || 0}      max={60}  color="#8B5CF6" />
             {justLogged.result?.client_suggestion && (
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 10, fontStyle: "italic" }}>
                 💡 {justLogged.result.client_suggestion}
@@ -782,13 +784,13 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
         }
       >
       <div className="space-y-4">
-  <h2 className="text-white text-lg font-bold mb-0">Today's Meals</h2>
+  <h2 className="text-white text-lg font-bold mb-0">{t("todaysMeals")}</h2>
 
   {resolvedLogs.length === 0 ? (
     <div className="bg-[#16161A] border border-white/5 rounded-xl p-8 text-center">
       <Apple size={32} color="var(--color-text-secondary)" className="mx-auto mb-3" />
       <p className="text-[var(--color-text-secondary)] text-sm">
-        Your nutrition log is empty for now. Start with one meal above and the dashboard will build your daily picture automatically.
+        {t("noMealsYet")}
       </p>
     </div>
   ) : (

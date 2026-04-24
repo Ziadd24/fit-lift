@@ -17,6 +17,7 @@ import { moveFocusWithArrows, SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE, useAccess
 import { getErrorMessage, showConfirmToast } from "@/lib/feedback";
 import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
 import { DashboardErrorBoundary } from "@/components/ui/DashboardErrorBoundary";
+import { useClientLanguage } from "@/lib/client-language";
 import { toast } from "react-hot-toast";
 import {
   Home,
@@ -1476,6 +1477,7 @@ export default function ClientDashboard() {
   const router = useRouter();
   const { disableHeavyAnimations } = useDashboardMotion();
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { language, t, setLanguage } = useClientLanguage();
   const [activeNav, setActiveNav] = useState("home");
   
   useEffect(() => {
@@ -1549,11 +1551,11 @@ export default function ClientDashboard() {
   const proteinGoal = progressGoals.find((g: any) => g.metric === "protein")?.target ?? 180;
 
   const navItems = [
-    { key: "home",      label: "Home",      icon: <LayoutDashboard size={20} /> },
-    { key: "workouts",  label: "Workouts",  icon: <Dumbbell size={20} /> },
-    { key: "nutrition", label: "Nutrition", icon: <Utensils size={20} /> },
-    { key: "progress",  label: "Progress",  icon: <TrendingUp size={20} /> },
-    { key: "coach_uploads", label: "Coach uploads", icon: <Upload size={20} /> },
+    { key: "home", label: t("home"), icon: <LayoutDashboard size={20} /> },
+    { key: "workouts", label: t("workouts"), icon: <Dumbbell size={20} /> },
+    { key: "nutrition", label: t("nutrition"), icon: <Utensils size={20} /> },
+    { key: "progress", label: t("progress"), icon: <TrendingUp size={20} /> },
+    { key: "coach_uploads", label: t("assessments"), icon: <Upload size={20} /> },
   ];
 
   const createTaskMutation = useCreateTask();
@@ -1895,7 +1897,7 @@ export default function ClientDashboard() {
   const handleCopy = () => {
     navigator.clipboard.writeText(memberCode);
     setCopied(true);
-    setLiveAnnouncement("Membership code copied to clipboard.");
+    setLiveAnnouncement(t("copiedMembershipCode"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -2096,7 +2098,7 @@ export default function ClientDashboard() {
               }}
             >
               <HelpCircle size={18} />
-              Help & Support
+              {t("helpSupport")}
             </button>
             <button
               onClick={handleLogout}
@@ -2115,7 +2117,7 @@ export default function ClientDashboard() {
               }}
             >
               <LogOut size={18} />
-              Log Out
+              {t("logOut")}
             </button>
           </div>
         </aside>
@@ -2157,10 +2159,10 @@ export default function ClientDashboard() {
                   cursor: "pointer",
                   transition: "all 0.2s ease",
                 }}
-                aria-label="Log out"
+                aria-label={t("logOut")}
               >
                 <LogOut size={14} />
-                Log Out
+                {t("logOut")}
               </button>
               {demoMode && (
                 <button
@@ -2181,6 +2183,62 @@ export default function ClientDashboard() {
                   Demo Mode On
                 </button>
               )}
+              <div
+                role="group"
+                aria-label="Toggle language"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  height: 40,
+                  padding: 4,
+                  borderRadius: 999,
+                  background: "#111114",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setLanguage("en")}
+                  aria-pressed={language === "en"}
+                  style={{
+                    minWidth: 52,
+                    height: 30,
+                    padding: "0 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    cursor: "pointer",
+                    background: language === "en" ? "#7CFC00" : "transparent",
+                    color: language === "en" ? "#111114" : "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage("ar")}
+                  aria-pressed={language === "ar"}
+                  style={{
+                    minWidth: 52,
+                    height: 30,
+                    padding: "0 14px",
+                    borderRadius: 999,
+                    border: "none",
+                    cursor: "pointer",
+                    background: language === "ar" ? "#7CFC00" : "transparent",
+                    color: language === "ar" ? "#111114" : "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  عربي
+                </button>
+              </div>
               <button
                 style={{
                   width: 36, height: 36, borderRadius: 10,
@@ -2190,7 +2248,7 @@ export default function ClientDashboard() {
                   cursor: "pointer", color: "var(--color-text-secondary)",
                 }}
                 onClick={() => setIsSettingsOpen(true)}
-                aria-label="Open dashboard settings"
+                aria-label={t("openSettings")}
               >
                 <Settings size={16} />
               </button>
@@ -2271,7 +2329,7 @@ export default function ClientDashboard() {
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20 }}>
                 <div>
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
-                    Member ID
+                    {t("memberId")}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, color: "#7CFC00", fontFamily: "monospace" }}>
@@ -2288,7 +2346,7 @@ export default function ClientDashboard() {
                         minWidth: TOUCH_TARGET_SIZE,
                         minHeight: TOUCH_TARGET_SIZE,
                       }}
-                      aria-label={copied ? "Membership code copied" : "Copy membership code"}
+                      aria-label={copied ? t("copiedMembershipCode") : t("copyMembershipCode")}
                     >
                       {copied ? <Check size={13} /> : <Copy size={13} />}
                     </button>
@@ -2296,7 +2354,7 @@ export default function ClientDashboard() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
-                    Start Date
+                    {t("startDate")}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>
                     {currentMember?.start_date
@@ -2310,16 +2368,16 @@ export default function ClientDashboard() {
               <div style={{ marginBottom: isPrivate ? 20 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    {memberType} Plan
+                    {t("plan", { type: memberType })}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {daysLow && <AlertTriangle size={12} color={memberStatus === "expired" ? "#EF4444" : "#F59E0B"} />}
                     <span style={{ fontSize: 13, color: daysLow ? (memberStatus === "expired" ? "#EF4444" : "#F59E0B") : "var(--color-text-secondary)", fontWeight: daysLow ? 600 : 400 }}>
                       {memberStatus === "expired"
-                        ? `Expired ${Math.abs(rawDaysRemaining)} days ago`
+                        ? t("expiredDaysAgo", { count: Math.abs(rawDaysRemaining) })
                         : memberStatus === "expiring_soon"
-                        ? `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} left`
-                        : `${daysRemaining} / {totalDays} days`}
+                        ? t("daysLeft", { count: daysRemaining })
+                        : t("daysProgress", { remaining: daysRemaining, total: totalDays })}
                     </span>
                   </div>
                 </div>
@@ -2335,7 +2393,7 @@ export default function ClientDashboard() {
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
                   {startDate && (
                     <div>
-                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>Start</div>
+                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>{t("start")}</div>
                       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", fontWeight: 500 }}>
                         {startDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                       </div>
@@ -2343,7 +2401,7 @@ export default function ClientDashboard() {
                   )}
                   {expiryDate && (
                     <div style={{ textAlign: startDate ? "right" : "left" }}>
-                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>Expires</div>
+                      <div style={{ fontSize: 9, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px" }}>{t("expires")}</div>
                       <div style={{ fontSize: 12, color: daysLow ? (memberStatus === "expired" ? "#EF4444" : "#F59E0B") : "var(--color-text-secondary)", fontWeight: 500 }}>
                         {expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                       </div>
@@ -2353,8 +2411,8 @@ export default function ClientDashboard() {
                 {daysLow && (
                   <div style={{ fontSize: 12, color: memberStatus === "expired" ? "#EF4444" : "#F59E0B", marginTop: 6 }}>
                     {memberStatus === "expired"
-                      ? "Your subscription has expired. Contact us to renew."
-                      : "Your subscription is expiring soon. Renew to keep access."}
+                      ? t("subscriptionExpired")
+                      : t("subscriptionExpiring")}
                   </div>
                 )}
                               {/* Renew Now Button — shows when ≤5 days remaining or expired */}
@@ -2386,7 +2444,7 @@ export default function ClientDashboard() {
                     }}
                   >
                     <WhatsAppIcon size={18} color="#FFFFFF" />
-                    Renew Now
+                    {t("renewNow")}
                     <motion.span
                       animate={{ opacity: [1, 0.4, 1] }}
                       transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
@@ -2399,7 +2457,7 @@ export default function ClientDashboard() {
                         letterSpacing: "0.5px",
                       }}
                     >
-                      {memberStatus === "expired" ? "URGENT" : `${daysRemaining}D LEFT`}
+                      {memberStatus === "expired" ? t("urgent") : t("daysLeftShort", { count: daysRemaining })}
                     </motion.span>
                   </motion.a>
                 )}  
@@ -2437,7 +2495,7 @@ export default function ClientDashboard() {
                             transition={{ duration: 1.5, repeat: Infinity }}
                             style={{ width: 5, height: 5, borderRadius: "50%", background: "#7CFC00" }}
                           />
-                          Online · Watching your progress
+                          {t("onlineWatching")}
                         </div>
                       </div>
                     </div>
@@ -2452,7 +2510,7 @@ export default function ClientDashboard() {
                         cursor: "pointer",
                       }}
                     >
-                      View Dashboard
+                      {t("viewDashboard")}
                     </button>
                   </div>
                 </>
@@ -2479,7 +2537,7 @@ export default function ClientDashboard() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <Bell size={24} color="#7CFC00" />
-                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>Gym Updates</span>
+                <span style={{ fontSize: 20, fontWeight: 600, color: "#FFFFFF" }}>{t("gymUpdates")}</span>
               </div>
 
               {(announcementsLoading || photosLoading) && (
@@ -2499,7 +2557,7 @@ export default function ClientDashboard() {
               {!announcementsLoading && !photosLoading && announcements && announcements.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 16, fontWeight: 600, color: "#FFFFFF", marginBottom: 16 }}>
-                    Latest Announcements
+                    {t("latestAnnouncements")}
                   </div>
                   <LazyRenderSection
                     minHeight={184}
@@ -2558,7 +2616,7 @@ export default function ClientDashboard() {
                       onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
                       onMouseLeave={(e) => e.currentTarget.style.opacity = "0.7"}
                     >
-                      {showAllAnnouncements ? "See less" : "See more"}
+                      {showAllAnnouncements ? t("seeLess") : t("seeMore")}
                     </button>
                   )}
                 </div>
@@ -2568,10 +2626,10 @@ export default function ClientDashboard() {
               {!announcementsLoading && !photosLoading && (!announcements || announcements.length === 0) && (!photos || photos.length === 0) && (
                 <div style={{ textAlign: "center", padding: 40 }}>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 8 }}>
-                    Your dashboard is ready for the first update
+                    {t("dashboardReady")}
                   </div>
                   <div style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 420, margin: "0 auto" }}>
-                    As soon as your coach posts an announcement or new gym photo, it will land here.
+                    {t("dashboardReadyBody")}
                   </div>
                 </div>
               )}
@@ -2594,22 +2652,22 @@ export default function ClientDashboard() {
                   <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
                       <div>
-                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#10B981", fontWeight: 800 }}>Today&apos;s Nutrition</div>
+                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#10B981", fontWeight: 800 }}>{t("todaysNutrition")}</div>
                         <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{todayCalories} kcal</div>
                       </div>
                       {nutritionRisk && (
                         <div style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.24)", color: "#FCA5A5", fontSize: 12, fontWeight: 800 }}>
-                          Urgent
+                          {t("urgentBadge")}
                         </div>
                       )}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
                       <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Protein</div>
+                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{t("protein")}</div>
                         <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{todayProtein}g</div>
                       </div>
                       <div style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.04)" }}>
-                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Meals Logged</div>
+                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{t("mealsLogged")}</div>
                         <div style={{ fontSize: 20, fontWeight: 800, color: "#FFFFFF", marginTop: 4 }}>{nutritionLogs.length}</div>
                       </div>
                     </div>
@@ -2618,7 +2676,7 @@ export default function ClientDashboard() {
                       onClick={() => setActiveNav("nutrition")}
                       style={{ minHeight: 44, width: "100%", marginTop: 16, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(16,185,129,0.22)", background: "rgba(16,185,129,0.1)", color: "#86EFAC", fontWeight: 700, cursor: "pointer" }}
                     >
-                      Open Nutrition
+                      {t("openNutrition")}
                     </button>
                   </div>
                 </div>
@@ -2689,7 +2747,7 @@ export default function ClientDashboard() {
                   </HomeSectionCard>}
 
                   <HomeSectionCard
-                    title="Goals"
+                    title={t("goals")}
                     sectionKey="goals"
                     isOpen={homeSections.goals}
                     onToggle={toggleHomeSection}
@@ -2701,7 +2759,7 @@ export default function ClientDashboard() {
                             <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{item.label}</div>
                             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>{item.value}</div>
                           </div>
-                          {item.urgent && <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 10, fontWeight: 800 }}>Urgent</span>}
+                          {item.urgent && <span style={{ padding: "4px 8px", borderRadius: 999, background: "rgba(239,68,68,0.12)", color: "#FCA5A5", fontSize: 10, fontWeight: 800 }}>{t("urgentBadge")}</span>}
                         </div>
                       ))}
                     </div>
@@ -2742,14 +2800,14 @@ export default function ClientDashboard() {
                       <Play size={20} color="#7CFC00" />
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF" }}>Let&apos;s build your first win</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF" }}>{t("homeEmptyTitle")}</div>
                       <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
-                        Demo previews make the dashboard feel real before your live data starts coming in.
+                        {t("homeEmptyBody")}
                       </div>
                     </div>
                   </div>
                   <div style={{ fontSize: 14, lineHeight: 1.6, color: "#E5E7EB" }}>
-                    Start with a guided preview, then switch back to your live dashboard at any time.
+                    {t("homeEmptyBody2")}
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: "auto" }}>
                     <button
@@ -2757,14 +2815,14 @@ export default function ClientDashboard() {
                       onClick={() => enableDemoMode("workouts")}
                       style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "none", background: "#7CFC00", color: "#111114", fontWeight: 800, cursor: "pointer" }}
                     >
-                      Try Demo Workout
+                      {t("tryDemoWorkout")}
                     </button>
                     <button
                       type="button"
                       onClick={() => enableDemoMode("nutrition")}
                       style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.05)", color: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}
                     >
-                      Try Demo Nutrition
+                      {t("tryDemoNutrition")}
                     </button>
                   </div>
                 </div>
@@ -2782,19 +2840,19 @@ export default function ClientDashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                       <Avatar name={CLIENT_DATA.coach.name} size={44} isCoach ring ringColor="#7CFC00" fontSize={14} />
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Meet {CLIENT_DATA.coach.name}</div>
-                        <div style={{ fontSize: 12, color: "#7CFC00", marginTop: 4 }}>Your coach is ready to guide the first week.</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>{t("meetCoach", { name: CLIENT_DATA.coach.name })}</div>
+                        <div style={{ fontSize: 12, color: "#7CFC00", marginTop: 4 }}>{t("coachReady")}</div>
                       </div>
                     </div>
                     <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 16 }}>
-                      Welcome to Fit & Lift. We&apos;ll use workouts, nutrition logs, and short check-ins to keep you moving without overload.
+                      {t("welcomeFitLift")}
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveNav("home")}
                       style={{ minHeight: 44, padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(124,252,0,0.22)", background: "rgba(124,252,0,0.1)", color: "#7CFC00", fontWeight: 700, cursor: "pointer" }}
                     >
-                      View Dashboard
+                      {t("viewDashboard")}
                     </button>
                   </div>
                 )}
@@ -2808,7 +2866,7 @@ export default function ClientDashboard() {
                     minHeight: 220,
                   }}
                 >
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF", marginBottom: 14 }}>Get Started Checklist</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF", marginBottom: 14 }}>{t("getStartedChecklist")}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {checklistItems.map((item) => (
                       <div
@@ -2869,7 +2927,7 @@ export default function ClientDashboard() {
           )}
 
           {activeNav === "coach_uploads" && (
-            <DashboardErrorBoundary label="Coach Uploads">
+            <DashboardErrorBoundary label="Assessments">
               <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                 <CoachUploadsTab isPrivate={isPrivate} memberId={memberId!} />
               </motion.div>
@@ -2892,7 +2950,7 @@ export default function ClientDashboard() {
                     <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF" }}>{CLIENT_DATA.coach.name}</div>
                     <div style={{ fontSize: 13, color: "#7CFC00", display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                       <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7CFC00" }} />
-                      Online Now
+                      {t("onlineWatching")}
                     </div>
                     <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>Certified Personal Trainer · 5+ years exp.</div>
                   </div>
@@ -2938,8 +2996,8 @@ export default function ClientDashboard() {
               aria-describedby={taskModalDescriptionId}
               tabIndex={-1}
             >
-              <h2 id={taskModalTitleId} style={{ color: "#FFF", marginBottom: 8 }}>{editingTask ? "Edit Task" : "Add Task"}</h2>
-              <p id={taskModalDescriptionId} className="sr-only">Task editor dialog. Press Escape to close the dialog.</p>
+              <h2 id={taskModalTitleId} style={{ color: "#FFF", marginBottom: 8 }}>{editingTask ? (language === "ar" ? "تعديل المهمة" : "Edit Task") : t("addTask")}</h2>
+              <p id={taskModalDescriptionId} className="sr-only">{language === "ar" ? "نافذة تعديل المهمة. اضغط Escape للإغلاق." : "Task editor dialog. Press Escape to close the dialog."}</p>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 setTaskFormError(null);
@@ -2948,11 +3006,11 @@ export default function ClientDashboard() {
                 const type = String(formData.get("type") || "workout");
                 const duration = String(formData.get("duration") || "").trim();
                 if (title.length < 3) {
-                  setTaskFormError("Task title should be at least 3 characters.");
+                  setTaskFormError(language === "ar" ? "عنوان المهمة لازم يكون ٣ حروف على الأقل." : "Task title should be at least 3 characters.");
                   return;
                 }
                 if (!duration) {
-                  setTaskFormError("Add a duration like 15 min or All Day.");
+                  setTaskFormError(language === "ar" ? "اكتب مدة زي 15 min أو All Day." : "Add a duration like 15 min or All Day.");
                   return;
                 }
                 if (editingTask) {
@@ -2960,10 +3018,10 @@ export default function ClientDashboard() {
                     { id: editingTask.id, data: { title, type, duration } },
                     {
                       onSuccess: () => {
-                        toast.success("Task updated.");
+                        toast.success(language === "ar" ? "اتحدثت المهمة." : "Task updated.");
                         setIsTaskModalOpen(false);
                       },
-                      onError: (error) => setTaskFormError(getErrorMessage(error, "Couldn't update that task right now."))
+                      onError: (error) => setTaskFormError(getErrorMessage(error, language === "ar" ? "ماقدرناش نحدّث المهمة دلوقتي." : "Couldn't update that task right now."))
                     }
                   );
                 } else {
@@ -2971,10 +3029,10 @@ export default function ClientDashboard() {
                     { member_id: memberId!, title, type, duration, status: "todo", coach_assigned: false },
                     {
                       onSuccess: () => {
-                        toast.success("Task created.");
+                        toast.success(language === "ar" ? "اتعملت المهمة." : "Task created.");
                         setIsTaskModalOpen(false);
                       },
-                      onError: (error) => setTaskFormError(getErrorMessage(error, "Couldn't create that task right now."))
+                      onError: (error) => setTaskFormError(getErrorMessage(error, language === "ar" ? "ماقدرناش نعمل المهمة دلوقتي." : "Couldn't create that task right now."))
                     }
                   );
                 }
@@ -2985,24 +3043,24 @@ export default function ClientDashboard() {
                   </div>
                 )}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>Task Title</label>
-                  <input aria-label="Task title" name="title" defaultValue={editingTask?.title || ""} required style={{ width: "100%", padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>{language === "ar" ? "عنوان المهمة" : "Task Title"}</label>
+                  <input aria-label={language === "ar" ? "عنوان المهمة" : "Task title"} name="title" defaultValue={editingTask?.title || ""} required style={{ width: "100%", padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>Type</label>
+                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>{language === "ar" ? "النوع" : "Type"}</label>
                   <select aria-label="Task type" name="type" defaultValue={editingTask?.type || "workout"} style={{ width: "100%", padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }}>
-                    <option value="workout">Workout</option>
-                    <option value="nutrition">Nutrition</option>
-                    <option value="recovery">Recovery</option>
+                    <option value="workout">{language === "ar" ? "تمرين" : "Workout"}</option>
+                    <option value="nutrition">{language === "ar" ? "تغذية" : "Nutrition"}</option>
+                    <option value="recovery">{language === "ar" ? "استشفاء" : "Recovery"}</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>Duration</label>
-                  <input aria-label="Task duration" name="duration" defaultValue={editingTask?.duration || "15 min"} required style={{ width: "100%", padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
+                  <label style={{ display: "block", color: SECONDARY_TEXT_COLOR, fontSize: 13, marginBottom: 8 }}>{language === "ar" ? "المدة" : "Duration"}</label>
+                  <input aria-label={language === "ar" ? "مدة المهمة" : "Task duration"} name="duration" defaultValue={editingTask?.duration || "15 min"} required style={{ width: "100%", padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF" }} />
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
-                  <button type="button" onClick={() => setIsTaskModalOpen(false)} style={{ flex: 1, padding: 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8, cursor: "pointer", minHeight: TOUCH_TARGET_SIZE }}>Cancel</button>
-                  <button type="submit" disabled={createTaskMutation.isPending || updateTaskMutation.isPending} style={{ flex: 1, padding: 12, background: "#7CFC00", color: "#000", fontWeight: 600, border: "none", borderRadius: 8, cursor: "pointer", minHeight: TOUCH_TARGET_SIZE }}>Save</button>
+                  <button type="button" onClick={() => setIsTaskModalOpen(false)} style={{ flex: 1, padding: 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 8, cursor: "pointer", minHeight: TOUCH_TARGET_SIZE }}>{t("cancel")}</button>
+                  <button type="submit" disabled={createTaskMutation.isPending || updateTaskMutation.isPending} style={{ flex: 1, padding: 12, background: "#7CFC00", color: "#000", fontWeight: 600, border: "none", borderRadius: 8, cursor: "pointer", minHeight: TOUCH_TARGET_SIZE }}>{t("save")}</button>
                 </div>
               </form>
             </motion.div>

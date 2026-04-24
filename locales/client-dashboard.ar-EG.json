@@ -1,0 +1,403 @@
+{
+  "meta": {
+    "locale": "ar-EG",
+    "direction": "rtl",
+    "numerals": "western",
+    "tone": "friendly-trustworthy-egyptian-saas"
+  },
+  "common": {
+    "save": "احفظ",
+    "cancel": "إلغاء",
+    "close": "اقفل",
+    "edit": "عدّل",
+    "delete": "احذف",
+    "remove": "شيل",
+    "add": "أضف",
+    "done": "تم",
+    "pending": "معلّق",
+    "completed": "مكتمل",
+    "inProgress": "شغّال دلوقتي",
+    "loading": "بنجهّز لك البيانات...",
+    "loadingDashboard": "بنجهّز لك الداشبورد...",
+    "viewDetails": "شوف التفاصيل",
+    "open": "افتح",
+    "tryAgain": "جرّب تاني",
+    "search": "ابحث",
+    "all": "الكل",
+    "more": "المزيد",
+    "today": "النهارده",
+    "yesterday": "امبارح",
+    "week": "الأسبوع",
+    "month": "الشهر",
+    "day": "اليوم",
+    "minutesShort": "دقيقة",
+    "hoursShort": "ساعة",
+    "kcalRemaining": "سعرة متبقية",
+    "resultsCount": "{count} نتيجة",
+    "notEnoughHistory": "لسه مفيش بيانات كفاية عشان نعرض التاريخ.",
+    "noDataYet": "لسه مفيش بيانات هنا.",
+    "demoBadge": "تجربة",
+    "coach": "الكوتش",
+    "member": "العضو",
+    "selfPaced": "على راحتك"
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "workouts": "التمارين",
+    "nutrition": "التغذية",
+    "progress": "التقدم",
+    "assessments": "التقييمات",
+    "helpSupport": "المساعدة والدعم",
+    "settings": "الإعدادات",
+    "logOut": "تسجيل الخروج",
+    "quickLog": "تسجيل سريع",
+    "openQuickLogMenu": "افتح قائمة التسجيل السريع"
+  },
+  "banner": {
+    "privateCoachActive": "عندك كوتش خاص والدعم المميز شغّال"
+  },
+  "home": {
+    "welcomeBack": "أهلاً بيك تاني، {name}",
+    "membershipCode": "كود العضوية",
+    "membershipCodeCopied": "تم نسخ كود العضوية.",
+    "subscriptionRunway": "مدة الاشتراك",
+    "expiredDaysAgo": "الاشتراك انتهى من {count} يوم",
+    "daysLeft": "فاضل {remaining} من {total} يوم",
+    "proteinTarget": "هدف البروتين",
+    "ofTarget": "{current} من {target}",
+    "workoutPending": "في تمرين مستنيك",
+    "nutritionRisk": "محتاج تظبط التغذية",
+    "nutritionRiskDetail": "السعرات أو البروتين أقل من المطلوب النهارده",
+    "todaysNutrition": "تغذية النهارده",
+    "mealsLogged": "وجبات متسجلة",
+    "openNutrition": "افتح التغذية",
+    "urgent": "مهم",
+    "goals": "أهدافك",
+    "workoutSummary": "ملخص التمارين",
+    "nextUp": "اللي جاي",
+    "dailyScoreTitle": "تقييم النهارده",
+    "dailyScoreHigh": "أداءك النهارده ممتاز، كمّل بنفس الإيقاع.",
+    "dailyScoreMedium": "أنت ماشي كويس، باقي خطوة وتكمل اليوم صح.",
+    "dailyScoreLow": "ابدأ بحاجة بسيطة، ومع أول خطوة اليوم هيفرق.",
+    "challengeTitle": "تحدي الأسبوع",
+    "challengeHelper": "خلصت {done} من {total} خطوات",
+    "momentumBuilder": "بناء الإيقاع",
+    "momentumBuilderDescription": "خلّص ٤ خطوات مفيدة الأسبوع ده بين التمرين والتغذية.",
+    "achievements": "الإنجازات",
+    "unlocked": "اتفتح",
+    "stillWorkingOnIt": "شغّال عليه",
+    "firstWorkout": "أول تمرين",
+    "firstWorkoutDescription": "بدأت فعلاً، ودي أهم خطوة.",
+    "tenWorkouts": "١٠ تمارين",
+    "tenWorkoutsDescription": "الالتزام بدأ يبان في مستواك.",
+    "thirtyDayStreak": "سلسلة ٣٠ يوم",
+    "thirtyDayStreakDescription": "الروتين بقى عادة ثابتة.",
+    "firstPR": "أول رقم شخصي",
+    "firstPRDescription": "واضح إنك أقوى من امبارح.",
+    "earlyBird": "بداية بدري",
+    "earlyBirdDescription": "بدأت يومك بدري وخدت الخطوة قبل الزحمة.",
+    "announcements": "التحديثات",
+    "gallery": "الصور",
+    "showAllAnnouncements": "شوف كل التحديثات",
+    "emptyFeedTitle": "لسه مفيش جديد",
+    "emptyFeedBody": "أول ما ينزل لك تحديث أو صورة، هتلاقيه هنا.",
+    "emptyWorkoutTasks": "لسه مفيش تمارين متضافة. افتح صفحة التمارين وابدأ من هناك.",
+    "checklistTitle": "ابدأ من هنا",
+    "completeProfile": "كمّل بياناتك",
+    "finishFirstWorkout": "خلّص أول تمرين",
+    "logFirstMeal": "سجّل أول وجبة",
+    "setFirstGoal": "حدد أول هدف",
+    "demoModeEnabled": "فعّلنا وضع التجربة.",
+    "backToLiveDashboard": "رجّعناك لبياناتك الحقيقية.",
+    "emptyStateTitle": "يلا نبدأ أول خطوة",
+    "emptyStateBody": "مفيش بيانات لسه، فجهزنالك معاينة تساعدك تتخيل شكل الداشبورد لما تبدأ تستخدمه.",
+    "emptyStateHint": "ابدأ بتجربة سريعة، وتقدر ترجع لبياناتك الأصلية في أي وقت.",
+    "tryDemoWorkout": "جرّب التمارين التجريبية",
+    "tryDemoNutrition": "جرّب التغذية التجريبية",
+    "meetCoach": "اتعرّف على {name}",
+    "coachReady": "الكوتش جاهز يمشي معاك أول أسبوع.",
+    "welcomeToProduct": "أهلاً بيك في Fit & Lift. هنمشي معاك بالتمارين وتسجيل الأكل والمتابعة السريعة من غير ضغط زيادة.",
+    "viewDashboard": "افتح الرئيسية",
+    "coachSpecialty": "متخصص في تمارين القوة وبناء العضلات، وموجود معاك للتمرين والتغذية والمتابعة."
+  },
+  "search": {
+    "title": "بحث شامل",
+    "description": "دوّر في التمارين وسجل التغذية ومكتبة التمارين. تقدر تفتحه في أي وقت بـ Ctrl/Cmd + K.",
+    "closeSearch": "اقفل البحث",
+    "placeholder": "ابحث عن تمرين أو وجبة أو حركة",
+    "filters": {
+      "all": "الكل",
+      "workouts": "التمارين",
+      "nutrition": "التغذية",
+      "exercises": "مكتبة التمارين"
+    },
+    "muscleGroup": {
+      "all": "كل العضلات",
+      "upperBody": "الجزء العلوي",
+      "lowerBody": "الجزء السفلي",
+      "fullBody": "الجسم كله",
+      "mobility": "المرونة والحركة"
+    },
+    "difficulty": {
+      "all": "كل المستويات",
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب"
+    },
+    "duration": {
+      "all": "أي مدة",
+      "short": "أقل من ٣٠ دقيقة",
+      "medium": "من ٣٠ لـ ٤٥ دقيقة",
+      "long": "أكتر من ٤٥ دقيقة"
+    },
+    "sections": {
+      "workouts": "التمارين",
+      "nutritionLogs": "سجل التغذية",
+      "exerciseLibrary": "مكتبة التمارين"
+    },
+    "empty": {
+      "workouts": "مفيش تمارين مطابقة للفلاتر دي.",
+      "nutrition": "مفيش وجبات مطابقة للبحث.",
+      "exercises": "مفيش تمارين مطابقة."
+    },
+    "actions": {
+      "openWorkouts": "افتح التمارين",
+      "addTag": "أضف “{tag}” كتاج"
+    },
+    "exerciseGuide": "يفتح لك فيديو شرح"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "description": "ظبط التجربة على اللي يناسبك",
+    "closeSettings": "اقفل الإعدادات",
+    "theme": "المظهر",
+    "themeAuto": "تلقائي",
+    "themeDark": "غامق",
+    "units": "الوحدات",
+    "kg": "كجم",
+    "lbs": "رطل"
+  },
+  "quickLog": {
+    "title": "تسجيل سريع",
+    "description": "اختار الإجراء اللي عايز تبدأ به",
+    "logWorkout": "سجّل تمرين",
+    "logWorkoutHint": "علّم على الجولات اللي خلصتها",
+    "logMeal": "سجّل وجبة",
+    "logMealHint": "تحليل غذائي بالذكاء الاصطناعي",
+    "updateWeight": "حدّث وزنك",
+    "updateWeightHint": "سجّل وزنك الحالي"
+  },
+  "tasks": {
+    "title": "المهام",
+    "filters": {
+      "all": "الكل",
+      "coach": "من الكوتش",
+      "personal": "شخصية",
+      "completed": "تمت"
+    },
+    "status": {
+      "todo": "لسه",
+      "inProgress": "شغّال عليها",
+      "done": "خلصت"
+    },
+    "menu": {
+      "edit": "عدّل",
+      "skip": "تخطّى",
+      "delete": "احذف"
+    },
+    "modal": {
+      "addTitle": "أضف مهمة",
+      "editTitle": "عدّل المهمة",
+      "description": "نافذة تعديل المهام. اضغط Escape للإغلاق.",
+      "taskTitle": "عنوان المهمة",
+      "type": "النوع",
+      "duration": "المدة",
+      "typeWorkout": "تمرين",
+      "typeNutrition": "تغذية",
+      "typeRecovery": "استشفاء",
+      "durationPlaceholder": "مثال: ١٥ دقيقة أو طول اليوم",
+      "validationTitle": "العنوان لازم يكون ٣ حروف على الأقل.",
+      "validationDuration": "اكتب مدة واضحة زي ١٥ دقيقة أو طول اليوم."
+    }
+  },
+  "workouts": {
+    "title": "التمارين",
+    "weeklyPlan": "خطة الأسبوع",
+    "weeklyProgress": "تقدم الأسبوع",
+    "todaysFocus": "تركيز النهارده",
+    "manageTasks": "نظّم المهام",
+    "addWorkout": "أضف تمرين",
+    "editWorkout": "عدّل التمرين",
+    "finishWorkout": "أنهِ التمرين",
+    "finishSuccess": "خلصت التمرين. شغل جامد!",
+    "completeAllSets": "كمّلت {done} من {total} جولات",
+    "coachAssigned": "من الكوتش",
+    "difficulty": {
+      "easy": "سهل",
+      "medium": "متوسط",
+      "hard": "صعب"
+    },
+    "status": {
+      "todo": "لسه",
+      "inProgress": "شغّال دلوقتي",
+      "done": "خلصت"
+    },
+    "actions": {
+      "edit": "عدّل",
+      "replace": "بدّل",
+      "skip": "تخطّى",
+      "remove": "احذف",
+      "undo": "تراجع",
+      "savePlan": "احفظ الخطة",
+      "saveTasks": "احفظ المهام"
+    },
+    "confirmRemoveExercise": "تحب تشيل {name} من التمرين ده؟",
+    "exerciseRemoved": "تمرين {name} اتمسح.",
+    "setCompleted": "{exercise}، الجولة {set} تمت.",
+    "setIncomplete": "{exercise}، الجولة {set} رجعت غير مكتملة.",
+    "exerciseSkipped": "تخطّينا {name}.",
+    "workoutFinishedAnnouncement": "تمرين {name} خلص.",
+    "form": {
+      "workoutTitle": "عنوان التمرين",
+      "calories": "السعرات (kcal)",
+      "save": "احفظ",
+      "cancel": "إلغاء",
+      "validationTitle": "عنوان التمرين لازم يكون ٣ حروف على الأقل.",
+      "validationCalories": "السعرات لازم تكون رقم أكبر من صفر.",
+      "saveError": "مش قادرين نحفظ التمرين دلوقتي.",
+      "createSuccess": "التمرين اتضاف.",
+      "updateSuccess": "التمرين اتحدّث."
+    },
+    "weeklyPlanModal": {
+      "title": "عدّل خطة الأسبوع",
+      "done": "تم"
+    },
+    "tasksModal": {
+      "title": "عدّل المهام",
+      "newTask": "مهمة جديدة",
+      "priority": {
+        "low": "منخفضة",
+        "medium": "متوسطة",
+        "high": "عالية"
+      }
+    }
+  },
+  "nutrition": {
+    "title": "التغذية",
+    "demoPreview": "دي معاينة تجريبية عشان تشوف شكل يوم التغذية لما البيانات تبدأ تدخل.",
+    "remainingCalories": "سعرة متبقية",
+    "editGoals": "عدّل أهداف التغذية",
+    "closeGoalEditor": "اقفل تعديل الأهداف",
+    "goalsUpdated": "أهداف التغذية اتحدّثت.",
+    "goalsSaveError": "مش قادرين نحفظ الأهداف دلوقتي.",
+    "goalEditor": {
+      "calories": "السعرات (kcal)",
+      "protein": "البروتين (جم)",
+      "carbs": "الكاربوهيدرات (جم)",
+      "fat": "الدهون (جم)",
+      "saveGoals": "احفظ الأهداف",
+      "saving": "بنحفظ..."
+    },
+    "logMealCardTitle": "سجّل وجبة",
+    "logMealCardHint": "اكتب اللي أكلته أو اختار اقتراح، وإحنا هنحسب الماكروز فورًا.",
+    "tabs": {
+      "recent": "الأحدث",
+      "favorites": "المفضلة"
+    },
+    "quickFood": {
+      "useQuickFood": "استخدم اقتراح {label}"
+    },
+    "image": {
+      "uploadMealPhoto": "ارفع صورة الوجبة للتحليل",
+      "removeSelectedPhoto": "شيل صورة الوجبة المختارة"
+    },
+    "textareaPlaceholder": "مثال: ٢٠٠ جم فراخ مشوية مع كوب رز بني",
+    "analyze": "حلّل وسجّل",
+    "analyzing": "بنحلّل...",
+    "analyzingAnnouncement": "بنعالج الوجبة دلوقتي.",
+    "analysisFailed": "مش قدرنا نحلّل الوجبة.",
+    "analysisBusy": "التحليل الذكي مشغول دلوقتي. جرّب تاني بعد دقيقة.",
+    "saveMealError": "مش قادرين نحفظ الوجبة دي دلوقتي.",
+    "photoUploadFallback": "صورة وجبة",
+    "mealLogged": "الوجبة اتسجلت.",
+    "mealLoggedSuccess": "{name} اتسجلت بنجاح.",
+    "portionAdjust": "عدّل الكمية إلى {multiplier} مرة",
+    "clientSuggestionPrefix": "اقتراح",
+    "todaysMeals": "وجبات النهارده",
+    "emptyMeals": "لسه مفيش وجبات متسجلة. ابدأ بوجبة واحدة فوق، والباقي هيتبني تلقائي.",
+    "categories": {
+      "breakfast": "الفطار",
+      "lunch": "الغدا",
+      "dinner": "العشا",
+      "snack": "سناك"
+    }
+  },
+  "progress": {
+    "title": "مركز التقدم",
+    "subtitle": "هنا بتتابع التمرين والسعرات والأهداف والأرقام الشخصية وملاحظات الكوتش في مكان واحد.",
+    "connection": {
+      "offlineQueue": "في انتظار المزامنة",
+      "syncing": "جارٍ المزامنة",
+      "live": "محدّث لحظيًا",
+      "pending": "{count} لسه ما اترفعتش"
+    },
+    "addWeight": "سجّل الوزن",
+    "addWeightHint": "اضغط على «سجّل الوزن» عشان تضيف وزنك الحالي وتشوف التغير مع الوقت.",
+    "enterWeightPrompt": "اكتب وزنك بالكيلو",
+    "weightSaved": "الوزن اتسجل.",
+    "weightSaveError": "مش قادرين نحفظ الوزن دلوقتي.",
+    "cards": {
+      "workoutsDone": "تمارين خلصتها",
+      "caloriesBurned": "سعرات اتحرقت",
+      "efficiency": "نسبة الالتزام",
+      "currentStreak": "السلسلة الحالية",
+      "weekTotal": "إجمالي الأسبوع",
+      "setCompletionRate": "نسبة إنهاء الجولات",
+      "consecutiveDays": "أيام متتالية"
+    },
+    "weightProgress": "تقدم الوزن",
+    "recentEntries": "آخر القياسات",
+    "needMoreWeightData": "سجّل وزنين على الأقل عشان نعرض خط التغير.",
+    "deleteWeightEntry": "احذف القياس",
+    "unknownDate": "تاريخ غير معروف",
+    "historyChart": "الرسم البياني",
+    "recordSearchPlaceholder": "ابحث في الأرقام الشخصية",
+    "recordFilters": {
+      "all": "الكل",
+      "upper": "علوي",
+      "lower": "سفلي",
+      "last30Days": "آخر ٣٠ يوم"
+    }
+  },
+  "assessments": {
+    "assignedCoach": "الكوتش المعيّن",
+    "noCoachAssigned": "لسه مفيش كوتش متعيّن",
+    "title": "التقييمات",
+    "subtitle": "طلبات القياسات والملفات والمتابعة من الكوتش هتلاقيها هنا.",
+    "tabs": {
+      "assessments": "التقييمات",
+      "sharedFiles": "الملفات المشتركة",
+      "all": "الكل"
+    },
+    "loading": "بنحمّل التقييمات...",
+    "emptyTitle": "لسه مفيش تقييمات",
+    "emptyBody": "أول ما الكوتش يبعت لك تقييم، هتلاقيه هنا بالملفات والتعليمات.",
+    "status": {
+      "pending": "مستني ردك",
+      "submitted": "اتسلم",
+      "reviewed": "اتراجع"
+    },
+    "filesCount": "{count} ملف",
+    "dueDate": "الموعد النهائي {date}",
+    "instructions": "تعليمات الكوتش",
+    "requestedMeasurements": "القياسات المطلوبة",
+    "bodyMeasurementAssessment": "تقييم قياسات الجسم",
+    "download": "نزّل الملف"
+  },
+  "errors": {
+    "generic": "حصلت مشكلة بسيطة. جرّب تاني.",
+    "notFound": "مش قادرين نلاقي اللي بتدور عليه.",
+    "saveFailed": "مقدرناش نحفظ التغييرات دلوقتي.",
+    "loadFailed": "مقدرناش نحمّل البيانات دلوقتي."
+  }
+}

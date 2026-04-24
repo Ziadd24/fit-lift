@@ -8,6 +8,7 @@ import {
   useUpdateSession,
   useListMembers,
 } from "@/lib/api-hooks";
+import { useCoachLanguage } from "@/lib/coach-language";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Search, HelpCircle, Plus, X,
@@ -165,8 +166,13 @@ function TimeLabel({ slot }: { slot: number }) {
 }
 
 function EmptySlot({
-  slot, resourceId, onClickCreate
-}: { slot: number; resourceId: string; onClickCreate: (slot: number, resourceId: string) => void }) {
+  slot, resourceId, onClickCreate, addLabel
+}: {
+  slot: number;
+  resourceId: string;
+  onClickCreate: (slot: number, resourceId: string) => void;
+  addLabel?: string;
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -191,7 +197,7 @@ function EmptySlot({
           fontFamily: "Inter,sans-serif", fontWeight: 600,
           pointerEvents: "none",
         }}>
-          <Plus size={11} /> New
+          <Plus size={11} /> {addLabel ?? "New"}
         </div>
       )}
     </div>
@@ -199,12 +205,18 @@ function EmptySlot({
 }
 
 function BookingCard({
-  booking, onEdit, onStatusChange, currentTime
+  booking, onEdit, onStatusChange, currentTime, texts
 }: {
   booking: Booking;
   onEdit: (b: Booking) => void;
   onStatusChange: (id: number | string, action: "start" | "pause" | "end") => void;
   currentTime: number;
+  texts: {
+    start: string;
+    resume: string;
+    end: string;
+    pause: string;
+  };
 }) {
   const [hovered, setHovered] = useState(false);
   const startSlot = timeToSlot(booking.startTime);
@@ -338,18 +350,18 @@ function BookingCard({
             <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
               <button onClick={e => { e.stopPropagation(); onStatusChange(booking.id, "start"); }}
                 style={{ flex: 1, background: "rgba(124,252,0,0.2)", border: "none", borderRadius: 6, padding: "4px", cursor: "pointer", color: "#7CFC00", fontSize: 9, fontWeight: 700 }}>
-                ▶ Resume
+                ▶ {texts.resume}
               </button>
               <button onClick={e => { e.stopPropagation(); onStatusChange(booking.id, "end"); }}
                 style={{ flex: 1, background: "rgba(239,68,68,0.2)", border: "none", borderRadius: 6, padding: "4px", cursor: "pointer", color: "#EF4444", fontSize: 9, fontWeight: 700 }}>
-                ■ End
+                ■ {texts.end}
               </button>
             </div>
           )}
           {booking.status === "scheduled" && hovered && booking.isReal && (
             <button onClick={e => { e.stopPropagation(); onStatusChange(booking.id, "start"); }}
               style={{ width: "100%", background: "rgba(124,252,0,0.15)", border: "1px solid rgba(124,252,0,0.3)", borderRadius: 6, padding: "3px 0", cursor: "pointer", color: "#7CFC00", fontSize: 9, fontWeight: 700, marginBottom: 4 }}>
-              ▶ Start
+              ▶ {texts.start}
             </button>
           )}
 
@@ -426,6 +438,7 @@ function MobileResourceCard({
   onEdit,
   onStatusChange,
   currentTime,
+  texts,
 }: {
   resource: Resource;
   count: number;
@@ -435,6 +448,15 @@ function MobileResourceCard({
   onEdit: (b: Booking) => void;
   onStatusChange: (id: number | string, action: "start" | "pause" | "end") => void;
   currentTime: number;
+  texts: {
+    resourceName: (name: string) => string;
+    sessions: (count: number) => string;
+    noSessionsScheduled: string;
+    statusLabel: (status: string) => string;
+    start: string;
+    pause: string;
+    end: string;
+  };
 }) {
   const Icon = resource.icon;
   const activityStyle = ACTIVITY_COLORS[resource.name] || ACTIVITY_COLORS["Personal Training"];
@@ -461,9 +483,9 @@ function MobileResourceCard({
             <Icon size={18} color={resource.glowColor} />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold text-white">{resource.name}</p>
+            <p className="text-sm font-semibold text-white">{texts.resourceName(resource.name)}</p>
             <p className="text-xs" style={{ color: count > 0 ? resource.glowColor : "#5A5A5A" }}>
-              {count} session{count !== 1 ? "s" : ""}
+              {texts.sessions(count)}
             </p>
           </div>
         </div>
@@ -485,7 +507,7 @@ function MobileResourceCard({
             <div className="px-4 pb-4 space-y-2">
               {bookings.length === 0 ? (
                 <p className="text-xs text-center py-3" style={{ color: "#5A5A5A" }}>
-                  No sessions scheduled
+                  {texts.noSessionsScheduled}
                 </p>
               ) : (
                 bookings.map((booking) => (
@@ -496,6 +518,7 @@ function MobileResourceCard({
                     onEdit={onEdit}
                     onStatusChange={onStatusChange}
                     currentTime={currentTime}
+                    texts={texts}
                   />
                 ))
               )}
@@ -513,12 +536,19 @@ function MobileSessionCard({
   onEdit,
   onStatusChange,
   currentTime,
+  texts,
 }: {
   booking: Booking;
   activityStyle: { bg: string; border: string; glow: string; text: string };
   onEdit: (b: Booking) => void;
   onStatusChange: (id: number | string, action: "start" | "pause" | "end") => void;
   currentTime: number;
+  texts: {
+    statusLabel: (status: string) => string;
+    start: string;
+    pause: string;
+    end: string;
+  };
 }) {
   const canStart = booking.status === "scheduled";
   const canPause = booking.status === "in_progress";
@@ -529,13 +559,6 @@ function MobileSessionCard({
     in_progress: "#7CFC00",
     paused: "#F59E0B",
     completed: "#10B981",
-  };
-
-  const statusLabels: Record<string, string> = {
-    scheduled: "Scheduled",
-    in_progress: "In Progress",
-    paused: "Paused",
-    completed: "Completed",
   };
 
   return (
@@ -564,7 +587,7 @@ function MobileSessionCard({
             }}
           />
           <span className="text-[10px]" style={{ color: statusColors[booking.status] }}>
-            {statusLabels[booking.status]}
+            {texts.statusLabel(booking.status)}
           </span>
         </div>
       </div>
@@ -580,7 +603,7 @@ function MobileSessionCard({
             className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
             style={{ background: "rgba(124,252,0,0.2)", color: "#7CFC00" }}
           >
-            <Play size={12} /> Start
+            <Play size={12} /> {texts.start}
           </button>
         )}
         {canPause && (
@@ -592,7 +615,7 @@ function MobileSessionCard({
             className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
             style={{ background: "rgba(245,158,11,0.2)", color: "#F59E0B" }}
           >
-            <Pause size={12} /> Pause
+            <Pause size={12} /> {texts.pause}
           </button>
         )}
         {canEnd && (
@@ -604,7 +627,7 @@ function MobileSessionCard({
             className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1"
             style={{ background: "rgba(16,185,129,0.2)", color: "#10B981" }}
           >
-            <Square size={12} /> End
+            <Square size={12} /> {texts.end}
           </button>
         )}
       </div>
@@ -628,6 +651,8 @@ function MobileStatsPill({ label, value, color }: { label: string; value: number
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CoachSchedule() {
+  const { language, isRTL, formatNumber } = useCoachLanguage();
+  const isArabic = language === "ar";
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
@@ -691,7 +716,7 @@ export default function CoachSchedule() {
     const color = AVATAR_COLORS[(s.id || 0) % AVATAR_COLORS.length];
     return {
       id: s.id,
-      clientName: s.member_name || "Guest Client",
+      clientName: s.member_name || (isArabic ? "عميل زائر" : "Guest Client"),
       startTime,
       endTime,
       resourceId,
@@ -823,6 +848,77 @@ export default function CoachSchedule() {
     border: "1px solid rgba(255,255,255,0.06)",
   } as React.CSSProperties;
 
+  const resourceName = (name: string) => {
+    const names: Record<string, string> = {
+      "Personal Training": "تدريب شخصي",
+      "Group Class": "حصة جماعية",
+      "HIIT": "هيت",
+      "Yoga & Recovery": "يوجا واستشفاء",
+      "Cardio Zone": "منطقة الكارديو",
+      "VIP Coaching": "تدريب كبار العملاء",
+    };
+    return isArabic ? (names[name] ?? name) : name;
+  };
+
+  const statusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      all: isArabic ? "كل الحالات" : "All Statuses",
+      scheduled: isArabic ? "مجدولة" : "Scheduled",
+      in_progress: isArabic ? "قيد التنفيذ" : "In Progress",
+      paused: isArabic ? "متوقفة" : "Paused",
+      completed: isArabic ? "مكتملة" : "Completed",
+    };
+    return labels[status] ?? status;
+  };
+
+  const activityLabel = (activity: string) => {
+    if (activity === "all") return isArabic ? "كل الأنشطة" : "All Activities";
+    return resourceName(activity);
+  };
+
+  const sessionsLabel = (count: number) =>
+    isArabic ? `${formatNumber(count)} جلسة` : `${count} session${count !== 1 ? "s" : ""}`;
+
+  const scheduleDate = (date: Date) =>
+    date.toLocaleDateString(isArabic ? "ar-EG" : "en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
+  const ui = {
+    title: isArabic ? "الجدول" : "Schedule",
+    searchClient: isArabic ? "ابحث عن عميل..." : "Search client…",
+    filters: isArabic ? "التصفية" : "Filters",
+    status: isArabic ? "الحالة" : "Status",
+    activity: isArabic ? "النشاط" : "Activity",
+    day: isArabic ? "يوم" : "Day",
+    week: isArabic ? "أسبوع" : "Week",
+    help: isArabic ? "مساعدة" : "Help",
+    newSession: isArabic ? "جلسة جديدة" : "New Session",
+    todayPrefix: isArabic ? "اليوم، " : "Today, ",
+    today: isArabic ? "اليوم" : "Today",
+    jumpToToday: isArabic ? "الرجوع لليوم" : "Jump to Today",
+    addNew: isArabic ? "جديد" : "New",
+    noSessionsScheduled: isArabic ? "لا توجد جلسات مجدولة" : "No sessions scheduled",
+    guestClient: isArabic ? "عميل زائر" : "Guest Client",
+    client: isArabic ? "العميل" : "Client",
+    activitySessionType: isArabic ? "النشاط / نوع الجلسة" : "Activity / Session Type",
+    startTime: isArabic ? "وقت البداية" : "Start Time",
+    durationMin: isArabic ? "المدة (دقيقة)" : "Duration (min)",
+    cancel: isArabic ? "إلغاء" : "Cancel",
+    scheduling: isArabic ? "جارٍ الجدولة..." : "Scheduling…",
+    scheduleSession: isArabic ? "جدولة الجلسة" : "Schedule Session",
+    start: isArabic ? "ابدأ" : "Start",
+    pause: isArabic ? "إيقاف" : "Pause",
+    resume: isArabic ? "استئناف" : "Resume",
+    end: isArabic ? "إنهاء" : "End",
+    startSession: isArabic ? "ابدأ الجلسة" : "Start Session",
+    endSession: isArabic ? "إنهاء الجلسة" : "End Session",
+    sessionCompleted: isArabic ? "تمت الجلسة" : "Session Completed",
+    duration: isArabic ? "المدة" : "Duration",
+  };
+
   return (
     <CoachLayout>
       <style>{`
@@ -834,12 +930,15 @@ export default function CoachSchedule() {
           scrollbar-width: none;
         }
       `}</style>
-      <div style={{ fontFamily: "Inter, sans-serif", minHeight: "calc(100vh - 40px)" }}>
+      <div
+        className={isRTL ? "text-right" : "text-left"}
+        style={{ fontFamily: "Inter, sans-serif", minHeight: "calc(100vh - 40px)" }}
+      >
 
         {/* ── HEADER ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>
-            Schedule
+            {ui.title}
           </h1>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -855,7 +954,7 @@ export default function CoachSchedule() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search client…"
+                  placeholder={ui.searchClient}
                   style={{
                     background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: 10, padding: "6px 12px", color: "#fff", fontSize: 13, outline: "none",
@@ -881,7 +980,7 @@ export default function CoachSchedule() {
                 className="hidden sm:flex"
                 style={{ ...glassPanel, height: 38, borderRadius: 10, alignItems: "center", gap: 6, padding: "0 12px", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", color: showFilterMenu ? "#7CFC00" : "#8B8B8B", fontSize: 12, fontWeight: 600 }}
               >
-                <Filter size={14} /> Filters <ChevronDown size={12} />
+                <Filter size={14} /> {ui.filters} <ChevronDown size={12} />
               </button>
               <button
                 onClick={() => setShowFilterMenu(v => !v)}
@@ -901,21 +1000,21 @@ export default function CoachSchedule() {
                       ...glassPanel, borderRadius: 14, padding: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
                     }}
                   >
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Status</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{ui.status}</p>
                     {["all","scheduled","in_progress","paused","completed"].map(s => (
                       <button key={s}
                         onClick={() => { setFilterStatus(s); setShowFilterMenu(false); }}
                         style={{ width: "100%", textAlign: "left", padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: filterStatus === s ? 700 : 400, background: filterStatus === s ? "rgba(124,252,0,0.12)" : "transparent", color: filterStatus === s ? "#7CFC00" : "#ccc", marginBottom: 2 }}>
-                        {s === "all" ? "All Statuses" : s.replace("_"," ")}
+                        {statusLabel(s)}
                       </button>
                     ))}
                     <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 8, marginBottom: 8 }} />
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Activity</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#8B8B8B", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{ui.activity}</p>
                     {["all", ...Object.keys(ACTIVITY_COLORS)].map(a => (
                       <button key={a}
                         onClick={() => { setFilterActivity(a); setShowFilterMenu(false); }}
                         style={{ width: "100%", textAlign: "left", padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: filterActivity === a ? 700 : 400, background: filterActivity === a ? "rgba(124,252,0,0.12)" : "transparent", color: filterActivity === a ? "#7CFC00" : "#ccc", marginBottom: 2 }}>
-                        {a === "all" ? "All Activities" : a}
+                        {activityLabel(a)}
                       </button>
                     ))}
                   </motion.div>
@@ -929,7 +1028,7 @@ export default function CoachSchedule() {
                 <button key={v}
                   onClick={() => setViewMode(v)}
                   style={{ padding: "5px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, textTransform: "capitalize", letterSpacing: "0.04em", transition: "all 0.2s", background: viewMode === v ? "#7CFC00" : "transparent", color: viewMode === v ? "#000" : "#8B8B8B" }}>
-                  {v}
+                  {v === "day" ? ui.day : ui.week}
                 </button>
               ))}
             </div>
@@ -937,7 +1036,7 @@ export default function CoachSchedule() {
             {/* Help button - desktop only */}
             <button
               id="schedule-help-btn"
-              title="Help"
+              title={ui.help}
               className="hidden sm:flex"
               style={{ ...glassPanel, width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)" }}
             >
@@ -951,7 +1050,7 @@ export default function CoachSchedule() {
               className="hidden sm:flex"
               style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", background: "#7CFC00", color: "#000", fontSize: 12, fontWeight: 800, alignItems: "center", gap: 6, boxShadow: "0 0 16px rgba(124,252,0,0.35)" }}
             >
-              <Plus size={15} /> New Session
+              <Plus size={15} /> {ui.newSession}
             </button>
             <button
               onClick={() => handleOpenCreate()}
@@ -975,10 +1074,10 @@ export default function CoachSchedule() {
 
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.2px" }}>
-              {dateToISO(selectedDate) === dateToISO(today) ? "Today, " : ""}{formatDate(selectedDate)}
+              {dateToISO(selectedDate) === dateToISO(today) ? ui.todayPrefix : ""}{scheduleDate(selectedDate)}
             </div>
             <div style={{ fontSize: 10, color: "#5A5A5A", marginTop: 1 }}>
-              {allBookings.length} session{allBookings.length !== 1 ? "s" : ""}
+              {sessionsLabel(allBookings.length)}
             </div>
           </div>
 
@@ -994,7 +1093,7 @@ export default function CoachSchedule() {
             onClick={() => setSelectedDate(today)}
             className="hidden sm:block"
             style={{ height: 28, padding: "0 12px", borderRadius: 8, background: dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.06)"}`, color: dateToISO(selectedDate) === dateToISO(today) ? "#7CFC00" : "#8B8B8B", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-            Today
+            {ui.today}
           </button>
         </div>
 
@@ -1003,7 +1102,7 @@ export default function CoachSchedule() {
           <button
             onClick={() => setSelectedDate(today)}
             style={{ height: 32, padding: "0 16px", borderRadius: 8, background: dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.05)", border: `1px solid ${dateToISO(selectedDate) === dateToISO(today) ? "rgba(124,252,0,0.3)" : "rgba(255,255,255,0.06)"}`, color: dateToISO(selectedDate) === dateToISO(today) ? "#7CFC00" : "#8B8B8B", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            {dateToISO(selectedDate) === dateToISO(today) ? "Today" : "Jump to Today"}
+            {dateToISO(selectedDate) === dateToISO(today) ? ui.today : ui.jumpToToday}
           </button>
         </div>
 
@@ -1011,10 +1110,10 @@ export default function CoachSchedule() {
         {isMobile ? (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
             {[
-              { label: "Scheduled", value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
-              { label: "In Progress", value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
-              { label: "Paused", value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
-              { label: "Completed", value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
+              { label: statusLabel("scheduled"), value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
+              { label: statusLabel("in_progress"), value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
+              { label: statusLabel("paused"), value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
+              { label: statusLabel("completed"), value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
             ].map(stat => (
               <MobileStatsPill key={stat.label} label={stat.label} value={stat.value} color={stat.color} />
             ))}
@@ -1022,10 +1121,10 @@ export default function CoachSchedule() {
         ) : (
           <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
             {[
-              { label: "Scheduled", value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
-              { label: "In Progress", value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
-              { label: "Paused", value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
-              { label: "Completed", value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
+              { label: statusLabel("scheduled"), value: realBookings.filter(b => b.status === "scheduled").length, color: "#8B8B8B" },
+              { label: statusLabel("in_progress"), value: realBookings.filter(b => b.status === "in_progress").length, color: "#7CFC00" },
+              { label: statusLabel("paused"), value: realBookings.filter(b => b.status === "paused").length, color: "#F59E0B" },
+              { label: statusLabel("completed"), value: realBookings.filter(b => b.status === "completed").length, color: "#10B981" },
             ].map(stat => (
               <div key={stat.label} style={{ ...cardStyle, padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 120 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: stat.color, boxShadow: `0 0 6px ${stat.color}` }} />
@@ -1062,10 +1161,10 @@ export default function CoachSchedule() {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {res.name}
+                        {resourceName(res.name)}
                       </div>
                       <div style={{ fontSize: isMobile ? 8 : 9, color: count > 0 ? res.glowColor : "#5A5A5A", fontWeight: 600 }}>
-                        {count} session{count !== 1 ? "s" : ""}
+                        {sessionsLabel(count)}
                       </div>
                     </div>
                   </div>
@@ -1108,7 +1207,7 @@ export default function CoachSchedule() {
 
                   {/* Empty slot rows */}
                   {timeSlots.map(slot => (
-                    <EmptySlot key={slot} slot={slot} resourceId={res.id} onClickCreate={handleOpenCreate} />
+                    <EmptySlot key={slot} slot={slot} resourceId={res.id} onClickCreate={handleOpenCreate} addLabel={ui.addNew} />
                   ))}
 
                   {/* Current time line */}
@@ -1122,6 +1221,12 @@ export default function CoachSchedule() {
                       onEdit={b => setEditModal({ open: true, booking: b })}
                       onStatusChange={handleTimerAction}
                       currentTime={currentTime}
+                      texts={{
+                        start: ui.start,
+                        resume: ui.resume,
+                        end: ui.end,
+                        pause: ui.pause,
+                      }}
                     />
                   ))}
                 </div>
@@ -1149,8 +1254,8 @@ export default function CoachSchedule() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
                   <div>
-                    <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: 0 }}>New Session</h2>
-                    <p style={{ fontSize: 12, color: "#5A5A5A", margin: "4px 0 0" }}>{formatDate(selectedDate)}</p>
+                    <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: 0 }}>{ui.newSession}</h2>
+                    <p style={{ fontSize: 12, color: "#5A5A5A", margin: "4px 0 0" }}>{scheduleDate(selectedDate)}</p>
                   </div>
                   <button onClick={() => setCreateModal({ open: false })} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <X size={15} color="#fff" />
@@ -1158,35 +1263,35 @@ export default function CoachSchedule() {
                 </div>
 
                 <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  <FormField label="Client">
+                  <FormField label={ui.client}>
                     <select
                       className="coach-schedule-select"
                       value={formClient}
                       onChange={e => setFormClient(e.target.value)}
                       style={selectStyle}
                     >
-                      <option value="">Guest Client</option>
+                      <option value="">{ui.guestClient}</option>
                       {membersList.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
                     </select>
                   </FormField>
 
-                  <FormField label="Activity / Session Type">
+                  <FormField label={ui.activitySessionType}>
                     <select className="coach-schedule-select" value={formActivity} onChange={e => {
                       setFormActivity(e.target.value);
                       const rid = SESSION_TYPE_TO_RESOURCE[e.target.value] || "personal";
                       setFormResource(rid);
                     }} style={selectStyle}>
-                      {Object.keys(ACTIVITY_COLORS).map(a => <option key={a}>{a}</option>)}
+                      {Object.keys(ACTIVITY_COLORS).map(a => <option key={a} value={a}>{resourceName(a)}</option>)}
                     </select>
                   </FormField>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <FormField label="Start Time">
+                    <FormField label={ui.startTime}>
                       <input type="time" value={formStart} onChange={e => setFormStart(e.target.value)} required style={inputStyle} />
                     </FormField>
-                    <FormField label="Duration (min)">
+                    <FormField label={ui.durationMin}>
                       <select className="coach-schedule-select" value={formDuration} onChange={e => setFormDuration(e.target.value)} style={selectStyle}>
-                        {[30,45,60,90,120].map(d => <option key={d} value={d}>{d} min</option>)}
+                        {[30,45,60,90,120].map(d => <option key={d} value={d}>{isArabic ? `${formatNumber(d)} دقيقة` : `${d} min`}</option>)}
                       </select>
                     </FormField>
                   </div>
@@ -1194,11 +1299,11 @@ export default function CoachSchedule() {
                   <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
                     <button type="button" onClick={() => setCreateModal({ open: false })}
                       style={{ flex: 1, height: 44, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#8B8B8B", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                      Cancel
+                      {ui.cancel}
                     </button>
                     <button type="submit" disabled={createMutation.isPending}
                       style={{ flex: 2, height: 44, borderRadius: 12, border: "none", background: "#7CFC00", color: "#000", fontSize: 13, fontWeight: 800, cursor: "pointer", boxShadow: "0 0 16px rgba(124,252,0,0.4)", opacity: createMutation.isPending ? 0.7 : 1 }}>
-                      {createMutation.isPending ? "Scheduling…" : "Schedule Session"}
+                      {createMutation.isPending ? ui.scheduling : ui.scheduleSession}
                     </button>
                   </div>
                 </form>
@@ -1230,7 +1335,7 @@ export default function CoachSchedule() {
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                         <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: colors.text, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{b.activityType}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: colors.text, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{resourceName(b.activityType)}</div>
                           <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: 0 }}>{b.clientName}</h2>
                           <p style={{ fontSize: 12, color: "#5A5A5A", margin: "4px 0 0" }}>
                             {formatDisplayTime(b.startTime)} – {formatDisplayTime(b.endTime)}
@@ -1238,7 +1343,7 @@ export default function CoachSchedule() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <StatusDot status={b.status} />
-                          <span style={{ fontSize: 11, color: "#8B8B8B", fontWeight: 600 }}>{b.status.replace("_"," ")}</span>
+                          <span style={{ fontSize: 11, color: "#8B8B8B", fontWeight: 600 }}>{statusLabel(b.status)}</span>
                           <button onClick={() => setEditModal({ open: false })} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 8 }}>
                             <X size={15} color="#fff" />
                           </button>
@@ -1248,10 +1353,10 @@ export default function CoachSchedule() {
                       {/* Detail info */}
                       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 16px", marginBottom: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                         {[
-                          { label: "Resource", value: RESOURCES.find(r => r.id === b.resourceId)?.name || b.resourceId },
-                          { label: "Duration", value: `${b.durationMinutes || minutesDuration(b.startTime, b.endTime)} min` },
-                          { label: "Start", value: formatDisplayTime(b.startTime) },
-                          { label: "End", value: formatDisplayTime(b.endTime) },
+                          { label: isArabic ? "المكان" : "Resource", value: resourceName(RESOURCES.find(r => r.id === b.resourceId)?.name || b.resourceId) },
+                          { label: ui.duration, value: isArabic ? `${formatNumber(b.durationMinutes || minutesDuration(b.startTime, b.endTime))} دقيقة` : `${b.durationMinutes || minutesDuration(b.startTime, b.endTime)} min` },
+                          { label: ui.start, value: formatDisplayTime(b.startTime) },
+                          { label: ui.end, value: formatDisplayTime(b.endTime) },
                         ].map(item => (
                           <div key={item.label}>
                             <div style={{ fontSize: 9, fontWeight: 700, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{item.label}</div>
@@ -1266,18 +1371,18 @@ export default function CoachSchedule() {
                           {b.status === "scheduled" && (
                             <button onClick={() => { handleTimerAction(b.id, "start"); setEditModal({ open: false }); }}
                               style={{ height: 44, borderRadius: 12, border: "none", background: "#7CFC00", color: "#000", fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 0 16px rgba(124,252,0,0.35)" }}>
-                              <Play size={15} fill="#000" /> Start Session
+                              <Play size={15} fill="#000" /> {ui.startSession}
                             </button>
                           )}
                           {b.status === "in_progress" && (
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                               <button onClick={() => { handleTimerAction(b.id, "pause"); setEditModal({ open: false }); }}
                                 style={{ height: 44, borderRadius: 12, border: "1px solid rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.1)", color: "#F59E0B", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-                                ⏸ Pause
+                                ⏸ {ui.pause}
                               </button>
                               <button onClick={() => { handleTimerAction(b.id, "end"); setEditModal({ open: false }); }}
                                 style={{ height: 44, borderRadius: 12, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)", color: "#EF4444", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-                                ■ End Session
+                                ■ {ui.endSession}
                               </button>
                             </div>
                           )}
@@ -1285,23 +1390,23 @@ export default function CoachSchedule() {
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                               <button onClick={() => { handleTimerAction(b.id, "start"); setEditModal({ open: false }); }}
                                 style={{ height: 44, borderRadius: 12, border: "none", background: "#7CFC00", color: "#000", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-                                ▶ Resume
+                                ▶ {ui.resume}
                               </button>
                               <button onClick={() => { handleTimerAction(b.id, "end"); setEditModal({ open: false }); }}
                                 style={{ height: 44, borderRadius: 12, border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.1)", color: "#EF4444", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-                                ■ End Session
+                                ■ {ui.endSession}
                               </button>
                             </div>
                           )}
                           {b.status === "completed" && (
                             <div style={{ height: 44, borderRadius: 12, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                               <Check size={16} color="#10B981" />
-                              <span style={{ color: "#10B981", fontSize: 13, fontWeight: 700 }}>Session Completed</span>
+                              <span style={{ color: "#10B981", fontSize: 13, fontWeight: 700 }}>{ui.sessionCompleted}</span>
                             </div>
                           )}
                           <button onClick={() => setEditModal({ open: false })}
                             style={{ height: 36, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#5A5A5A", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                            Close
+                            {isArabic ? "إغلاق" : "Close"}
                           </button>
                         </div>
                       )}
