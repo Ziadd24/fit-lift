@@ -12,6 +12,7 @@ import { useListCalorieLogs, useSaveCalorieLog, useDeleteCalorieLog, useVerifyCa
 import { useNutritionRealtime } from "@/lib/use-nutrition-realtime";
 import { useClientContext } from "@/lib/use-client-context";
 import { CalorieMarkerCard } from "@/components/ui/CalorieMarkerCard";
+import { useCoachLanguage } from "@/lib/coach-language";
 
 /* ─── Types ─── */
 interface MacroTotals {
@@ -108,11 +109,17 @@ function MacroRing({
 }
 
 /* ─── Confidence Badge ─── */
-function ConfidenceBadge({ level }: { level: "high" | "medium" | "low" }) {
+function ConfidenceBadge({
+  level,
+  labels,
+}: {
+  level: "high" | "medium" | "low";
+  labels?: { high: string; medium: string; low: string };
+}) {
   const cfg = {
-    high:   { label: "High Accuracy", color: "#10B981", bg: "rgba(16,185,129,0.12)" },
-    medium: { label: "Estimated",     color: "#F59E0B", bg: "rgba(245,158,11,0.12)" },
-    low:    { label: "Approximate",   color: "#EF4444", bg: "rgba(239,68,68,0.12)" },
+    high:   { label: labels?.high ?? "High Accuracy", color: "#10B981", bg: "rgba(16,185,129,0.12)" },
+    medium: { label: labels?.medium ?? "Estimated", color: "#F59E0B", bg: "rgba(245,158,11,0.12)" },
+    low:    { label: labels?.low ?? "Approximate", color: "#EF4444", bg: "rgba(239,68,68,0.12)" },
   }[level];
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
@@ -145,6 +152,7 @@ const EXAMPLES = [
    MAIN PAGE
    ════════════════════════════════════════ */
 export default function CaloriesPage() {
+  const { language, isRTL, formatNumber } = useCoachLanguage();
   const [activeTab, setActiveTab] = useState<"my" | "clients">("my");
   const [meal, setMeal] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -166,6 +174,65 @@ export default function CaloriesPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+  const isArabic = language === "ar";
+  const ui = {
+    title: isArabic ? "متابعة التغذية الذكية" : "AI Nutrition Tracker",
+    subtitle: isArabic ? "تابع وجباتك أو راجع سجلات العملاء واعتمدها بشكل مباشر" : "Track your own meals or review & verify client food logs in real-time",
+    myTracker: isArabic ? "متابعتي" : "My Tracker",
+    clientLogs: isArabic ? "سجلات العملاء" : "Client Logs",
+    selectClient: isArabic ? "اختر عميلًا" : "Select Client",
+    noClients: isArabic ? "لا يوجد عملاء مسجلون." : "No clients registered.",
+    foodLogFor: (name: string) => isArabic ? `سجل وجبات ${name}` : `${name}'s Food Log`,
+    coachAssessment: isArabic ? "تقييم الكوتش" : "Coach Assessment",
+    runAssessment: isArabic ? "تشغيل التقييم" : "Run Threat Assessment",
+    dailyGoals: isArabic ? "الأهداف اليومية" : "Daily Goals",
+    describeMeal: isArabic ? "اكتب تفاصيل وجبتك" : "Describe Your Meal",
+    placeholder: isArabic ? "مثال: سلمون مشوي مع كينوا وبروكلي... أو صوّر الوجبة" : "e.g. Grilled salmon with quinoa and steamed broccoli... or snap a picture!",
+    analyzeMeal: isArabic ? "حلّل الوجبة (Ctrl+Enter)" : "Analyze Meal (Ctrl+Enter)",
+    analyzing: isArabic ? "جارٍ التحليل..." : "Analyzing with AI...",
+    breakdown: isArabic ? "التحليل" : "Breakdown",
+    addToLog: isArabic ? "إضافة إلى سجل اليوم" : "Add to Today's Log",
+    todayProgress: isArabic ? "تقدم اليوم" : "Today's Progress",
+    calorieBudget: isArabic ? "ميزانية السعرات" : "Calorie Budget",
+    remaining: isArabic ? "متبقي" : "remaining",
+    macroSplit: isArabic ? "توزيع المغذيات" : "Macro Split",
+    todayFoodLog: isArabic ? "سجل وجبات اليوم" : "Today's Food Log",
+    totalKcal: isArabic ? "إجمالي سعرة" : "kcal total",
+    noMealsYet: isArabic ? "لا توجد وجبات مسجلة بعد" : "No meals logged yet",
+    noMealsHint: isArabic ? 'اكتب وجبة بالأعلى ثم اضغط "إضافة إلى سجل اليوم"' : 'Describe a meal above and click "Add to Today\'s Log"',
+    noMealsForClient: isArabic ? "لا توجد وجبات مسجلة لهذا العميل اليوم" : "No meals logged by this client today",
+    mealLogs: (count: number) => isArabic ? `${formatNumber(count)} سجل وجبة` : `${count} meal log${count > 1 ? "s" : ""}`,
+    noMealsToday: isArabic ? "لا توجد وجبات اليوم" : "No meals today",
+    calories: isArabic ? "السعرات" : "Calories",
+    protein: isArabic ? "البروتين" : "Protein",
+    carbs: isArabic ? "الكربوهيدرات" : "Carbs",
+    fat: isArabic ? "الدهون" : "Fat",
+    confidenceHigh: isArabic ? "دقة عالية" : "High Accuracy",
+    confidenceMedium: isArabic ? "تقديري" : "Estimated",
+    confidenceLow: isArabic ? "تقريبي" : "Approximate",
+    assessmentFailed: isArabic ? "فشل تشغيل التقييم" : "Assessment failed",
+    analysisFailed: isArabic ? "فشل تحليل الوجبة" : "Analysis failed",
+    somethingWentWrong: isArabic ? "حصلت مشكلة. حاول مرة تانية." : "Something went wrong. Please try again.",
+    clientFallback: isArabic ? "عميل" : "Client",
+    actionLabel: isArabic ? "الإجراء" : "Action",
+    goalSuffix: isArabic ? "هدف" : "Goal",
+  };
+  const categoryStyle = {
+    breakfast: { label: isArabic ? "فطار" : "Breakfast", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    lunch: { label: isArabic ? "غداء" : "Lunch", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    dinner: { label: isArabic ? "عشاء" : "Dinner", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
+    snack: { label: isArabic ? "سناك" : "Snack", color: "#7CFC00", bg: "rgba(124,252,0,0.1)" },
+  };
+  const exampleMeals = isArabic
+    ? [
+        "فراخ مشوية مع أرز بني وسلطة",
+        "بيض مخفوق مع توست أسمر وعصير برتقال",
+        "مشروب بروتين بالموز",
+        "فول بزيت زيتون وعيش بلدي",
+        "طبق مكرونة كبير",
+        "كشري وسط",
+      ]
+    : EXAMPLES;
 
   // Client Selection & Assessment State
   const { data: membersPage } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
@@ -235,7 +302,7 @@ export default function CaloriesPage() {
       if(!res.ok) throw new Error(data.error);
       setAssessment(data);
     } catch (err: any) {
-      alert("Assessment failed: " + err.message);
+      alert(`${ui.assessmentFailed}: ${err.message}`);
     } finally {
       setIsAssessing(false);
     }
@@ -247,7 +314,7 @@ export default function CaloriesPage() {
   // Alerts for coach
   const coachAlerts = allClientLogs
     .filter((l) => l.result?.coach_alert)
-    .map((l) => ({ id: l.id, alert: l.result.coach_alert as string, member: l.member_name ?? "Client" }));
+    .map((l) => ({ id: l.id, alert: l.result.coach_alert as string, member: l.member_name ?? ui.clientFallback }));
 
   const totals: MacroTotals = log.reduce(
     (acc, e) => ({
@@ -273,10 +340,10 @@ export default function CaloriesPage() {
         body: JSON.stringify({ meal: trimmed, image }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed");
+      if (!res.ok) throw new Error(data.error || ui.analysisFailed);
       setResult(data);
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(err.message || ui.somethingWentWrong);
     } finally {
       setIsLoading(false);
     }
@@ -321,35 +388,33 @@ export default function CaloriesPage() {
 
   return (
     <CoachLayout>
-      <div style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className={isRTL ? "text-right" : "text-left"}>
 
         {/* ── HEADER ── */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+        <div className={`flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 ${isRTL ? "lg:flex-row-reverse" : ""}`}>
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className={`flex items-center gap-3 mb-1 ${isRTL ? "flex-row-reverse" : ""}`}>
               <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg, #7CFC00, #39FF14)", boxShadow: "0 0 20px rgba(124,252,0,0.4)" }}>
                 <Flame className="w-5 h-5 text-black" />
               </div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-tight">
-                AI <span style={{ color: "#7CFC00" }}>Nutrition</span> Tracker
-              </h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">{ui.title}</h1>
             </div>
-            <p className="text-sm" style={{ color: "#8B8B8B", paddingLeft: 52 }}>
-              Track your own meals or review &amp; verify client food logs in real-time
+            <p className="text-sm" style={{ color: "#8B8B8B", paddingLeft: isRTL ? 0 : 52, paddingRight: isRTL ? 52 : 0 }}>
+              {ui.subtitle}
             </p>
           </div>
 
         </div>
 
         {/* ── TAB SWITCHER ── */}
-        <div className="flex gap-2 mb-6">
+        <div className={`flex gap-2 mb-6 ${isRTL ? "justify-end" : ""}`}>
           {([
-            { key: "my",      label: "My Tracker",  Icon: Flame },
-            { key: "clients", label: "Client Logs", Icon: Users },
+            { key: "my",      label: ui.myTracker,  Icon: Flame },
+            { key: "clients", label: ui.clientLogs, Icon: Users },
           ] as const).map(({ key, label, Icon }) => (
             <button key={key} onClick={() => setActiveTab(key)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all relative"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all relative ${isRTL ? "flex-row-reverse" : ""}`}
               style={{
                 background: activeTab === key ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)",
                 color: activeTab === key ? "#7CFC00" : "#8B8B8B",
@@ -401,7 +466,7 @@ export default function CaloriesPage() {
                     className="text-sm font-black uppercase tracking-[0.18em] text-white"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    Select Client
+                    {ui.selectClient}
                   </h2>
                 </div>
 
@@ -429,7 +494,7 @@ export default function CaloriesPage() {
                         <div className="min-w-0">
                           <h3 className="text-white font-bold text-[1.05rem] truncate">{m.name}</h3>
                           <p className="text-[11px]" style={{ color: "#7A7A85", marginTop: 3 }}>
-                            {mLogs.length > 0 ? `${mLogs.length} meal log${mLogs.length > 1 ? "s" : ""}` : "No meals today"}
+                            {mLogs.length > 0 ? ui.mealLogs(mLogs.length) : ui.noMealsToday}
                           </p>
                         </div>
                         <div
@@ -447,7 +512,7 @@ export default function CaloriesPage() {
                   );
                 })}
                 {privateMembers.length === 0 && (
-                  <span className="text-sm text-gray-500 text-center py-10">No clients registered.</span>
+                  <span className="text-sm text-gray-500 text-center py-10">{ui.noClients}</span>
                 )}
                 </div>
               </div>
@@ -460,7 +525,7 @@ export default function CaloriesPage() {
                     className="flex items-center justify-center w-10 h-10 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
                     <ChevronDown className="w-5 h-5 text-white rotate-90" />
                   </button>
-                  <h2 className="text-2xl font-black text-white">{selectedMember?.name}'s Food Log</h2>
+                  <h2 className="text-2xl font-black text-white">{ui.foodLogFor(selectedMember?.name || "")}</h2>
                 </div>
 
                 {/* Client Assessment Panel */}
@@ -468,12 +533,12 @@ export default function CaloriesPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
                     <div className="flex items-center gap-2">
                        <Brain className="w-6 h-6 text-[#7CFC00]" />
-                       <h2 className="text-xl font-black text-white">Coach Assessment</h2>
+                       <h2 className="text-xl font-black text-white">{ui.coachAssessment}</h2>
                     </div>
                     <button onClick={runAssessment} disabled={isAssessing}
                        className="bg-[#7CFC00] text-black font-black text-sm px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-[#7CFC00]/80 transition-colors disabled:opacity-50 cursor-pointer">
                        {isAssessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
-                       Run Threat Assessment
+                       {ui.runAssessment}
                     </button>
                   </div>
 
@@ -491,7 +556,7 @@ export default function CaloriesPage() {
                          {assessment.key_observations.map((obs: string, i: number) => <li key={i}>{obs}</li>)}
                        </ul>
                        <div className="text-sm font-bold text-white bg-black/30 p-3 rounded-xl border border-white/10">
-                          💡 Action: <span className="text-[#7CFC00]">{assessment.coach_recommendation}</span>
+                          💡 {ui.actionLabel}: <span className="text-[#7CFC00]">{assessment.coach_recommendation}</span>
                        </div>
                     </motion.div>
                   )}
@@ -500,7 +565,9 @@ export default function CaloriesPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                      {(['calories', 'protein', 'carbs', 'fat'] as const).map(k => (
                        <div key={k} className="bg-black/30 p-3 rounded-xl border border-white/5 flex flex-col justify-between">
-                          <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">{k} Goal</span>
+                          <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">
+                            {(ui[k] ?? k)} {ui.goalSuffix}
+                          </span>
                           <input type="number" 
                             value={getClientGoals(selectedClientId)[k]} 
                             onChange={e => saveClientGoal(selectedClientId, k, Number(e.target.value))}
@@ -515,7 +582,7 @@ export default function CaloriesPage() {
                   <div className="flex flex-col items-center justify-center py-24"
                     style={{ border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 20 }}>
                     <Users className="w-12 h-12 mb-4 opacity-20 text-white" />
-                    <p className="font-bold text-white mb-1">No meals logged by this client today</p>
+                    <p className="font-bold text-white mb-1">{ui.noMealsForClient}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -548,13 +615,13 @@ export default function CaloriesPage() {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-6">
               <div style={{ ...cardStyle, padding: 24 }}>
-                <h3 className="font-bold text-white mb-5 text-sm uppercase tracking-widest">Daily Goals</h3>
+                <h3 className="font-bold text-white mb-5 text-sm uppercase tracking-widest">{ui.dailyGoals}</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   {([
-                    { key: "calories", label: "Calories", unit: "kcal", min: 1200, max: 5000, step: 50, color: "#7CFC00" },
-                    { key: "protein",  label: "Protein",  unit: "g",    min: 50,   max: 300,  step: 5,  color: "#8B5CF6" },
-                    { key: "carbs",    label: "Carbs",    unit: "g",    min: 50,   max: 500,  step: 5,  color: "#F59E0B" },
-                    { key: "fat",      label: "Fat",      unit: "g",    min: 20,   max: 200,  step: 5,  color: "#10B981" },
+                    { key: "calories", label: ui.calories, unit: "kcal", min: 1200, max: 5000, step: 50, color: "#7CFC00" },
+                    { key: "protein",  label: ui.protein,  unit: "g",    min: 50,   max: 300,  step: 5,  color: "#8B5CF6" },
+                    { key: "carbs",    label: ui.carbs,    unit: "g",    min: 50,   max: 500,  step: 5,  color: "#F59E0B" },
+                    { key: "fat",      label: ui.fat,      unit: "g",    min: 20,   max: 200,  step: 5,  color: "#10B981" },
                   ] as const).map(({ key, label, unit, min, max, step, color }) => (
                     <div key={key}>
                       <div className="flex justify-between mb-2">
@@ -585,7 +652,7 @@ export default function CaloriesPage() {
             <div style={{ ...cardStyle, padding: 28 }}>
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5" style={{ color: "#7CFC00" }} />
-                <h2 className="font-bold text-white text-base">Describe Your Meal</h2>
+                <h2 className="font-bold text-white text-base">{ui.describeMeal}</h2>
               </div>
 
               {/* Textarea & Image */}
@@ -606,7 +673,7 @@ export default function CaloriesPage() {
                   value={meal}
                   onChange={e => setMeal(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyze(); }}
-                  placeholder="e.g. Grilled salmon with quinoa and steamed broccoli... or snap a picture!"
+                  placeholder={ui.placeholder}
                   rows={4}
                   className="w-full resize-none outline-none text-white placeholder-[#3A3A3A] rounded-2xl p-4 text-sm transition-all"
                   style={{
@@ -636,7 +703,7 @@ export default function CaloriesPage() {
 
               {/* Example chips */}
               <div className="flex flex-wrap gap-2 mb-5">
-                {EXAMPLES.map(ex => (
+                {exampleMeals.map(ex => (
                   <button key={ex} onClick={() => setMeal(ex)}
                     className="text-[11px] px-3 py-1.5 rounded-full transition-all hover:scale-105"
                     style={{ background: "rgba(124,252,0,0.08)", color: "#7CFC00", border: "1px solid rgba(124,252,0,0.15)", fontFamily: "Inter, sans-serif" }}>
@@ -659,9 +726,9 @@ export default function CaloriesPage() {
                   cursor: isLoading || (meal.trim().length < 3 && !image) ? "not-allowed" : "pointer",
                 }}>
                 {isLoading ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing with AI…</>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> {ui.analyzing}</>
                 ) : (
-                  <><Sparkles className="w-5 h-5" /> Analyze Meal (Ctrl+Enter)</>
+                  <><Sparkles className="w-5 h-5" /> {ui.analyzeMeal}</>
                 )}
               </button>
             </div>
@@ -690,18 +757,25 @@ export default function CaloriesPage() {
                   <div className="flex justify-between items-center mb-5">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-5 h-5" style={{ color: "#7CFC00" }} />
-                      <h3 className="font-bold text-white text-base">Breakdown</h3>
+                      <h3 className="font-bold text-white text-base">{ui.breakdown}</h3>
                     </div>
-                    <ConfidenceBadge level={result.confidence} />
+                      <ConfidenceBadge
+                        level={result.confidence}
+                        labels={{
+                          high: ui.confidenceHigh,
+                          medium: ui.confidenceMedium,
+                          low: ui.confidenceLow,
+                        }}
+                      />
                   </div>
 
                   {/* Macro Summary Row */}
                   <div className="grid grid-cols-4 gap-3 mb-5">
                     {[
-                      { label: "Calories", value: result.totals.calories, unit: "kcal", color: "#7CFC00", bg: "rgba(124,252,0,0.1)" },
-                      { label: "Protein",  value: result.totals.protein,  unit: "g",    color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
-                      { label: "Carbs",    value: result.totals.carbs,    unit: "g",    color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
-                      { label: "Fat",      value: result.totals.fat,      unit: "g",    color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+                      { label: ui.calories, value: result.totals.calories, unit: "kcal", color: "#7CFC00", bg: "rgba(124,252,0,0.1)" },
+                      { label: ui.protein,  value: result.totals.protein,  unit: "g",    color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
+                      { label: ui.carbs,    value: result.totals.carbs,    unit: "g",    color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+                      { label: ui.fat,      value: result.totals.fat,      unit: "g",    color: "#10B981", bg: "rgba(16,185,129,0.1)" },
                     ].map(({ label, value, unit, color, bg }) => (
                       <div key={label} className="rounded-2xl p-3 text-center" style={{ background: bg }}>
                         <p className="font-black text-white text-xl">{value}</p>
@@ -751,7 +825,7 @@ export default function CaloriesPage() {
                   <button onClick={addToLog}
                     className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 font-black text-black text-sm uppercase tracking-wide transition-all hover:scale-[1.02]"
                     style={{ background: "linear-gradient(135deg, #7CFC00, #39FF14)", boxShadow: "0 0 24px rgba(124,252,0,0.35)" }}>
-                    <Plus className="w-4 h-4" /> Add to Today&apos;s Log
+                    <Plus className="w-4 h-4" /> {ui.addToLog}
                   </button>
                 </motion.div>
               )}
@@ -765,21 +839,21 @@ export default function CaloriesPage() {
             <div style={{ ...cardStyle, padding: 28 }}>
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="w-4 h-4" style={{ color: "#7CFC00" }} />
-                <h3 className="font-bold text-white text-sm uppercase tracking-widest">Today&apos;s Progress</h3>
+                <h3 className="font-bold text-white text-sm uppercase tracking-widest">{ui.todayProgress}</h3>
               </div>
               <div className="grid grid-cols-2 gap-6 place-items-center">
-                <MacroRing label="Calories" value={totals.calories} goal={goals.calories} unit="kcal" color="#7CFC00" icon={Flame} />
-                <MacroRing label="Protein"  value={totals.protein}  goal={goals.protein}  unit="g"    color="#8B5CF6" icon={Zap} />
-                <MacroRing label="Carbs"    value={totals.carbs}    goal={goals.carbs}    unit="g"    color="#F59E0B" icon={Wheat} />
-                <MacroRing label="Fat"      value={totals.fat}      goal={goals.fat}      unit="g"    color="#10B981" icon={Droplets} />
+                <MacroRing label={ui.calories} value={totals.calories} goal={goals.calories} unit="kcal" color="#7CFC00" icon={Flame} />
+                <MacroRing label={ui.protein}  value={totals.protein}  goal={goals.protein}  unit="g"    color="#8B5CF6" icon={Zap} />
+                <MacroRing label={ui.carbs}    value={totals.carbs}    goal={goals.carbs}    unit="g"    color="#F59E0B" icon={Wheat} />
+                <MacroRing label={ui.fat}      value={totals.fat}      goal={goals.fat}      unit="g"    color="#10B981" icon={Droplets} />
               </div>
 
               {/* Calorie Bar */}
               <div className="mt-6">
                 <div className="flex justify-between text-[11px] mb-2">
-                  <span style={{ color: "#8B8B8B" }}>Calorie Budget</span>
+                  <span style={{ color: "#8B8B8B" }}>{ui.calorieBudget}</span>
                   <span className="font-bold" style={{ color: totals.calories > goals.calories ? "#EF4444" : "#7CFC00" }}>
-                    {Math.max(goals.calories - totals.calories, 0)} remaining
+                    {formatNumber(Math.max(goals.calories - totals.calories, 0))} {ui.remaining}
                   </span>
                 </div>
                 <div className="rounded-full overflow-hidden" style={{ height: 8, background: "rgba(255,255,255,0.06)" }}>
@@ -802,11 +876,11 @@ export default function CaloriesPage() {
 
             {/* Quick Stats */}
             <div style={{ ...cardStyle, padding: 24 }}>
-              <h3 className="font-bold text-white text-sm uppercase tracking-widest mb-4">Macro Split</h3>
+              <h3 className="font-bold text-white text-sm uppercase tracking-widest mb-4">{ui.macroSplit}</h3>
               {[
-                { label: "Protein",   pct: totals.calories > 0 ? Math.round((totals.protein  * 4 / totals.calories) * 100) : 0, color: "#8B5CF6" },
-                { label: "Carbs",     pct: totals.calories > 0 ? Math.round((totals.carbs    * 4 / totals.calories) * 100) : 0, color: "#F59E0B" },
-                { label: "Fat",       pct: totals.calories > 0 ? Math.round((totals.fat      * 9 / totals.calories) * 100) : 0, color: "#10B981" },
+                { label: ui.protein,   pct: totals.calories > 0 ? Math.round((totals.protein  * 4 / totals.calories) * 100) : 0, color: "#8B5CF6" },
+                { label: ui.carbs,     pct: totals.calories > 0 ? Math.round((totals.carbs    * 4 / totals.calories) * 100) : 0, color: "#F59E0B" },
+                { label: ui.fat,       pct: totals.calories > 0 ? Math.round((totals.fat      * 9 / totals.calories) * 100) : 0, color: "#10B981" },
               ].map(({ label, pct, color }) => (
                 <div key={label} className="mb-3">
                   <div className="flex justify-between text-[11px] mb-1.5">
@@ -832,14 +906,14 @@ export default function CaloriesPage() {
             style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-3">
               <UtensilsCrossed className="w-5 h-5" style={{ color: "#7CFC00" }} />
-              <h2 className="font-bold text-white uppercase tracking-wide">Today&apos;s Food Log</h2>
+              <h2 className="font-bold text-white uppercase tracking-wide">{ui.todayFoodLog}</h2>
               <span className="font-bold text-xs px-2.5 py-0.5 rounded-full text-black"
                 style={{ background: "#7CFC00" }}>{log.length}</span>
             </div>
             {log.length > 0 && (
               <div className="flex items-center gap-2 text-sm" style={{ color: "#8B8B8B" }}>
                 <Flame className="w-4 h-4" style={{ color: "#7CFC00" }} />
-                <span className="font-bold text-white">{totals.calories.toLocaleString()}</span> kcal total
+                <span className="font-bold text-white">{formatNumber(totals.calories)}</span> {ui.totalKcal}
               </div>
             )}
           </div>
@@ -847,9 +921,9 @@ export default function CaloriesPage() {
           {log.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <UtensilsCrossed className="w-12 h-12 mb-4 opacity-20 text-white" />
-              <p className="font-bold text-white mb-1">No meals logged yet</p>
+              <p className="font-bold text-white mb-1">{ui.noMealsYet}</p>
               <p className="text-sm" style={{ color: "#5A5A5A" }}>
-                Describe a meal above and click &quot;Add to Today&apos;s Log&quot;
+                {ui.noMealsHint}
               </p>
             </div>
           ) : (

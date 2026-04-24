@@ -12,6 +12,7 @@ import {
 import { useListWorkouts, useCreateWorkout, useUpdateWorkout, useDeleteWorkout } from "@/lib/api-hooks";
 import { WorkoutExerciseCard } from "@/components/ui/WorkoutExerciseCard";
 import { toast } from "react-hot-toast";
+import { useClientLanguage } from "@/lib/client-language";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface LocalTask {
@@ -649,7 +650,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
               <span style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: "#FFFFFF" }}>{workout.title}</span>
               {workout.coachAssigned && isPrivate && (
                 <span style={{ fontSize: 10, color: "#7CFC00", background: "rgba(124,252,0,0.1)", border: "1px solid rgba(124,252,0,0.2)", borderRadius: 6, padding: "2px 6px", display: "flex", alignItems: "center", gap: 3 }}>
-                  <Crown size={8} /> Coach
+                  <Crown size={8} /> {isArabicLanguage(language) ? "الكوتش" : "Coach"}
                 </span>
               )}
               <span style={{ fontSize: 10, background: `${difficultyColor[workout.difficulty]}20`, color: difficultyColor[workout.difficulty], borderRadius: 6, padding: "2px 8px", fontWeight: 600 }}>
@@ -698,7 +699,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
               opacity: completionPct >= 100 ? 1 : 0.6,
             }}
           >
-            Finish
+            {isArabicLanguage(language) ? "أنهِ التمرين" : "Finish"}
           </button>
           {expanded ? <ChevronUp size={16} color={SECONDARY_TEXT_COLOR} /> : <ChevronDown size={16} color={SECONDARY_TEXT_COLOR} />}
         </div>
@@ -942,7 +943,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [workoutFormError, setWorkoutFormError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
-  const [language, setLanguage] = useState("en");
+  const { language, t } = useClientLanguage();
+  const isArabic = isArabicLanguage(language);
   const undoTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const { titleId: workoutModalTitleId, descriptionId: workoutModalDescriptionId } = useAccessibleDialog(
     isModalOpen,
@@ -983,17 +985,13 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
     }
     entry.undo();
     setUndoStack(prev => prev.filter((item) => item.id !== entry.id));
-    toast.success("Action undone.");
+    toast.success(t("actionUndone"));
   }, []);
 
   useEffect(() => {
     return () => {
       Object.values(undoTimersRef.current).forEach(clearTimeout);
     };
-  }, []);
-
-  useEffect(() => {
-    setLanguage(getPreferredLanguage());
   }, []);
 
   // Save tasks to localStorage whenever they change
@@ -1015,7 +1013,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   // Manual reset function
   const handleResetLocalTasks = () => {
     setLocalTasks((prev: LocalTask[]) => prev.map((t: LocalTask) => ({ ...t, completed: false })));
-    toast.success("All tasks reset");
+    toast.success(t("allTasksReset"));
   };
 
   const normalizedWorkouts = (Array.isArray(dbWorkouts) && dbWorkouts.length > 0
@@ -1150,21 +1148,21 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Dumbbell size={isMobile ? 20 : 24} color="#7CFC00" />
-          <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#FFFFFF" }}>Your Workouts</span>
+          <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#FFFFFF" }}>{t("workoutsTitle")}</span>
         </div>
       </div>
 
       {/* Weekly strip */}
       <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>This Week</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>{t("thisWeek")}</div>
           <button 
             onClick={() => setIsWeeklyPlanModalOpen(true)}
             style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-secondary)", fontSize: 11, fontWeight: 600, background: "transparent", border: "none", cursor: "pointer", transition: "color 0.2s" }}
             onMouseOver={(e) => e.currentTarget.style.color = "#7CFC00"}
             onMouseOut={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
           >
-            <Edit3 size={12} /> Edit Plan
+            <Edit3 size={12} /> {t("editPlan")}
           </button>
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -1175,7 +1173,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 <div style={{ fontSize: 11, color: isToday ? "#7CFC00" : "#5A5A5A", fontWeight: isToday ? 700 : 400 }}>{day.day}</div>
                 <button
                   onClick={() => setLocalWeekPlan(prev => prev.map((d, idx) => idx === i ? { ...d, done: !d.done } : d))}
-                  aria-label={`${day.done ? "Unmark" : "Mark"} ${day.day} as done`}
+                  aria-label={day.done ? t("unmarkDoneDay", { day: day.day }) : t("markDoneDay", { day: day.day })}
                   aria-pressed={day.done}
                   style={{
                     width: "100%", padding: "10px 0", borderRadius: 10,
@@ -1197,7 +1195,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         </div>
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
           <Target size={12} color="#7CFC00" />
-          <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Today: <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{todayPlan.label}</span></span>
+          <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{t("todayLabel")}: <span style={{ color: "#FFFFFF", fontWeight: 600 }}>{todayPlan.label}</span></span>
         </div>
         {/* Weekly progress bar */}
         {(() => {
@@ -1207,8 +1205,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
           return (
             <div style={{ marginTop: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>
-                <span>Weekly Progress</span>
-                <span style={{ color: "#7CFC00", fontWeight: 600 }}>{doneDays}/{totalDays} days ({weekPct}%)</span>
+                <span>{t("weeklyProgress")}</span>
+                <span style={{ color: "#7CFC00", fontWeight: 600 }}>{t("daysCount", { done: doneDays, total: totalDays, pct: weekPct })}</span>
               </div>
               <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
                 <motion.div
@@ -1230,12 +1228,12 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         style={{ minHeight: 420 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: isMobile ? 11 : 12, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>Assigned Workouts</div>
+          <div style={{ fontSize: isMobile ? 11 : 12, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.8px" }}>{t("assignedWorkouts")}</div>
           <button
             onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
             style={{ display: "flex", alignItems: "center", gap: 6, background: "#7CFC00", border: "none", borderRadius: 10, padding: isMobile ? "7px 12px" : "8px 14px", color: "#000", cursor: "pointer", fontSize: isMobile ? 12 : 13, fontWeight: 700, minHeight: isMobile ? 38 : 40 }}
           >
-            <Plus size={isMobile ? 13 : 14} /> {isArabicLanguage(language) ? "إضافة تمرين كامل" : "Add Workout"}
+            <Plus size={isMobile ? 13 : 14} /> {t("addWorkout")}
           </button>
         </div>
         <LazyRenderSection
@@ -1263,10 +1261,10 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 <Dumbbell size={isMobile ? 28 : 36} color="#7CFC00" strokeWidth={1.5} />
               </div>
               <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 6 }}>
-                No Workouts Yet
+                {t("noWorkoutsYet")}
               </div>
               <div style={{ fontSize: isMobile ? 13 : 14, color: "var(--color-text-secondary)", marginBottom: 20, maxWidth: 280, lineHeight: 1.5 }}>
-                Design your own workout program - tap on + and start now!
+                {t("noWorkoutsBody")}
               </div>
               <button
                 onClick={() => { setEditingWorkout(null); setIsModalOpen(true); }}
@@ -1277,7 +1275,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                   cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
                 }}
               >
-                <Plus size={18} /> Create Workout
+                <Plus size={18} /> {t("createWorkout")}
               </button>
             </div>
           ) : (
@@ -1296,12 +1294,12 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 updateWorkoutMutation={updateWorkoutMutation}
                 onDelete={() =>
                   showConfirmToast({
-                    message: `Delete "${w.title}"?`,
-                    confirmLabel: "Delete",
+                    message: isArabic ? `تحب تحذف "${w.title}"؟` : `Delete "${w.title}"?`,
+                    confirmLabel: isArabic ? "حذف" : "Delete",
                     onConfirm: () =>
                       deleteWorkoutMutation.mutate(
                         { id: w.id },
-                        { onSuccess: () => toast.success("Workout deleted.") }
+                        { onSuccess: () => toast.success(isArabic ? "اتحذف التمرين." : "Workout deleted.") }
                       ),
                   })
                 }
@@ -1327,7 +1325,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 14 : 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
             <Target size={isMobile ? 18 : 20} color="#7CFC00" />
-            <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, color: "#FFFFFF" }}>Current Tasks</span>
+            <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, color: "#FFFFFF" }}>{t("currentTasks")}</span>
             <span style={{ fontSize: isMobile ? 12 : 14, color: "var(--color-text-secondary)" }}>
               {localTasks.filter((t: LocalTask) => t.completed).length}/{localTasks.length}
             </span>
@@ -1338,7 +1336,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 onClick={handleResetLocalTasks}
                 style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--color-text-secondary)", fontSize: isMobile ? 11 : 12, fontWeight: 600, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", borderRadius: 8, padding: isMobile ? "6px 10px" : "6px 12px" }}
               >
-                <RotateCcw size={isMobile ? 12 : 14} /> Reset
+                <RotateCcw size={isMobile ? 12 : 14} /> {t("reset")}
               </button>
             )}
             <button
@@ -1446,7 +1444,7 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
             fontSize: isMobile ? 13 : 14
           }}
         >
-          <Edit3 size={isMobile ? 14 : 16} /> Manage Tasks
+          <Edit3 size={isMobile ? 14 : 16} /> {t("manageTasks")}
         </button>
       </motion.div>
 
@@ -1475,8 +1473,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 20px" }} />
               <h2 id={workoutModalTitleId} style={{ color: "#FFF", marginBottom: 8, fontSize: 18, fontWeight: 700 }}>
                 {editingWorkout
-                  ? (isArabicLanguage(language) ? "تعديل التدريب" : "Edit Workout")
-                  : (isArabicLanguage(language) ? "إضافة تدريب" : "Add Workout")}
+                  ? (isArabic ? "تعديل التمرين" : "Edit Workout")
+                  : t("addWorkout")}
               </h2>
               <p id={workoutModalDescriptionId} className="sr-only">
                 {isArabicLanguage(language)
@@ -1491,11 +1489,11 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 const caloriesRaw = String(formData.get("calories") || "").trim();
                 const calories = parseInt(caloriesRaw, 10);
                 if (title.length < 3) {
-                  setWorkoutFormError("Workout title should be at least 3 characters.");
+                  setWorkoutFormError(isArabic ? "عنوان التمرين لازم يكون ٣ حروف على الأقل." : "Workout title should be at least 3 characters.");
                   return;
                 }
                 if (Number.isNaN(calories) || calories <= 0) {
-                  setWorkoutFormError("Calories should be a number greater than 0.");
+                  setWorkoutFormError(isArabic ? "السعرات لازم تكون رقم أكبر من ٠." : "Calories should be a number greater than 0.");
                   return;
                 }
                 const data = {
@@ -1578,8 +1576,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               tabIndex={-1}
             >
               {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />}
-              <h3 id={weeklyPlanTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>Edit Weekly Plan</h3>
-              <p id={weeklyPlanDescriptionId} className="sr-only">Weekly workout plan editor. Press Escape to close the dialog.</p>
+              <h3 id={weeklyPlanTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>{t("editWeeklyPlan")}</h3>
+              <p id={weeklyPlanDescriptionId} className="sr-only">{isArabic ? "نافذة تعديل خطة الأسبوع. اضغط Escape للإغلاق." : "Weekly workout plan editor. Press Escape to close the dialog."}</p>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
@@ -1603,15 +1601,15 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                       <div style={{ width: isMobile ? 44 : 40, fontSize: isMobile ? 14 : 13, fontWeight: 700, color: day.color }}>{day.day}</div>
                       <input name={`label-${day.day}`} defaultValue={day.label} style={{ flex: 1, padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: "8px", background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 36 }} />
                       <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 13 : 12 }}>
-                        Done
+                        {t("done")}
                         <input type="checkbox" name={`done-${day.day}`} defaultChecked={day.done} style={{ width: isMobile ? 22 : 16, height: isMobile ? 22 : 16, accentColor: "#7CFC00" }} />
                       </label>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
-                  <button type="button" onClick={() => setIsWeeklyPlanModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Cancel</button>
-                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Save Plan</button>
+                  <button type="button" onClick={() => setIsWeeklyPlanModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>{t("cancel")}</button>
+                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>{t("savePlan")}</button>
                 </div>
               </form>
             </motion.div>
@@ -1639,8 +1637,8 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
               tabIndex={-1}
             >
               {isMobile && <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 16px" }} />}
-              <h3 id={tasksModalTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>Edit Tasks</h3>
-              <p id={tasksModalDescriptionId} className="sr-only">Task management dialog. Press Escape to close the dialog.</p>
+              <h3 id={tasksModalTitleId} style={{ color: "#FFF", marginBottom: isMobile ? 12 : 8, fontSize: isMobile ? 17 : 18, fontWeight: 700 }}>{t("editTasks")}</h3>
+              <p id={tasksModalDescriptionId} className="sr-only">{isArabic ? "نافذة تعديل المهام. اضغط Escape للإغلاق." : "Task management dialog. Press Escape to close the dialog."}</p>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
@@ -1660,23 +1658,23 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                       </button>
                       <input name={`task-${task.id}-title`} defaultValue={task.title} style={{ flex: 1, padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: "8px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: 16, minHeight: isMobile ? 48 : 36 }} />
                       <select name={`task-${task.id}-pri`} defaultValue={task.priority} style={{ padding: isMobile ? "12px" : "8px", borderRadius: "8px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFF", fontSize: isMobile ? 14 : 12, minHeight: isMobile ? 48 : 36 }}>
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
+                        <option value="low">{t("low")}</option>
+                        <option value="medium">{t("medium")}</option>
+                        <option value="high">{t("high")}</option>
                       </select>
                     </div>
                   ))}
                 </div>
                 
                 <button type="button" onClick={() => {
-                  setLocalTasks((prev: LocalTask[]) => [...prev, { id: Date.now(), title: "New Task", completed: false, priority: "medium" }]);
+                  setLocalTasks((prev: LocalTask[]) => [...prev, { id: Date.now(), title: t("newTask"), completed: false, priority: "medium" }]);
                 }} style={{ width: "100%", padding: isMobile ? "14px" : "12px", background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: 12, color: SECONDARY_TEXT_COLOR, fontSize: isMobile ? 14 : 13, marginBottom: isMobile ? 20 : 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, minHeight: isMobile ? 48 : 40 }}>
-                  <Plus size={isMobile ? 18 : 16} /> Add Task
+                  <Plus size={isMobile ? 18 : 16} /> {t("addTask")}
                 </button>
 
                 <div style={{ display: "flex", gap: isMobile ? 8 : 8 }}>
-                  <button type="button" onClick={() => setIsTasksModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Cancel</button>
-                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>Save Tasks</button>
+                  <button type="button" onClick={() => setIsTasksModalOpen(false)} style={{ flex: 1, padding: isMobile ? 16 : 12, background: "rgba(255,255,255,0.05)", color: "#FFF", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>{t("cancel")}</button>
+                  <button type="submit" style={{ flex: 1, padding: isMobile ? 16 : 12, background: "#7CFC00", color: "#000", fontWeight: 700, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, minHeight: isMobile ? 52 : 44 }}>{t("saveTasks")}</button>
                 </div>
               </form>
             </motion.div>

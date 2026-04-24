@@ -6,6 +6,7 @@ import { Activity, BarChart2, Eye, EyeOff, Flame, Info, Plus, Signal, Star, Targ
 import { useProgressDashboard, type CoachGoal } from "@/lib/use-progress-dashboard";
 import { SECONDARY_TEXT_COLOR, TOUCH_TARGET_SIZE } from "@/lib/accessibility";
 import { LazyRenderSection, SkeletonBlock, useDashboardMotion } from "@/lib/performance";
+import { useClientLanguage } from "@/lib/client-language";
 
 function cardStyle() {
   return {
@@ -38,9 +39,9 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
 }
 
 function statusTone(state: "online" | "offline" | "syncing") {
-  if (state === "offline") return { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.22)", color: "#FCA5A5", label: "Offline queue" };
-  if (state === "syncing") return { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.22)", color: "#FDE68A", label: "Syncing" };
-  return { bg: "rgba(124,252,0,0.12)", border: "rgba(124,252,0,0.22)", color: "#B9FF8B", label: "Realtime live" };
+  if (state === "offline") return { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.22)", color: "#FCA5A5", key: "offline" as const };
+  if (state === "syncing") return { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.22)", color: "#FDE68A", key: "syncing" as const };
+  return { bg: "rgba(124,252,0,0.12)", border: "rgba(124,252,0,0.22)", color: "#B9FF8B", key: "live" as const };
 }
 
 function ProgressLoadingState() {
@@ -72,8 +73,9 @@ function ProgressLoadingState() {
 }
 
 function GoalHistoryChart({ points }: { points: Array<{ label: string; current: number; target: number }> }) {
+  const { language } = useClientLanguage();
   if (!points.length) {
-    return <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>Not enough history yet.</div>;
+    return <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{language === "ar" ? "لسه مفيش بيانات كفاية." : "Not enough history yet."}</div>;
   }
 
   const width = 220;
@@ -152,6 +154,8 @@ function TrendChart({
 
 
 export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolean; memberId?: number }) {
+  const { language } = useClientLanguage();
+  const isArabic = language === "ar";
   const {
     isLoading,
     period,
@@ -188,6 +192,12 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
   const [showRiskInfo, setShowRiskInfo] = useState(false);
   const { disableHeavyAnimations } = useDashboardMotion();
   const tone = statusTone(connectionState);
+  const toneLabel =
+    tone.key === "offline"
+      ? (isArabic ? "في انتظار المزامنة" : "Offline queue")
+      : tone.key === "syncing"
+        ? (isArabic ? "جارٍ المزامنة" : "Syncing")
+        : (isArabic ? "محدّث لحظيًا" : "Realtime live");
   const filteredRecords = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return personalRecords.filter((record) => {
@@ -217,29 +227,29 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
             <BarChart2 size={22} color="#7CFC00" />
           </div>
           <div>
-            <div style={{ color: "#FFFFFF", fontSize: 24, fontWeight: 800 }}>Progress Command Center</div>
-            <div style={{ color: SECONDARY_TEXT_COLOR, fontSize: 14 }}>Live metrics now sync workouts, calories, goals, records, and coach feedback.</div>
+            <div style={{ color: "#FFFFFF", fontSize: 24, fontWeight: 800 }}>{isArabic ? "مركز التقدم" : "Progress Command Center"}</div>
+            <div style={{ color: SECONDARY_TEXT_COLOR, fontSize: 14 }}>{isArabic ? "هنا بتتابع التمرين والسعرات والأهداف والأرقام الشخصية وملاحظات الكوتش." : "Live metrics now sync workouts, calories, goals, records, and coach feedback."}</div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 999, background: tone.bg, border: `1px solid ${tone.border}`, color: tone.color, fontSize: 12, fontWeight: 800 }}>
             {connectionState === "offline" ? <WifiOff size={14} /> : <Signal size={14} />}
-            <span>{tone.label}</span>
-            {pendingCount > 0 && <span style={{ color: "#FFFFFF" }}>{pendingCount} pending</span>}
+            <span>{toneLabel}</span>
+            {pendingCount > 0 && <span style={{ color: "#FFFFFF" }}>{isArabic ? `${pendingCount} مستني` : `${pendingCount} pending`}</span>}
           </div>
-          <button onClick={async () => { const weight = window.prompt("Enter your weight (kg)", ""); if (weight && !isNaN(Number(weight))) { try { await addBodyMetric({ metric: "Body Weight", value: Number(weight), unit: "kg", source: "manual", note: null }); alert("Weight saved!"); } catch (e) { alert("Error saving weight. Please try again."); } } }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]" aria-label="Add weight">
-            <span className="inline-flex items-center gap-2"><Plus size={14} /> Add Weight</span>
+          <button onClick={async () => { const weight = window.prompt(isArabic ? "اكتب وزنك بالكيلو" : "Enter your weight (kg)", ""); if (weight && !isNaN(Number(weight))) { try { await addBodyMetric({ metric: "Body Weight", value: Number(weight), unit: "kg", source: "manual", note: null }); alert(isArabic ? "الوزن اتسجل." : "Weight saved!"); } catch (e) { alert(isArabic ? "مش قادرين نحفظ الوزن دلوقتي." : "Error saving weight. Please try again."); } } }} className="rounded-full border border-[#7CFC00]/20 bg-[#7CFC00]/10 px-4 py-2 text-sm font-semibold text-[#7CFC00]" aria-label={isArabic ? "سجّل الوزن" : "Add weight"}>
+            <span className="inline-flex items-center gap-2"><Plus size={14} /> {isArabic ? "سجّل الوزن" : "Add Weight"}</span>
           </button>
         </div>
       </div>
-      <div style={{ fontSize: 12, color: "#5A5A5A", marginTop: 4 }}>Click "Add Weight" to log your body weight. Track progress over time in the chart below.</div>
+      <div style={{ fontSize: 12, color: "#5A5A5A", marginTop: 4 }}>{isArabic ? "اضغط على «سجّل الوزن» عشان تضيف وزنك الحالي وتتابع التغير في الرسم البياني." : 'Click "Add Weight" to log your body weight. Track progress over time in the chart below.'}</div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          { key: "workouts", label: "Workouts Done", value: `${workoutsDone}`, delta: `${streak}d streak`, color: "#F59E0B", points: [0, 1, 1, 2, 1, 3, Math.max(workoutsDone, 1)] },
-          { key: "calories", label: "Calories Burned", value: `${caloriesBurned.toLocaleString()} kcal`, delta: `Week total`, color: "#FB7185", points: [1200, 1850, 1930, 2010, 1840, 2060, caloriesBurned || 1920] },
-          { key: "efficiency", label: "Efficiency", value: `${efficiency}%`, delta: "Set completion rate", color: "#7CFC00", points: [78, 82, 85, 88, 91, 90, efficiency || 85] },
-          { key: "streak", label: "Current Streak", value: `${streak} days`, delta: "Consecutive days", color: "#A78BFA", points: [0, 1, 2, 3, 4, 5, Math.max(streak, 1)] },
+          { key: "workouts", label: isArabic ? "تمارين خلصتها" : "Workouts Done", value: `${workoutsDone}`, delta: isArabic ? `${streak} يوم متواصل` : `${streak}d streak`, color: "#F59E0B", points: [0, 1, 1, 2, 1, 3, Math.max(workoutsDone, 1)] },
+          { key: "calories", label: isArabic ? "سعرات اتحرقت" : "Calories Burned", value: `${caloriesBurned.toLocaleString()} kcal`, delta: isArabic ? "إجمالي الأسبوع" : `Week total`, color: "#FB7185", points: [1200, 1850, 1930, 2010, 1840, 2060, caloriesBurned || 1920] },
+          { key: "efficiency", label: isArabic ? "نسبة الالتزام" : "Efficiency", value: `${efficiency}%`, delta: isArabic ? "نسبة إنهاء الجولات" : "Set completion rate", color: "#7CFC00", points: [78, 82, 85, 88, 91, 90, efficiency || 85] },
+          { key: "streak", label: isArabic ? "السلسلة الحالية" : "Current Streak", value: isArabic ? `${streak} يوم` : `${streak} days`, delta: isArabic ? "أيام متتالية" : "Consecutive days", color: "#A78BFA", points: [0, 1, 2, 3, 4, 5, Math.max(streak, 1)] },
         ].map((card) => (
           <motion.div
             key={card.key}
@@ -273,7 +283,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <TrendingDown size={20} color="#7CFC00" />
-                    <span style={{ color: "#FFFFFF", fontSize: 16, fontWeight: 700 }}>Weight Progress</span>
+                    <span style={{ color: "#FFFFFF", fontSize: 16, fontWeight: 700 }}>{isArabic ? "تقدم الوزن" : "Weight Progress"}</span>
                   </div>
                   <div style={{ color: "#8B8B8B", fontSize: 13 }}>
                     {weightCard.latest?.value} {weightCard.latest?.unit}
@@ -284,7 +294,7 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
                 <div style={{ height: 120, marginBottom: 16 }}>
                   {!hasEnoughData ? (
                     <div style={{ color: "#5A5A5A", fontSize: 13, textAlign: "center", padding: 40 }}>
-                      Add at least 2 weight entries to see your trend chart
+                      {isArabic ? "سجّل وزنين على الأقل عشان يظهر خط التغير." : "Add at least 2 weight entries to see your trend chart"}
                     </div>
                   ) : (
                     (() => {
@@ -316,18 +326,18 @@ export default function ProgressTab({ isPrivate, memberId }: { isPrivate: boolea
 
                 {/* Recent Weight History */}
                 <div>
-                  <div style={{ fontSize: 11, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Recent Entries</div>
+                  <div style={{ fontSize: 11, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>{isArabic ? "آخر القياسات" : "Recent Entries"}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {(() => {
                       const weightMetrics = (profile?.body_metrics || []).filter((m: any) => m.metric === "Body Weight").slice(-5).reverse();
                       return weightMetrics.map((entry: any) => (
                         <div key={entry.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10 }}>
                           <span style={{ color: "#8B8B8B", fontSize: 13 }}>
-                            {entry.recordedAt ? new Date(entry.recordedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Unknown"}
+                            {entry.recordedAt ? new Date(entry.recordedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : (isArabic ? "غير معروف" : "Unknown")}
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ color: "#FFFFFF", fontWeight: 600, fontSize: 14 }}>{entry.value} {entry.unit}</span>
-                            <button onClick={() => deleteBodyMetric(entry.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#5A5A5A" }} aria-label="Delete weight entry">
+                            <button onClick={() => deleteBodyMetric(entry.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#5A5A5A" }} aria-label={isArabic ? "احذف القياس" : "Delete weight entry"}>
                               <Trash size={14} />
                             </button>
                           </div>
