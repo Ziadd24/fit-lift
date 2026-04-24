@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
    Dumbbell, Calendar, CreditCard, LogOut, Bell, ImageIcon, LayoutDashboard,
   ChevronRight, ChevronLeft, X, Menu, Check, MapPin, Clock, Star, ChevronDown, ArrowRight, Play,
+  Activity, Wind,
 } from "lucide-react";
 import { format } from "date-fns";
 import { isMembershipActive, cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ interface Bundle {
   period: string;
   features: string[];
   highlight: boolean;
+  display_order?: number;
 }
 
 const HOME_LIFT = "transition-all duration-300 hover:scale-[1.03] active:scale-95";
@@ -85,7 +87,6 @@ function useCarousel(itemsLength: number, intervalMs = 4000) {
     scrollToIndex(index);
   }, [scrollToIndex]);
 
-  // setActiveIndexOnly: update state+ref without re-scrolling (used by onScroll)
   const setActiveIndexOnly = useCallback((index: number) => {
     activeIndexRef.current = index;
     setActiveIndex(index);
@@ -165,7 +166,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
               {bundle.highlight && (
                 <span className="absolute top-0 right-0 bg-[#47D84B] text-white text-[10px] md:text-[11px] font-black uppercase tracking-[0.12em] md:tracking-[0.14em] px-4 md:px-6 py-2.5 md:py-3 rounded-bl-2xl shadow-[0_10px_24px_rgba(71,216,75,0.28)]">
-                  {lang === "ar" ? "\u0627\u0644\u0623\u0643\u062b\u0631 \u0637\u0644\u0628\u064b\u0627" : "RECOMMENDED"}
+                  {lang === "ar" ? "الأفضل قيمة" : "RECOMMENDED"}
                 </span>
               )}
 
@@ -242,7 +243,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
   );
 }
 
-function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, string> }) {
+function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }> }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
   const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 2000);
 
@@ -262,7 +263,9 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
         }}
       >
         {allCoaches.map((coach: any, i: number) => {
-          const uploadedPhoto = coachPhotoMap[coach.name];
+          const coachData = coachPhotoMap[coach.name];
+          const uploadedPhoto = coachData?.url;
+          const caption = coachData?.caption;
           return (
             <motion.div key={coach.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }} className="shrink-0 snap-center w-[65vw] sm:w-[45vw] md:w-[280px] lg:w-[300px]">
               <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full", HOME_CARD)}>
@@ -277,7 +280,8 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
                   />
                 </div>
                 <div className="p-3 md:p-4">
-                  <h4 className="text-white font-bold text-sm md:text-lg">{lang === "ar" ? "\u0627\u0644\u0645\u062f\u0631\u0628 " + coach.name : "Coach " + coach.name}</h4>
+                  <h4 className="text-white font-bold text-sm md:text-lg">{coach.name}</h4>
+                  {caption && <p className="text-white/60 text-xs mt-1">{caption}</p>}
                 </div>
               </Card>
             </motion.div>
@@ -318,9 +322,9 @@ const translations = {
     hero: { title1: "Push Your", title2: "Limits", desc: "Premium equipment, expert trainers, and a community that pushes you to be your best self. Welcome to the next level of fitness.", join: "Join Now", login: "Member Login" },
     about: { tag: "About Us", title: "More Than Just A Gym", p1: "FIT & LIFT was founded on a simple principle: provide the best environment for people who are serious about their fitness journey. We are not just a place with weights; we are a community of dedicated individuals.", p2: "Whether you are a beginner learning the ropes or a seasoned athlete prepping for competition, our state-of-the-art facility and expert staff are here to support your goals.", years: "Years", members: "Members", coaches: "Coaches", active: "Active Members" },
     services: { tag: "What We Offer", title: "World-Class Facilities", items: [
-      { title: "Free Weights", desc: "Fully equipped weight room with barbells, dumbbells, and cable machines for all fitness levels." },
-      { title: "Group Classes", desc: "Daily classes in HIIT, yoga, spinning, boxing, and more, led by certified expert trainers." },
-      { title: "Personal Training", desc: "One-on-one sessions with certified personal trainers tailored to your specific goals." }
+      { title: "Equipment Zone", desc: "State-of-the-art fitness floor featuring premium resistance machines, free weights, and cable systems for comprehensive strength training at every level." },
+      { title: "High Quality Fitness Room", desc: "Spacious workout area with top-tier equipment, climate control, and dedicated zones for cardio, strength, and functional training." },
+      { title: "Sauna & Spa", desc: "Recover and relax in our premium sauna and spa facilities—perfect for muscle recovery, stress relief, and post-workout rejuvenation." }
     ]},
     schedule: { tag: "Weekly Schedule", title1: "HRS", title2: "Schedule", filters: { all: "All Hours", men: "Men's Hours", women: "Women's Hours" }, labels: { menMorn: "Men (Morning)", women: "Women", menEve: "Men (Evening)" } },
     coaches: { tag: "The Elite Team", title: "Expert Coaches", coaches: [
@@ -341,31 +345,108 @@ const translations = {
     modal: { title: "Member Login", desc: "Enter your membership code to access your portal.", code: "Membership Code", placeholder: "e.g. FL-1234", btn: "Access Portal", loading: "Verifying..." }
   },
   ar: {
-    nav: { about: "عنا", services: "الخدمات", schedule: "الجدول", pricing: "الأسعار", coaches: "المدربين", contact: "تواصل معنا", login: "دخول الأعضاء", dashboard: "لوحة التحكم", logout: "تسجيل الخروج" },
-    hero: { title1: "جاوز", title2: "حدودك", desc: "أفضل معدات، مدربين محترفين، وجيم بيكفلك تكون أحسن نسخة من نفسك. أهلاً بيك في المستوى التالي.", join: "انضم دلوقتي", login: "دخول الأعضاء" },
-    about: { tag: "عنا", title: "أكتر من مجرد جيم", p1: "FIT & LIFT اتبنت على فكرة بسيطة: نوفر أحسن مكان للناس اللي جادة في رحلتهم الرياضية. احنا مش مجرد مكان فيه أوزان، احنا مجتمع من ناس ملتزمة وبيحبوا الجيم.", p2: "سواء كنت مبتدئ بتتعلم الأساسيات ولا رياضي محترف بيستعد لبطولات، مرافقنا الحديثة وفريقنا المتخصص هنا عشان يساعدوك تحقق أهدافك.", years: "سنة خبرة", members: "عضو", coaches: "مدرب", active: "عضو نشط" },
-    services: { tag: "إيه اللي بنقدمه", title: "مرفقة عالمية", items: [
-      { title: "أوزان حرة", desc: "جيم أوزان مجهز بالكامل بالبارات والدمبلات وآلات الكابل لكل المستويات." },
-      { title: "تمرينات جماعية", desc: "تمرينات يومية HIIT ويوجا وسبيننج وملاكمة وأكتر، بقيادة مدربين محترفين." },
-      { title: "تدريب شخصي", desc: "جلسات فردية مع مدربين شخصيين معتمدين مصممة خصيصاً عشان أهدافك." }
-    ]},
-    schedule: { tag: "الجدول الأسبوعي", title1: "مواعيد", title2: "الشغل", filters: { all: "كل المواعيد", men: "مواعيد الرجالة", women: "مواعيد البنات" }, labels: { menMorn: "رجالة (صبح)", women: "بنات", menEve: "رجالة (بالليل)" } },
-    coaches: { tag: "الفريق المميز", title: "مدربين خبراء", coaches: [
-      { name: "المدرب محمود", role: "خبير بناء أجسام", tagline: "أكتر من 10 سنين خبرة" },
-      { name: "المدرب أحمد", role: "متخصص كروسفيت", tagline: "بطل سابق" },
-      { name: "المدربة سارة", role: "تغذية ويوجا", tagline: "محترفة ومعتمدة" },
-      { name: "المدرب زياد", role: "ريفع أثقال", tagline: "مدرب مميز" }
-    ], book: "احجز تمرين" },
-    pricing: { tag: "باقات الاشتراك", title1: "اختار", title2: "باقتك", plans: [
-      { name: "شهر", period: "شهر واحد", badge: null, features: ["دخول كامل للجيم", "خزانة ملابس"] },
-      { name: "شهرين", period: "شهرين", badge: null, features: ["دخول كامل للجيم", "خزانة ملابس"] },
-      { name: "3 شهور", period: "3 شهور", badge: null, features: ["دخول كامل للجيم", "خزانة ملابس"] },
-      { name: "6 شهور", period: "6 شهور", badge: "الأكثر مبيعاً", features: ["دخول كامل للجيم", "خزانة ملابس"] },
-      { name: "سنة", period: "سنة كاملة", badge: null, features: ["دخول كامل للجيم", "خزانة ملابس"] }
-    ], currency: "ج.م", button: "اشترك دلوقتي", msg: "أهلاً! أنا عايز أشترك في باقة {plan} (ج.م {price})." },
-    contact: { tag: "كلمنا", title1: "تواصل", title2: "معنا", desc: "عندك أي سؤال؟ احنا حابين نسمع منك. ابعتلنا رسالة وهنرد عليك في أقرب وقت.", labels: { address: "العنوان", phone: "رقم الموبايل", hours: "مواعيد الشغل" }, hoursText: "24/7 (ما عدا الخميس: بيقفل 12 بالليل)", mapTitle: "زر مكاننا", mapBtn: "افتح في خرائط جوجل", form: { name: "اسمك", phone: "رقم الموبايل", email: "الإيميل", subject: "الموضوع", subj1: "استفسار عن الاشتراك", subj2: "سؤال عن التمرينات", subj3: "تدريب شخصي", subj4: "حاجة تانية", message: "الرسالة", send: "ابعت", success: "تم إرسال الرسالة بنجاح!" } },
+    nav: { 
+      about: "عنّا", 
+      services: "خدماتنا", 
+      schedule: "المواعيد", 
+      pricing: "الاشتراكات", 
+      coaches: "المدربين", 
+      contact: "تواصل معانا", 
+      login: "دخول الأعضاء", 
+      dashboard: "لوحة التحكم", 
+      logout: "تسجيل الخروج" 
+    },
+    hero: { 
+      title1: "اكسر", 
+      title2: "حدودك.", 
+      desc: "أحدث معدات، مدربين محترفين، وجوّ هيخليك توصل لأحسن نسخة منك. أهلاً بيك في FIT & LIFT.", 
+      join: "اشترك دلوقتي", 
+      login: "دخول الأعضاء" 
+    },
+    about: { 
+      tag: "عنّا", 
+      title: "أكتر من مجرد جيم", 
+      p1: "FIT & LIFT اتأسس على مبدأ بسيط: نخلق أحسن بيئة للناس الجادة في مشوارها الرياضي. مش مجرد أوزان وآلات، احنا عيلة بتتشارك نفس الهدف.", 
+      p2: "سواء كنت لسّه بتبدأ ولا رياضي محترف، عندنا اللي يساعدك توصل لهدفك. معداتنا على أعلى مستوى وفريقنا جاهز يقف جنبك في كل خطوة.", 
+      years: "سنين خبرة", 
+      members: "عضو نشط", 
+      coaches: "مدرب محترف", 
+      active: "عضو بيتمرن" 
+    },
+    services: { 
+      tag: "إيه اللي بنقدّمهولك", 
+      title: "مرافق عالمية المستوى", 
+      items: [
+        { title: "منطقة المعدات", desc: "أرضية رياضية مجهزة بأحدث أجهزة المقاومة والأوزان الحرة والكابلات. مناسبة للمبتدئين والمحترفين." },
+        { title: "غرفة فيتنيس متكاملة", desc: "مساحة تمرين واسعة ومكيّفة. فيها مناطق للكارديو والقوة والتمارين الوظيفية." },
+        { title: "ساونا وسبا", desc: "استرح وريح عضلاتك بعد التمرين في ساونا وسبا VIP. مثالي للاستشفاء والاسترخاء." }
+      ]
+    },
+    schedule: { 
+      tag: "الجدول الأسبوعي", 
+      title1: "مواعيد", 
+      title2: "التمرين", 
+      filters: { all: "كل المواعيد", men: "مواعيد الرجال", women: "مواعيد السيدات" }, 
+      labels: { menMorn: "رجال (صباحاً)", women: "سيدات", menEve: "رجال (مساءً)" } 
+    },
+    coaches: { 
+      tag: "نخبة المدربين", 
+      title: "مدربينا الخبراء", 
+      coaches: [
+        { name: "كابتن محمود", role: "خبير كمال أجسام", tagline: "+10 سنين خبرة" },
+        { name: "كابتن أحمد", role: "متخصص كروسفت", tagline: "بطل سابق" },
+        { name: "كابتن سارة", role: "أخصائية تغذية ويوجا", tagline: "محترفة معتمدة" },
+        { name: "كابتن زياد", role: "متخصص رفع أثقال", tagline: "مدرب على أعلى مستوى" }
+      ], 
+      book: "احجز جلستك" 
+    },
+    pricing: { 
+      tag: "باقات الاشتراك", 
+      title1: "اختار", 
+      title2: "باقتك", 
+      plans: [
+        { name: "شهر", period: "شهرياً", badge: null, features: ["دخول شامل للجيم", "لوكر"] },
+        { name: "شهرين", period: "كل شهرين", badge: null, features: ["دخول شامل للجيم", "لوكر"] },
+        { name: "3 شهور", period: "كل 3 شهور", badge: null, features: ["دخول شامل للجيم", "لوكر"] },
+        { name: "6 شهور", period: "كل 6 شهور", badge: "الأفضل قيمة", features: ["دخول شامل للجيم", "لوكر"] },
+        { name: "سنة", period: "سنوياً", badge: null, features: ["دخول شامل للجيم", "لوكر"] }
+      ], 
+      currency: "ج.م", 
+      button: "اشترك دلوقتي", 
+      msg: "السلام عليكم، عايز أعرف تفاصيل باقة {plan} بسعر {price} ج.م." 
+    },
+    contact: { 
+      tag: "تواصل معانا", 
+      title1: "تواصل", 
+      title2: "معنا", 
+      desc: "عندك سؤال؟ احنا هنا عشان نساعدك. سيب لنا رسالة وهنرد عليك في أسرع وقت.", 
+      labels: { address: "العنوان", phone: "الموبايل", hours: "ساعات العمل" }, 
+      hoursText: "مفتوح 24/7 (الخميس بيقفل 12 بالليل)", 
+      mapTitle: "زور مكاننا", 
+      mapBtn: "افتح في خرائط جوجل", 
+      form: { 
+        name: "الاسم", 
+        phone: "رقم التليفون", 
+        email: "الإيميل", 
+        subject: "الموضوع", 
+        subj1: "استفسار عن الاشتراك", 
+        subj2: "سؤال عن الحصص", 
+        subj3: "تدريب شخصي", 
+        subj4: "أمر آخر", 
+        message: "الرسالة", 
+        send: "إرسال", 
+        success: "تم إرسال الرسالة بنجاح!" 
+      } 
+    },
     footer: { rights: "FIT & LIFT. كل الحقوق محفوظة." },
-    modal: { title: "دخول الأعضاء", desc: "حط كود اشتراكك عشان تدخل على حسابك.", code: "كود الاشتراك", placeholder: "مثال: FL-1234", btn: "دخول", loading: "بنحقق دلوقتي..." }
+    modal: { 
+      title: "تسجيل دخول الأعضاء", 
+      desc: "ادخل كود العضوية بتاعك عشان تفتح حسابك.", 
+      code: "كود العضوية", 
+      placeholder: "مثال: FL-1234", 
+      btn: "دخول", 
+      loading: "جاري التحقق..." 
+    }
   }
 };
 
@@ -418,8 +499,6 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
   const next = useCallback(() => setIndex((i) => (i + 1) % totalImages), [totalImages]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + totalImages) % totalImages), [totalImages]);
 
-  // Auto-scroll: restart whenever totalImages changes (photos finish loading)
-  // Uses document visibility so it pauses when tab is hidden
   useEffect(() => {
     if (totalImages <= 1) return;
     const tick = () => {
@@ -430,7 +509,6 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
     return () => clearInterval(timer);
   }, [totalImages]);
 
-  // Pre-load all images whenever the set changes
   useEffect(() => {
     galleryItems.forEach(({ src }) => {
       const img = new Image();
@@ -438,7 +516,6 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
     });
   }, [galleryItems]);
 
-  // Always render the outer div (keeps ref stable); show skeleton inside
   return (
     <div ref={galleryRef} className="rounded-2xl overflow-hidden h-72 md:h-80 relative group bg-black">
       {isLoading && (
@@ -491,7 +568,6 @@ export default function MemberPortal() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "photos">("overview");
   const [contactSuccess, setContactSuccess] = useState(false);
-    // Fetch schedule image from settings
   const { data: scheduleSetting } = useQuery<{ value: string }>({
     queryKey: ["setting", "schedule_image_url"],
     queryFn: async () => {
@@ -512,7 +588,6 @@ export default function MemberPortal() {
     currentMember ? { memberId: currentMember.id } : undefined
   );
 
-  // Fetch coaches from DB
   const { data: dbCoaches } = useQuery<any[]>({
     queryKey: ["db-coaches"],
     queryFn: async () => {
@@ -523,7 +598,6 @@ export default function MemberPortal() {
     retry: false,
   });
 
-  // Fetch coach photos and build map by coach_id
   const { data: coachPhotos } = useQuery<any[]>({
     queryKey: ["photos-coach"],
     queryFn: async () => {
@@ -535,14 +609,14 @@ export default function MemberPortal() {
     retry: false,
   });
 
-  const coachPhotoMap: Record<string, string> = useMemo(() => {
-    const byId: Record<number, string> = {};
+  const coachPhotoMap: Record<string, { url: string; caption?: string }> = useMemo(() => {
+    const byId: Record<number, { url: string; caption?: string }> = {};
     if (coachPhotos) {
       coachPhotos.forEach((p) => {
-        if (p.coach_id && !byId[p.coach_id]) byId[p.coach_id] = p.url;
+        if (p.coach_id && !byId[p.coach_id]) byId[p.coach_id] = { url: p.url, caption: p.caption };
       });
     }
-    const byName: Record<string, string> = {};
+    const byName: Record<string, { url: string; caption?: string }> = {};
     if (dbCoaches) {
       dbCoaches.forEach((c: any) => {
         if (byId[c.id]) byName[c.name] = byId[c.id];
@@ -600,26 +674,20 @@ export default function MemberPortal() {
             alt={lang === "ar" ? "\u062c\u064a\u0645 FIT & LIFT" : "Fit & Lift Gym Interior"}
             className="w-full h-full object-cover object-center"
           />
-          {/* Dark overlay using website background color (dark navy) */}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.55) 100%)' }} />
-          {/* Bottom fade into page background */}
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgb(10,10,10) 0%, transparent 40%)' }} />
-          {/* Subtle lime grid overlay */}
           <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(124,252,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,252,0,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
         </div>
       
-        {/* Side accent bars */}
         <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
       
         <nav className="fixed top-0 left-0 right-0 z-50 h-[96px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
           <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
-            {/* Logo */}
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
               <img src="/images/logo.png" alt="Fit and Lift" className="h-[90px] w-auto object-contain" />
               <span className="text-lg font-black text-primary tracking-widest hidden sm:block">FIT & LIFT</span>
             </a>
       
-            {/* Nav Links */}
             <div className="hidden lg:flex items-center gap-10">
               {[
                 { href: '#about', label: t.nav.about },
@@ -635,7 +703,6 @@ export default function MemberPortal() {
               ))}
             </div>
       
-            {/* Right: Lang + Auth */}
             <div className="hidden lg:flex items-center gap-4">
               <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-1" dir="ltr">
                 <button onClick={() => setLang("en")} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
@@ -659,7 +726,6 @@ export default function MemberPortal() {
               )}
             </div>
       
-            {/* Mobile hamburger + Language */}
             <div className="lg:hidden flex items-center gap-2">
               <div className="flex items-center bg-white/5 border border-white/10 rounded-full p-0.5" dir="ltr">
                 <button onClick={() => setLang("en")} className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-white/50 hover:text-white"}`}>EN</button>
@@ -672,7 +738,6 @@ export default function MemberPortal() {
           </div>
         </nav>
       
-        {/* Mobile Menu */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
@@ -711,30 +776,27 @@ export default function MemberPortal() {
       
         <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[126px] pb-20 sm:pb-24">
       
-          {/* Tag line */}
           <motion.div animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
             className="flex items-center gap-3 mb-5 sm:mb-6">
             <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
             <span className="text-primary text-[12px] sm:text-xs font-bold uppercase tracking-[3px] sm:tracking-[4px]">
-              {lang === "ar" ? "\u0623\u0641\u0636\u0644 \u062c\u064a\u0645 \u0641\u064a \u0628\u0646\u0647\u0627" : "Benha's No.1 Gym"}
+              {lang === "ar" ? "جيم رقم 1 في بنها" : "Benha's No.1 Gym"}
             </span>
           </motion.div>
       
-          {/* Headline */}
           <motion.h1
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 70, damping: 18 }}
             className="font-extrabold uppercase leading-[1.1] mb-5 sm:mb-6 max-w-3xl"
             style={{ fontSize: 'clamp(54px, 14vw, 108px)', letterSpacing: '2px', fontFamily: "'Montserrat', sans-serif" }}
           >
-            <span className="text-white block">{lang === "ar" ? "\u062c\u0627\u0648\u0632" : "Push Your"}</span>
-            <span className="text-primary block">{lang === "ar" ? "\u062d\u062f\u0648\u062f\u0643." : "Limits."}</span>
+            <span className="text-white block">{lang === "ar" ? "اكسر" : "Push Your"}</span>
+            <span className="text-primary block">{lang === "ar" ? "حدودك." : "Limits."}</span>
             <span className="block" style={{ color: '#0a0a0a', WebkitTextStroke: '2px rgba(255,255,255,0.5)', paintOrder: 'stroke fill', letterSpacing: '-1px', fontSize: '0.82em', lineHeight: '1.15', marginTop: '0.1em', display: 'block' }}>
-              {lang === "ar" ? "\u0648\u0635\u0644 \u0644\u062d\u062f \u0627\u0644\u0623\u0642\u0635\u0649." : "Reach Your Potential."}
+              {lang === "ar" ? "أوصل لأقصى إمكانياتك." : "Reach Your Potential."}
             </span>
           </motion.h1>
       
-          {/* Accent line */}
           <motion.div
             initial={{ scaleX: 0, originX: 0 }}
             animate={{ scaleX: 1 }}
@@ -742,47 +804,51 @@ export default function MemberPortal() {
             className="w-14 sm:w-16 h-[3px] bg-primary mb-5 sm:mb-6"
           />
       
-          {/* Description */}
           <motion.p animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
             className="text-white/60 text-[15px] sm:text-base leading-relaxed max-w-[90%] sm:max-w-md mb-10 sm:mb-10">
             {lang === "ar"
-              ? "\u0623\u0641\u0636\u0644 \u0645\u0639\u062f\u0627\u062a\u060c \u0645\u062f\u0631\u0628\u064a\u0646 \u0645\u062d\u062a\u0631\u0641\u064a\u0646\u060c \u0648\u062c\u064a\u0645 \u0628\u064a\u0643\u0641\u0644\u0643 \u062a\u0643\u0648\u0646 \u0623\u062d\u0633\u0646 \u0646\u0633\u062e\u0629 \u0645\u0646 \u0646\u0641\u0633\u0643."
+              ? "جيم متكامل مش ناقصه غيرك."
               : "Premium equipment, expert trainers, and a community that pushes you to be your best self."}
           </motion.p>
       
-          {/* CTA Buttons */}
           <motion.div animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
             <a href="#pricing"
               className={cn("inline-flex items-center justify-center bg-primary text-primary-foreground font-black uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full w-full sm:w-auto", HOME_BUTTON_PRIMARY)}>
-              {lang === "ar" ? "\u0627\u0646\u0636\u0645 \u062f\u0644\u0648\u0642\u062a\u064a" : "Join Now"}
+              {lang === "ar" ? "اشترك دلوقتي" : "Join Now"}
             </a>
             <button onClick={() => router.push('/client/login')}
               className={cn("inline-flex items-center justify-center border border-white/25 text-white font-bold uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full hover:text-primary w-full sm:w-auto", HOME_BUTTON_SECONDARY)}>
               {t.nav.login}
             </button>
           </motion.div>
-      
 
         </div>
       
         <motion.div
-          animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.0 }}
-          className="hidden lg:flex flex-col absolute left-8 top-1/2 -translate-y-1/2 items-center gap-5 z-20">
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+          className="flex items-center justify-center gap-5 z-20 absolute bottom-8 left-0 right-0"
+        >
           <a href="https://www.facebook.com/share/1E86b6Vp3n/" target="_blank" rel="noopener noreferrer"
             className="text-white/30 hover:text-primary transition-colors">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
           </a>
-          <div className="w-px h-10 bg-white/10" />
+          <div className="w-8 h-px bg-white/10" />
           <a href="https://www.instagram.com/fit.and.lift.gym" target="_blank" rel="noopener noreferrer"
             className="text-white/30 hover:text-primary transition-colors">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+          <div className="w-8 h-px bg-white/10" />
+          <a href="https://www.tiktok.com/@fit.and.lift.gym" target="_blank" rel="noopener noreferrer"
+            className="text-white/30 hover:text-primary transition-colors">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
           </a>
         </motion.div>
       
       </section>
 
-      {/* About */}
       <section id="about" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -796,7 +862,7 @@ export default function MemberPortal() {
                 {t.about.p2}
               </p>
               <div className="flex gap-8 mt-8">
-                {[{ n: "15+", l: t.about.years }, { n: "5K+", l: t.about.members }, { n: "25", l: t.about.coaches }].map((s) => (
+                {[{ n: "6+", l: t.about.years }, { n: "25", l: t.about.coaches }].map((s) => (
                   <div key={s.l}>
                     <p className="text-3xl font-black text-primary">{s.n}</p>
                     <p className="text-xs text-muted-foreground uppercase tracking-widest">{s.l}</p>
@@ -804,18 +870,30 @@ export default function MemberPortal() {
                 ))}
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 60 }} whileInView={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.15 }} viewport={{ once: true, margin: "-50px" }} className="relative">
-              <PhotoGallery lang={lang} />
-              <div className={`absolute -bottom-6 bg-primary text-black px-7 py-5 rounded-2xl font-bold z-10 w-auto min-w-[140px] ${lang === "ar" ? "-right-6" : "-left-6"}`} dir="ltr">
-                <p className="text-4xl font-black whitespace-nowrap">500+</p>
-                <p className="text-[11px] md:text-sm uppercase tracking-widest whitespace-nowrap">{t.about.active}</p>
+            <motion.div initial={{ opacity: 0, x: 60 }} whileInView={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.15 }} viewport={{ once: true, margin: "-50px" }} className="flex flex-col gap-5">
+              <div className="relative">
+                <PhotoGallery lang={lang} />
+                
+              </div>
+              <div className="flex justify-center">
+                <a
+                  href="https://youtu.be/13Tr4BRMQUg?si=A_lNALVebJ_bsfVH"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-2 bg-[#7CFC00] text-black font-black uppercase tracking-wider text-sm px-8 py-3.5 rounded-full shadow-[0_0_24px_rgba(124,252,0,0.35)]",
+                    HOME_BUTTON_PRIMARY
+                  )}
+                >
+                  <Play className="w-4 h-4 fill-black" />
+                  {lang === "ar" ? "شوف أكتر" : "See Details"}
+                </a>
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Services */}
       <section id="services" className="py-24 bg-secondary/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -825,13 +903,13 @@ export default function MemberPortal() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 px-4 md:px-0 max-w-full">
             {[
               { icon: Dumbbell, title: t.services.items[0].title, desc: t.services.items[0].desc },
-              { icon: Calendar, title: t.services.items[1].title, desc: t.services.items[1].desc },
-              { icon: CreditCard, title: t.services.items[2].title, desc: t.services.items[2].desc },
+              { icon: Activity, title: t.services.items[1].title, desc: t.services.items[1].desc },
+              { icon: Wind, title: t.services.items[2].title, desc: t.services.items[2].desc },
             ].map((s, i) => (
               <motion.div key={s.title} className="snap-start" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
                 <Card className={cn("p-6 md:p-8 h-full bg-card border-white/10", HOME_CARD)}>
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[#7CFC00]/10 flex items-center justify-center flex-shrink-0">
+                  <div className="flex flex-col h-full">
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
                       <s.icon className="w-6 h-6 md:w-7 md:h-7 text-[#7CFC00]" />
                     </div>
                     <div className="flex-1">
@@ -869,15 +947,14 @@ export default function MemberPortal() {
             ) : (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <Calendar className="w-16 h-16 text-white/10 mb-4" />
-                <p className="text-muted-foreground text-lg">{lang === "ar" ? "\u0645\u0641\u064a\u0634 \u062c\u062f\u0648\u0644 \u0645\u062a\u062d\u0637 \u0644\u0633\u0647" : "No schedule uploaded yet"}</p>
-                <p className="text-muted-foreground text-sm mt-1">{lang === "ar" ? "\u0627\u0644\u062c\u062f\u0648\u0644 \u0647\u064a\u0638\u0647\u0631 \u0647\u0646\u0627 \u0644\u0645\u0627 \u064a\u062a\u062d\u0637 \u0645\u0646 \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645" : "Schedule image will appear here once uploaded from admin panel"}</p>
+                <p className="text-muted-foreground text-lg">{lang === "ar" ? "الجدول لسه ما اتنزلش" : "No schedule uploaded yet"}</p>
+                <p className="text-muted-foreground text-sm mt-1">{lang === "ar" ? "الجدول هيظهر هنا لما يتنزل من لوحة التحكم" : "Schedule image will appear here once uploaded from admin panel"}</p>
               </div>
             )}
           </motion.div>
         </div>
       </section>
 
-      {/* Expert Coaches */}
       <section id="coaches" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -888,7 +965,6 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      {/* Pricing */}
       <section id="pricing" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="text-center mb-16">
@@ -899,11 +975,9 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      {/* Contact Section */}
       <section id="contact" className="py-16 md:py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-            {/* Left Column (Info & Map Link) */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20 }} viewport={{ once: true }}>
               <h2 className="text-xs md:text-sm text-[#7CFC00] font-bold uppercase tracking-widest mb-2">{t.contact.tag}</h2>
               <h3 className="text-3xl md:text-5xl font-bold text-white mb-4 uppercase">{t.contact.title1} {t.contact.title2 && <span className="text-[#7CFC00]">{t.contact.title2}</span>}</h3>
@@ -913,7 +987,7 @@ export default function MemberPortal() {
 
               <div className="space-y-4 md:space-y-6">
                 {[
-                  { icon: MapPin, label: t.contact.labels.address, value: lang === "ar" ? "\u0628\u0646\u0647\u0627 - \u0627\u0644\u0632\u0647\u0648\u0631 - \u0628\u062c\u0627\u0646\u0628 \u0628\u0646 \u0631\u064a\u0627\u0646" : "Banha - Al Zohour - Beside Ben Rayyan" },
+                  { icon: MapPin, label: t.contact.labels.address, value: lang === "ar" ? "بنها - حي الزهور - بجوار بن ريان" : "Banha - Al Zohour - Beside Ben Rayyan" },
                   { icon: WhatsAppIcon, label: t.contact.labels.phone, value: "+20 10 09987771", isLTR: true },
                   { icon: Clock, label: t.contact.labels.hours, value: t.contact.hoursText },
                 ].map((item, i) => (
@@ -929,7 +1003,6 @@ export default function MemberPortal() {
                 ))}
               </div>
 
-              {/* Map Link Container */}
               <div className="mt-8 rounded-2xl overflow-hidden h-[200px] md:h-[250px] bg-[linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),url('/images/gym-hero.jpg')] bg-center bg-cover flex flex-col items-center justify-center border border-white/10">
                 <MapPin className="w-8 h-8 md:w-10 md:h-10 text-[#7CFC00] mb-3" />
                 <h3 className="text-white font-bold text-lg md:text-xl mb-4">{t.contact.mapTitle}</h3>
@@ -943,7 +1016,6 @@ export default function MemberPortal() {
               </div>
             </motion.div>
 
-            {/* Right Column (Form) */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }} viewport={{ once: true }}>
               <div className="bg-card border border-white/10 rounded-2xl p-5 md:p-8">
                 <form onSubmit={(e) => { e.preventDefault(); setContactSuccess(false); fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))}).then(r=>{if(r.ok){setContactSuccess(true);(e.target as HTMLFormElement).reset();}}); }} className="space-y-4 md:space-y-5">
@@ -997,7 +1069,6 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      {/* Floating WhatsApp Button */}
       <a
         href={`https://wa.me/${GYM_PHONE}`}
         target="_blank"
@@ -1008,7 +1079,6 @@ export default function MemberPortal() {
         <WhatsAppIcon className="w-7 h-7 text-white" />
       </a>
 
-      {/* Footer */}
       <footer className="py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-center gap-0 mb-4 hover:opacity-80 transition-opacity">
@@ -1019,7 +1089,6 @@ export default function MemberPortal() {
         </div>
       </footer>
 
-      {/* Login Modal */}
       <AnimatePresence>
         {isLoginModalOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1049,7 +1118,6 @@ export default function MemberPortal() {
         )}
       </AnimatePresence>
 
-      {/* Photo Zoom Modal */}
       <AnimatePresence>
         {zoomedPhoto && (
           <motion.div

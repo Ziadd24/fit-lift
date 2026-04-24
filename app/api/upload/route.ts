@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
   const coachId = coachIdStr ? parseInt(coachIdStr) : null;
   const memberIdStr = formData.get("memberId") as string | null;
   const memberId = memberIdStr ? parseInt(memberIdStr) : null;
+
+  // Reject member photo uploads (feature removed)
+  if (memberId || category === "member") {
+    return NextResponse.json({ error: "Member photo uploads are no longer supported" }, { status: 400 });
+  }
   const supabase = getSupabaseAdmin();
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "gym-photos";
   const ext = validation.safeExtension;

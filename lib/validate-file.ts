@@ -7,6 +7,7 @@ const IMAGE_SIGNATURES: Record<string, number[]> = {
 
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const HEIC_EXTENSIONS = new Set(["heic", "heif"]);
 
 export interface FileValidationResult {
   valid: boolean;
@@ -22,6 +23,13 @@ export function validateImageFile(file: File): FileValidationResult {
     return { valid: false, error: "Empty file", safeExtension: "" };
   }
   const ext = (file.name.split(".").pop() || "").toLowerCase();
+  if (HEIC_EXTENSIONS.has(ext)) {
+    return {
+      valid: false,
+      error: "iPhone HEIC format not supported. Please convert to JPEG first.",
+      safeExtension: "",
+    };
+  }
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     return {
       valid: false,

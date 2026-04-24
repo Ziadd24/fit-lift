@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search") || "";
   const status = searchParams.get("status") || "all";
   const type = searchParams.get("type") || "all";
+  const sortBy = searchParams.get("sortBy") || "created_desc";
   // unassigned=true → return members with no coach (for the assign-member drawer)
   const unassigned = searchParams.get("unassigned") === "true";
   const wantsAll = pageSizeParam === "all";
@@ -65,7 +66,34 @@ export async function GET(req: NextRequest) {
     query = query.gte("sub_expiry_date", today).lte("sub_expiry_date", sevenDaysLater);
   }
 
-  const { data, error, count } = await query.order("created_at", { ascending: false }).range(from, to);
+  let orderColumn = "created_at";
+  let orderAscending = false;
+
+  switch (sortBy) {
+    case "name_asc":
+      orderColumn = "name";
+      orderAscending = true;
+      break;
+    case "code_asc":
+      orderColumn = "membership_code";
+      orderAscending = true;
+      break;
+    case "created_asc":
+      orderColumn = "created_at";
+      orderAscending = true;
+      break;
+    case "expiring_soon":
+      orderColumn = "sub_expiry_date";
+      orderAscending = true;
+      break;
+    case "created_desc":
+    default:
+      orderColumn = "created_at";
+      orderAscending = false;
+      break;
+  }
+
+  const { data, error, count } = await query.order(orderColumn, { ascending: orderAscending }).range(from, to);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({

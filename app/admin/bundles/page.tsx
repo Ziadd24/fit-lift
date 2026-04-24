@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
-import { Plus, Trash2, Edit, Dumbbell, Check, X } from "lucide-react";
+import { Plus, Trash2, Edit, Dumbbell, Check, X, ArrowUp, ArrowDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
 
@@ -15,6 +15,7 @@ interface Bundle {
   period: string;
   features: string[];
   highlight: boolean;
+  display_order: number;
   created_at: string;
 }
 
@@ -91,6 +92,38 @@ export default function AdminBundles() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (swaps: { id: number; display_order: number }[]) => {
+      const res = await fetch("/api/bundles/reorder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(adminToken),
+        },
+        body: JSON.stringify({ swaps }),
+      });
+      if (!res.ok) throw new Error("Failed to reorder bundles");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bundles"] });
+    },
+  });
+
+  const handleMove = (index: number, direction: "up" | "down") => {
+    if (!bundles) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= bundles.length) return;
+
+    const current = bundles[index];
+    const target = bundles[targetIndex];
+
+    reorderMutation.mutate([
+      { id: current.id, display_order: target.display_order },
+      { id: target.id, display_order: current.display_order },
+    ]);
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -130,7 +163,7 @@ export default function AdminBundles() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bundles?.map((bundle: Bundle) => (
+          {bundles?.map((bundle: Bundle, index: number) => (
             <Card key={bundle.id} className={`p-6 flex flex-col ${bundle.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
               {bundle.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
               <h3 className="text-2xl font-display text-white mb-2">{bundle.name}</h3>
@@ -146,6 +179,24 @@ export default function AdminBundles() {
                 ))}
               </ul>
               <div className="flex gap-2 mt-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleMove(index, "up")}
+                  disabled={index === 0 || reorderMutation.isPending}
+                  className="text-muted-foreground"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleMove(index, "down")}
+                  disabled={index === (bundles?.length ?? 0) - 1 || reorderMutation.isPending}
+                  className="text-muted-foreground"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -185,13 +236,25 @@ function BundleForm({
   isPending: boolean;
 }) {
   const [formData, setFormData] = useState({
-    name: bundle?.name || "",
-    price: bundle?.price || 0,
-    period: bundle?.period || "/ mo",
-    features: bundle?.features || [],
-    highlight: bundle?.highlight || false,
+    name: "",
+    price: 0,
+    period: "/ mo",
+    features: [] as string[],
+    highlight: false,
+    display_order: 0,
   });
   const [featureInput, setFeatureInput] = useState("");
+
+  useEffect(() => {
+    setFormData({
+      name: bundle?.name || "",
+      price: bundle?.price || 0,
+      period: bundle?.period || "/ mo",
+      features: bundle?.features || [],
+      highlight: bundle?.highlight || false,
+      display_order: bundle?.display_order ?? 0,
+    });
+  }, [bundle]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,13 +311,20 @@ function BundleForm({
           />
         </div>
         <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="highlight"
-            checked={formData.highlight}
-            onChange={(e) => setFormData({ ...formData, highlight: e.target.checked })}
-            className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
-          />
+          <label className="relative flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              id="highlight"
+              checked={formData.highlight}
+              onChange={(e) => setFormData({ ...formData, highlight: e.target.checked })}
+              className="peer sr-only"
+            />
+            <span className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-[#47D84B] peer-checked:border-[#47D84B] transition-colors flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+          </label>
           <Label htmlFor="highlight" className="mb-0 text-white cursor-pointer">Highlight as Most Popular</Label>
         </div>
 

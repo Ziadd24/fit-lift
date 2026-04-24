@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("coaches")
-    .select("id, name, created_at")
-    .order("created_at", { ascending: true });
+    .select("id, name, created_at, display_order")
+    .order("display_order", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data || []);
 }

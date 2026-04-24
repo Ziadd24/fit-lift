@@ -20,15 +20,15 @@ const NAV_ITEMS = [
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { adminToken, logoutAdmin } = useAuth();
+  const { adminToken, logoutAdmin, _hasHydrated } = useAuth();
 
   React.useEffect(() => {
-    if (!adminToken) {
+    if (_hasHydrated && !adminToken) {
       router.push("/admin/login");
     }
-  }, [adminToken, router]);
+  }, [_hasHydrated, adminToken, router]);
 
-  if (!adminToken) return null;
+  if (!_hasHydrated || !adminToken) return null;
 
   return (
     <div className="h-screen overflow-hidden flex bg-background font-sans">

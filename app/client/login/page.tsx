@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Lock, Check } from "lucide-react";
+import { Lock, Check } from "lucide-react";
 import Image from "next/image";
 import { useLookupMember } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
@@ -29,7 +29,6 @@ const SrOnly = ({ children }: { children: React.ReactNode }) => (
 
 export default function ClientLoginPage() {
   const [code, setCode] = useState("");
-  const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [memberName, setMemberName] = useState("");
@@ -169,23 +168,6 @@ export default function ClientLoginPage() {
             </p>
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-8 pt-4 border-t border-white/[0.06]">
-            {[
-              { label: "Active Members", value: "2,400+" },
-              { label: "Workouts Tracked", value: "50K+" },
-              { label: "Coaches", value: "18" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div className="text-xl font-bold text-[#7CFC00]">
-                  {stat.value}
-                </div>
-                <div className="text-[11px] text-[#8B8B8B] uppercase tracking-[1px]">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ═══ Right Login Panel ═══ */}
@@ -308,7 +290,7 @@ export default function ClientLoginPage() {
                       />
                       <input
                         id="code-input"
-                        type={showCode ? "text" : "password"}
+                        type="text"
                         value={code}
                         onChange={handleCodeChange}
                         placeholder="Enter your member code"
@@ -321,21 +303,9 @@ export default function ClientLoginPage() {
                         aria-required="true"
                         className={`${error ? inputError : inputNormal} ${isLoading ? inputDisabled : ""}`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowCode(!showCode)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8B8B8B] hover:text-white transition-colors p-1 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7CFC00]"
-                        aria-label={showCode ? "Hide member code" : "Show member code"}
-                      >
-                        {showCode ? (
-                          <EyeOff size={16} />
-                        ) : (
-                          <Eye size={16} />
-                        )}
-                      </button>
                     </div>
-                    <p className="text-[11px] text-[#8B8B8B] mt-1.5">
-                      Enter your full membership code or just the last 4 digits (e.g. FIT-0001 or 0001)
+                    <p className="text-[15px] text-[#8B8B8B] mt-1.5">
+                      دخل كود العضويه
                     </p>
                   </div>
 

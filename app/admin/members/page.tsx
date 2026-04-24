@@ -8,7 +8,7 @@ import {
   useDeleteMember,
 } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
-import { Plus, Trash2, Search, X, Eye } from "lucide-react";
+import { Plus, Trash2, Search, X, Eye, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { isMembershipActive } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,11 +18,14 @@ import type { Member } from "@/lib/supabase";
 export default function AdminMembers() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("created_desc");
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { data: membersPage, isLoading } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
+  const { data: membersPage, isLoading } = useListMembers(page, undefined, undefined, undefined, { pageSize: 30 }, sortBy);
   const members = membersPage?.members || [];
+  const totalPages = membersPage?.totalPages || 1;
   const deleteMutation = useDeleteMember();
 
   const filteredMembers = members.filter(
@@ -30,6 +33,11 @@ export default function AdminMembers() {
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.membership_code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort);
+    setPage(1);
+  };
 
   const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
@@ -65,6 +73,20 @@ export default function AdminMembers() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:border-primary"
+            >
+              <option value="expiring_soon">Expiring Soon</option>
+              <option value="created_desc">Newest First</option>
+              <option value="created_asc">Oldest First</option>
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="code_asc">Code Order</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -149,6 +171,32 @@ export default function AdminMembers() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-white/5 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </AdminLayout>
   );

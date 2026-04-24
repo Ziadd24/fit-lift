@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 export function CoachLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { coachToken, currentCoach, logoutCoach } = useAuth();
+  const { coachToken, currentCoach, logoutCoach, _hasHydrated } = useAuth();
   const { selectedClientName, clearSelectedClient } = useClientContext();
 
   const [coachPhoto, setCoachPhoto] = useState<string | null>(null);
@@ -47,10 +47,10 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
   };
 
   React.useEffect(() => {
-    if (!coachToken) router.push("/coach/login");
-  }, [coachToken, router]);
+    if (_hasHydrated && !coachToken) router.push("/coach/login");
+  }, [_hasHydrated, coachToken, router]);
 
-  if (!coachToken) return null;
+  if (!_hasHydrated || !coachToken) return null;
 
   const initials = currentCoach?.name
     ? currentCoach.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
