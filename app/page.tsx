@@ -122,13 +122,13 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
     { name: t.pricing.plans[4].name, price: 5000, period: t.pricing.plans[4].period, features: t.pricing.plans[4].features, highlight: false },
   ];
 
-  const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length, 2000);
+  const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length, 4000);
 
   return (
     <div className="relative">
       <div
         ref={pricingCarouselRef}
-        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-[9vw] md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
         dir="ltr"
         onScroll={(e) => {
           const target = e.target as HTMLDivElement;
@@ -142,14 +142,14 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
         {displayBundles.map((bundle: any, i: number) => (
           <motion.div
             key={i}
-            className="shrink-0 snap-center w-[82vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(20%-16px)]"
+            className="shrink-0 snap-center w-[82vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(25%-12px)]"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             viewport={{ once: true }}
           >
             <div
-              className={`relative overflow-hidden rounded-[24px] md:rounded-[28px] p-5 md:p-7 flex flex-col min-h-[520px] md:min-h-[620px] transition-all duration-300 ${
+              className={`relative overflow-hidden rounded-[24px] md:rounded-[28px] p-4 md:p-6 flex flex-col min-h-[440px] md:min-h-[500px] transition-all duration-300 ${
                 bundle.highlight
                   ? "border-2 border-[#47D84B] shadow-[0_0_0_1px_rgba(71,216,75,0.14),0_0_38px_rgba(71,216,75,0.22)]"
                   : "border border-white/[0.08]"
@@ -177,29 +177,29 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
               <div className="relative z-10 flex flex-col items-center text-center flex-1">
                 <div
-                  className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-5 md:mb-8 ${
+                  className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-3 md:mb-4 ${
                     bundle.highlight ? "bg-[#47D84B]/12 border border-[#47D84B]/25" : "bg-white/[0.03] border border-white/[0.08]"
                   }`}
                 >
                   <Calendar className="w-6 h-6 md:w-8 md:h-8 text-[#47D84B]" strokeWidth={2.2} />
                 </div>
 
-                <div className="mb-5 md:mb-7">
+                <div className="mb-3 md:mb-4">
                   <h4 className="text-[14px] md:text-[17px] font-black text-white uppercase tracking-[0.12em] md:tracking-[0.18em]">{bundle.name}</h4>
                 </div>
 
-                <div className="flex items-end justify-center gap-2 md:gap-3 mb-2 md:mb-3">
-                  <span className={`font-black text-white leading-none ${bundle.highlight ? "text-5xl md:text-6xl" : "text-4xl md:text-5xl"}`}>
+                <div className="flex items-end justify-center gap-2 md:gap-3 mb-1 md:mb-2">
+                  <span className={`font-black text-white leading-none ${bundle.highlight ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"}`}>
                     {bundle.price.toLocaleString()}
                   </span>
                   <span className="text-[15px] md:text-[18px] text-white/55 font-bold mb-1.5 md:mb-2">{t.pricing.currency}</span>
                 </div>
 
-                <p className="text-center text-[14px] md:text-[15px] text-white/45 mb-7 md:mb-10">{bundle.period}</p>
+                <p className="text-center text-[14px] md:text-[15px] text-white/45 mb-4 md:mb-6">{bundle.period}</p>
 
-                <div className="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] mb-7 md:mb-10" />
+                <div className="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] mb-4 md:mb-6" />
 
-                <ul className="space-y-3 md:space-y-4 mb-7 md:mb-10 flex-1 w-full text-left">
+                <ul className="space-y-2 md:space-y-3 mb-4 md:mb-6 flex-1 w-full text-left">
                   {bundle.features.map((f: string, index: number) => (
                     <li key={index} className="flex items-center gap-2.5 md:gap-3 text-white/72 text-[13px] md:text-[15px]">
                       <span className="flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#47D84B]/10 flex-shrink-0">
@@ -214,7 +214,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
                   href={`https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(t.pricing.msg.replace("{plan}", bundle.name).replace("{price}", bundle.price.toString()))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`mt-auto w-full py-3.5 md:py-4 rounded-full font-black text-[14px] md:text-[15px] tracking-wide text-center transition-all active:scale-95 ${
+                  className={`mt-auto w-full py-3 md:py-3.5 rounded-full font-black text-[14px] md:text-[15px] tracking-wide text-center transition-all active:scale-95 ${
                     bundle.highlight
                       ? "bg-[#47D84B] text-white shadow-[0_14px_30px_rgba(71,216,75,0.28)] hover:scale-105 hover:shadow-[0_0_34px_rgba(71,216,75,0.36)]"
                       : "bg-[#111111] text-white hover:bg-[#47D84B] hover:text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(124,252,0,0.22)]"
@@ -238,19 +238,13 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
           />
         ))}
       </div>
-      <button onClick={pricingPrev} aria-label="Previous plan" className="flex absolute left-2 md:left-0 top-1/2 -translate-y-1/2 md:-translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/75 md:bg-black/60 border border-white/15 text-white items-center justify-center opacity-95 md:opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-      <button onClick={pricingNext} aria-label="Next plan" className="flex absolute right-2 md:right-0 top-1/2 -translate-y-1/2 md:translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/75 md:bg-black/60 border border-white/15 text-white items-center justify-center opacity-95 md:opacity-60 hover:opacity-100 hover:bg-[#47D84B] hover:text-black hover:scale-110 transition-all z-10">
-        <ChevronRight className="w-5 h-5" />
-      </button>
     </div>
   );
 }
 
 function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }> }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
-  const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 2000);
+  const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 4000);
 
   return (
     <div className="relative">
@@ -394,7 +388,7 @@ const translations = {
       items: [
         { title: "منطقة المعدات", desc: "أرضية رياضية مجهزة بأحدث أجهزة المقاومة والأوزان الحرة والكابلات. مناسبة للمبتدئين والمحترفين." },
         { title: "غرفة فيتنيس متكاملة", desc: "مساحة تمرين واسعة ومكيّفة. فيها مناطق للكارديو والقوة والتمارين الوظيفية." },
-        { title: "ساونا وسبا", desc: "استرح وريح عضلاتك بعد التمرين في ساونا وسبا VIP. مثالي للاستشفاء والاسترخاء." }
+        { title: "ساونا وسبا", desc: "ريح عضلاتك بعد التمرين في ساونا وسبا VIP. مثالي للاستشفاء والاسترخاء." }
       ]
     },
     schedule: { 
@@ -696,10 +690,10 @@ export default function MemberPortal() {
       
         <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
       
-        <nav className="fixed top-0 left-0 right-0 z-50 h-[96px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(8px)' }}>
+        <nav className="fixed top-0 left-0 right-0 z-50 h-[72px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(4px)' }}>
           <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
-              <img src="/images/logo.png" alt="Fit and Lift" className="h-[90px] w-auto object-contain" />
+              <img src="/images/logo.png" alt="Fit and Lift" className="h-[72px] w-auto object-contain" />
               <span className="text-lg font-black text-primary tracking-widest hidden sm:block">FIT & LIFT</span>
             </a>
       
@@ -756,7 +750,7 @@ export default function MemberPortal() {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden fixed top-[96px] left-0 right-0 backdrop-blur-md border-b border-white/10 z-40"
+              className="lg:hidden fixed top-[72px] left-0 right-0 backdrop-blur-sm border-b border-white/10 z-40"
               style={{ background: 'rgba(0,0,0,0.97)' }}>
               <div className="px-6 py-6 flex flex-col gap-4">
                 {[
@@ -909,9 +903,9 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      <section id="services" className="py-24 bg-secondary/20">
+      <section id="services" className="py-16 bg-secondary/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10">
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.services.tag}</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.services.title}</h3>
           </div>
@@ -922,14 +916,14 @@ export default function MemberPortal() {
               { icon: Wind, title: t.services.items[2].title, desc: t.services.items[2].desc },
             ].map((s, i) => (
               <motion.div key={s.title} className="snap-start" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                <Card className={cn("p-6 md:p-8 h-full bg-card border-white/10", HOME_CARD)}>
-                  <div className="flex flex-col h-full">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
-                      <s.icon className="w-6 h-6 md:w-7 md:h-7 text-[#7CFC00]" />
+                <Card className={cn("p-3 md:p-6 h-full bg-card border-white/10", HOME_CARD)}>
+                  <div className="flex flex-row md:flex-col gap-3 md:gap-0 h-full items-center md:items-start">
+                    <div className="w-9 h-9 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <s.icon className="w-4 h-4 md:w-6 md:h-6 text-[#7CFC00]" />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg md:text-xl font-bold text-white mb-2">{s.title}</h4>
-                      <p className="text-sm md:text-base text-white/60 leading-relaxed">{s.desc}</p>
+                    <div className="flex-1 md:mt-3">
+                      <h4 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-2">{s.title}</h4>
+                      <p className="text-xs md:text-base text-white/60 leading-tight">{s.desc}</p>
                     </div>
                   </div>
                 </Card>
@@ -980,7 +974,7 @@ export default function MemberPortal() {
         </div>
       </section>
 
-      <section id="pricing" className="py-24 bg-background">
+      <section id="pricing" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="text-center mb-16">
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.pricing.tag}</h2>
