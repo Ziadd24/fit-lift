@@ -8,6 +8,7 @@ interface SafeMemberResponse {
   name: string;
   membership_type: string;
   sub_expiry_date: string;
+  start_date: string | null;
   membership_code: string;
   coach_id: number | null;
 }
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
   for (const candidate of candidates) {
     const result = await supabase
       .from("members")
-      .select("id, name, membership_type, sub_expiry_date, membership_code, coach_id")
+      .select("id, name, membership_type, sub_expiry_date, start_date, membership_code, coach_id")
       .ilike("membership_code", candidate)
       .maybeSingle();
 
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (!data && digitsOnly.length === 4) {
     const fallback = await supabase
       .from("members")
-      .select("id, name, membership_type, sub_expiry_date, membership_code, coach_id")
+      .select("id, name, membership_type, sub_expiry_date, start_date, membership_code, coach_id")
       .ilike("membership_code", `%${digitsOnly}`)
       .limit(2);
 
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
     name: data.name,
     membership_type: data.membership_type,
     sub_expiry_date: data.sub_expiry_date,
+    start_date: data.start_date,
     membership_code: data.membership_code,
     coach_id: data.coach_id,
   };

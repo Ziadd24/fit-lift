@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useLookupMember, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
+import { CoachCard } from "@/components/ui/CoachCard";
 import { AnnouncementPopup } from "@/components/ui/AnnouncementPopup";
 import { motion, AnimatePresence } from "framer-motion";
 import {
    Dumbbell, Calendar, CreditCard, LogOut, Bell, ImageIcon, LayoutDashboard,
-  ChevronRight, ChevronLeft, X, Menu, Check, MapPin, Clock, Star, ChevronDown, ArrowRight, Play,
+  ChevronRight, ChevronLeft, X, Menu, Check, MapPin, Clock, Star, ChevronDown, ArrowRight, ArrowLeft, Play,
   Activity, Wind,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -33,7 +35,13 @@ const HOME_CARD = `${HOME_LIFT} ${HOME_GLOW}`;
 const HOME_BUTTON_PRIMARY = "transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(124,252,0,0.45)] active:scale-95";
 const HOME_BUTTON_SECONDARY = "transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-[0_0_24px_rgba(124,252,0,0.18)] active:scale-95";
 const ARABIC_LANG_LABEL = "\u0639\u0631\u0628\u064a";
-const GYM_PHONE = "201009987771";
+const GYM_PHONE = process.env.NEXT_PUBLIC_GYM_WHATSAPP_NUMBER || "201009987771";
+const COACH_PACKAGES = [
+  { sessions: 10, label: "10 جلسات", price: 1500, popular: false },
+  { sessions: 15, label: "15 جلسة", price: 1900, popular: false },
+  { sessions: 20, label: "20 جلسة", price: 2400, popular: true },
+  { sessions: 30, label: "30 جلسة", price: 3400, popular: false },
+] as const;
 
 const getCoachWhatsAppLink = (coachName: string, _lang: "en" | "ar") => {
   const message = `كنت حابب اشترك برايفت مع كابتن ${coachName} وحابب اعرف التفاصيل`;
@@ -242,7 +250,171 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
   );
 }
 
-function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }> }) {
+function getCoachPackageWhatsAppLink(packageLabel: string, price: number) {
+  const message = `أهلاً، أنا عايز أشترك في باقة ${packageLabel} بـ ${price} جنيه. ممكن نكمل التفاصيل؟`;
+  return `https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(message)}`;
+}
+
+function CoachPackagesModal({
+  open,
+  onClose,
+  lang,
+}: {
+  open: boolean;
+  onClose: () => void;
+  lang: "en" | "ar";
+}) {
+  const [isMobileSheet, setIsMobileSheet] = useState(false);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 480px)");
+    const handleMediaChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      setIsMobileSheet(event.matches);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const handlePopState = () => {
+      onClose();
+    };
+
+    handleMediaChange(mediaQuery);
+    document.body.style.overflow = "hidden";
+    window.history.pushState({ coachPackagesModal: true }, "");
+    mediaQuery.addEventListener("change", handleMediaChange);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      document.body.style.overflow = "";
+      mediaQuery.removeEventListener("change", handleMediaChange);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+      if (window.history.state?.coachPackagesModal) {
+        window.history.back();
+      }
+    };
+  }, [open, onClose]);
+
+  const copy = lang === "ar"
+    ? {
+        title: "\u0627\u062e\u062a\u0627\u0631 \u0628\u0627\u0642\u062a\u0643",
+        subtitle: "\u0627\u062e\u062a\u0627\u0631 \u0639\u062f\u062f \u0627\u0644\u062c\u0644\u0633\u0627\u062a \u0627\u0644\u0644\u064a \u062a\u0646\u0627\u0633\u0628\u0643\u060c \u0648\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0627\u0646\u0627 \u0639\u0644\u0649 \u0648\u0627\u062a\u0633\u0627\u0628 \u0639\u0634\u0627\u0646 \u062a\u062f\u0641\u0639.",
+        cta: "\u0627\u062d\u062c\u0632 \u062f\u0644\u0648\u0642\u062a\u064a",
+        badge: "\u0627\u0644\u0623\u0643\u062b\u0631 \u0637\u0644\u0628\u064b\u0627",
+        footer: "\u0627\u0644\u062f\u0641\u0639 \u0628\u064a\u0643\u0648\u0646 \u0643\u0627\u0634 \u0623\u0648 \u0641\u0648\u062f\u0627\u0641\u0648\u0646 \u0643\u0627\u0634 \u0639\u0646\u062f \u0627\u0644\u062d\u062c\u0632.",
+        close: "\u0625\u063a\u0644\u0627\u0642",
+        currency: "\u062c\u0646\u064a\u0647",
+      }
+    : {
+        title: "Choose Your Package",
+        subtitle: "Pick the number of sessions that fits you, then message us on WhatsApp to complete payment.",
+        cta: "Pay on WhatsApp",
+        badge: "Most Popular",
+        footer: "Payment is available in cash or via Vodafone Cash when booking.",
+        close: "Close",
+        currency: "EGP",
+      };
+
+  const panelAnimation = isMobileSheet
+    ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
+    : { initial: { opacity: 0, scale: 0.96, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.96, y: 16 } };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <div className={cn("flex min-h-full justify-center", isMobileSheet ? "items-end" : "items-center p-4 sm:p-6")} dir={lang === "ar" ? "rtl" : "ltr"}>
+            <motion.div
+              {...panelAnimation}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                "w-full border border-white/10 bg-[#0b0b0b] text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]",
+                isMobileSheet ? "rounded-t-[28px] px-4 pb-6 pt-4" : "max-w-[480px] rounded-[28px] p-6"
+              )}
+            >
+              {isMobileSheet && <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-white/15" />}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-black">{copy.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/65">{copy.subtitle}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={copy.close}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/70 transition-all hover:border-primary/50 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {COACH_PACKAGES.map((pkg) => (
+                  <div
+                    key={pkg.sessions}
+                    className={cn(
+                      "rounded-2xl border px-4 py-4 transition-all",
+                      pkg.popular
+                        ? "border-primary/40 bg-primary/[0.08] shadow-[0_0_28px_rgba(124,252,0,0.12)]"
+                        : "border-white/10 bg-white/[0.03]"
+                    )}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-lg font-black">{pkg.label}</h4>
+                          {pkg.popular && (
+                            <span className="rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[11px] font-bold text-primary">
+                              {copy.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-2xl font-black text-primary">
+                          {pkg.price} {copy.currency}
+                        </p>
+                      </div>
+                      <a
+                        href={getCoachPackageWhatsAppLink(pkg.label, pkg.price)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-5 text-sm font-black text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_22px_rgba(124,252,0,0.35)] active:scale-95"
+                      >
+                        {copy.cta}
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-5 text-xs leading-5 text-white/55">{copy.footer}</p>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function trackSeeAllCoachesClick(language: "en" | "ar") {
+  if (typeof window === "undefined") return;
+  const analyticsWindow = window as typeof window & {
+    va?: { track?: (eventName: string, payload?: Record<string, unknown>) => void };
+  };
+  analyticsWindow.va?.track?.("main_page_see_all_coaches_clicked", { language });
+}
+
+function CoachesSection({ lang, t, dbCoaches, coachPhotoMap, onOpenPackages }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }>; onOpenPackages: () => void }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
   const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 4000);
 
@@ -263,36 +435,15 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
       >
         {allCoaches.map((coach: any, i: number) => {
           const coachData = coachPhotoMap[coach.name];
-          const uploadedPhoto = coachData?.url;
-          const caption = coachData?.caption;
           return (
             <motion.div key={coach.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }} className="shrink-0 snap-center w-[65vw] sm:w-[45vw] md:w-[280px] lg:w-[300px]">
-              <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full", HOME_CARD)}>
-                <div className="aspect-[3/4] overflow-hidden bg-black/40 relative">
-                  <img
-                    src={uploadedPhoto || `/images/coach${i+1}.png`}
-                    alt={coach.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${coach.name}`; }}
-                  />
-                </div>
-                <div className="p-3 md:p-4 flex flex-col flex-grow">
-                  <h4 className="text-white font-bold text-sm md:text-lg">{coach.name}</h4>
-                  <div className="h-6 mt-1">
-                    {caption ? <p className="text-white/60 text-xs line-clamp-1">{caption}</p> : <span className="invisible text-xs">&nbsp;</span>}
-                  </div>
-                  <a
-                    href={getCoachWhatsAppLink(coach.name, lang)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-auto block w-full py-2.5 rounded-full bg-[#7CFC00] text-black font-bold text-xs text-center transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(124,252,0,0.4)] active:scale-95"
-                  >
-                    {lang === "ar" ? "اشترك دلوقتي" : "Subscribe Now"}
-                  </a>
-                </div>
-              </Card>
+              <CoachCard
+                coach={coach}
+                caption={coachData?.caption}
+                imageUrl={coachData?.url || `/images/coach${i + 1}.png`}
+                onCtaClick={onOpenPackages}
+                ctaLabel={lang === "ar" ? "\u0627\u0634\u062a\u0631\u0643 \u062f\u0644\u0648\u0642\u062a\u064a" : "Subscribe Now"}
+              />
             </motion.div>
           );
         })}
@@ -313,10 +464,19 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap }: { lang: "en" | "a
       <button onClick={coachNext} aria-label="Next coach" className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
         <ChevronRight className="w-5 h-5" />
       </button>
+      <div className="mt-6 flex justify-center md:justify-end">
+        <Link
+          href={lang === "ar" ? "/coaches?lang=ar" : "/coaches"}
+          onClick={() => trackSeeAllCoachesClick(lang)}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-white/80 transition-all hover:border-primary/50 hover:bg-white/[0.03] hover:text-white"
+        >
+          <span>{lang === "ar" ? "\u0634\u0648\u0641 \u0643\u0644 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646" : "See all coaches"}</span>
+          {lang === "ar" ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+        </Link>
+      </div>
     </div>
   );
 }
-
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -572,6 +732,7 @@ export default function MemberPortal() {
   const router = useRouter();
   const { currentMember, setMemberAuth, logoutMember } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isCoachPackagesOpen, setIsCoachPackagesOpen] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -600,7 +761,7 @@ export default function MemberPortal() {
   const { data: dbCoaches } = useQuery<any[]>({
     queryKey: ["db-coaches"],
     queryFn: async () => {
-      const res = await fetch("/api/coaches");
+      const res = await fetch("/api/coaches?limit=6");
       if (!res.ok) return [];
       return res.json();
     },
@@ -610,10 +771,9 @@ export default function MemberPortal() {
   const { data: coachPhotos } = useQuery<any[]>({
     queryKey: ["photos-coach"],
     queryFn: async () => {
-      const res = await fetch("/api/photos");
+      const res = await fetch("/api/photos?category=coach");
       if (!res.ok) return [];
-      const allPhotos = await res.json();
-      return allPhotos.filter((p: any) => p.category === "coach");
+      return res.json();
     },
     retry: false,
   });
@@ -826,10 +986,10 @@ export default function MemberPortal() {
               className={cn("inline-flex items-center justify-center bg-primary text-primary-foreground font-black uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full w-full sm:w-auto", HOME_BUTTON_PRIMARY)}>
               {lang === "ar" ? "اشترك دلوقتي" : "Join Now"}
             </a>
-            <button onClick={() => router.push('/client/login')}
-              className={cn("inline-flex items-center justify-center border border-white/25 text-white font-bold uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full hover:text-primary w-full sm:w-auto", HOME_BUTTON_SECONDARY)}>
-              {t.nav.login}
-            </button>
+              <button onClick={() => router.push('/client/login')}
+                className={cn("inline-flex items-center justify-center border border-white/25 text-white font-bold uppercase tracking-[1.5px] text-sm sm:text-sm px-8 sm:px-10 h-14 sm:h-14 rounded-full hover:text-primary w-full sm:w-auto", HOME_BUTTON_SECONDARY)}>
+                {t.nav.login}
+              </button>
           </motion.div>
 
         </div>
@@ -970,7 +1130,7 @@ export default function MemberPortal() {
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.coaches.tag}</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.coaches.title}</h3>
           </div>
-          <CoachesSection lang={lang} t={t} dbCoaches={dbCoaches} coachPhotoMap={coachPhotoMap} />
+          <CoachesSection lang={lang} t={t} dbCoaches={dbCoaches} coachPhotoMap={coachPhotoMap} onOpenPackages={() => setIsCoachPackagesOpen(true)} />
         </div>
       </section>
 
@@ -1097,6 +1257,12 @@ export default function MemberPortal() {
           <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} {t.footer.rights}</p>
         </div>
       </footer>
+
+      <CoachPackagesModal
+        open={isCoachPackagesOpen}
+        onClose={() => setIsCoachPackagesOpen(false)}
+        lang={lang}
+      />
 
       <AnimatePresence>
         {isLoginModalOpen && (

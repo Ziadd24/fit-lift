@@ -3,6 +3,16 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 import { normalizeMaybeMojibake } from "@/lib/text";
 
+function getCairoDateStamp() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date());
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -39,14 +49,16 @@ export async function PUT(
   }
 
   const body = await req.json();
+  const { renewal_processed, ...restBody } = body;
   const normalizedBody = {
-    ...body,
-    ...(typeof body.name === "string" ? { name: normalizeMaybeMojibake(body.name).slice(0, 200) } : {}),
-    ...(typeof body.email === "string" ? { email: normalizeMaybeMojibake(body.email).slice(0, 200) || null } : {}),
-    ...(typeof body.phone === "string" ? { phone: normalizeMaybeMojibake(body.phone).slice(0, 50) || null } : {}),
-    ...(typeof body.membership_type === "string"
-      ? { membership_type: normalizeMaybeMojibake(body.membership_type).slice(0, 100) }
+    ...restBody,
+    ...(typeof restBody.name === "string" ? { name: normalizeMaybeMojibake(restBody.name).slice(0, 200) } : {}),
+    ...(typeof restBody.email === "string" ? { email: normalizeMaybeMojibake(restBody.email).slice(0, 200) || null } : {}),
+    ...(typeof restBody.phone === "string" ? { phone: normalizeMaybeMojibake(restBody.phone).slice(0, 50) || null } : {}),
+    ...(typeof restBody.membership_type === "string"
+      ? { membership_type: normalizeMaybeMojibake(restBody.membership_type).slice(0, 100) }
       : {}),
+    ...(renewal_processed ? { start_date: getCairoDateStamp() } : {}),
   };
   const supabase = getSupabaseAdmin();
 

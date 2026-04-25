@@ -76,14 +76,14 @@ export default function AdminMemberProfile() {
     const today = new Date();
     const currentExpiry = parseISO(member.sub_expiry_date);
     const baseDate = isAfter(currentExpiry, today) ? currentExpiry : today;
-    const newExpiry = addMonths(baseDate, renewMonths);
-    const newExpiryStr = format(newExpiry, "yyyy-MM-dd");
+      const newExpiry = addMonths(baseDate, renewMonths);
+      const newExpiryStr = format(newExpiry, "yyyy-MM-dd");
 
-    updateMemberMutation.mutate(
-      { id: memberId, data: { sub_expiry_date: newExpiryStr } },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["members", memberId] });
+      updateMemberMutation.mutate(
+      { id: memberId, data: { sub_expiry_date: newExpiryStr, renewal_processed: true } as any },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["members", memberId] });
           setRenewSuccess(true);
           setTimeout(() => setRenewSuccess(false), 3000);
         },
