@@ -9,7 +9,7 @@ import { useClientContext } from "@/lib/use-client-context";
 import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
   Users, Activity,
-  MessageSquare, ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight,
   Tag, Calendar, Smartphone, User, Star,
   Search, Edit2, UserPlus, X, Plus,
   Flame,
@@ -757,11 +757,6 @@ export default function CoachDashboard() {
                           <Star className="w-3 h-3 fill-current" /> {t("client")}
                         </div>
                         <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
-                          <button onClick={() => router.push(`/coach/messages?memberId=${activeClient.id}`)}
-                            className="w-8 h-8 rounded-full flex items-center justify-center border transition-colors hover:bg-white/10"
-                            style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-                            <MessageSquare className="w-3.5 h-3.5 text-white" />
-                          </button>
                           <button onClick={() => { setEditingClient(activeClient); setIsEditClientOpen(true); }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white border transition-colors hover:bg-white/10 ${isRTL ? "flex-row-reverse" : ""}`}
                             style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -862,14 +857,6 @@ export default function CoachDashboard() {
                         <td className="p-4 text-left" style={{ paddingLeft: 24 }}>
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => { setEditingClient(m); setIsEditClientOpen(true); }}
-                              className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:border-white/30"
-                              style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8B8B8B" }}
-                              title={t("edit")}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
                               onClick={() => {
                                 setSelectedMemberForWorkout(m);
                                 setIsWorkoutModalOpen(true);
@@ -965,14 +952,6 @@ export default function CoachDashboard() {
                           >
                             <Paperclip className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            onClick={() => { setEditingClient(m); setIsEditClientOpen(true); }}
-                            className="text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors hover:border-white/30"
-                            style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8B8B8B" }}
-                            title={t("edit")}
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
                         </td>
                       </>
                     )}
@@ -1063,7 +1042,6 @@ export default function CoachDashboard() {
               </div>
               <form onSubmit={handleEditClient} className="space-y-4">
                 <div><Label>{t("fullName")}</Label><Input value={editingClient.name || ""} onChange={e => setEditingClient({ ...editingClient, name: e.target.value })} required /></div>
-                <div><Label>{t("email")}</Label><Input type="email" value={editingClient.email || ""} onChange={e => setEditingClient({ ...editingClient, email: e.target.value })} /></div>
                 <div><Label>{t("phone")}</Label><Input value={normalizeMaybeMojibake(editingClient.phone || "")} onChange={e => setEditingClient({ ...editingClient, phone: e.target.value })} /></div>
                 <div><Label>{t("membershipType")}</Label><Input value={editingClient.membership_type || ""} onChange={e => setEditingClient({ ...editingClient, membership_type: e.target.value })} /></div>
                 <div className="flex gap-3 pt-2">

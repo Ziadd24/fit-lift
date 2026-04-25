@@ -36,6 +36,7 @@ const HOME_BUTTON_PRIMARY = "transition-all duration-300 hover:scale-105 hover:s
 const HOME_BUTTON_SECONDARY = "transition-all duration-300 hover:scale-105 hover:border-primary/60 hover:shadow-[0_0_24px_rgba(124,252,0,0.18)] active:scale-95";
 const ARABIC_LANG_LABEL = "\u0639\u0631\u0628\u064a";
 const GYM_PHONE = process.env.NEXT_PUBLIC_GYM_WHATSAPP_NUMBER || "201009987771";
+const DEVELOPER_WHATSAPP_URL = "https://wa.me/201274374798";
 const COACH_PACKAGES = [
   { sessions: 10, label: "10 جلسات", price: 1500, popular: false },
   { sessions: 15, label: "15 جلسة", price: 1900, popular: false },
@@ -751,7 +752,6 @@ export default function MemberPortal() {
   const [error, setError] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "announcements" | "photos">("overview");
-  const [contactSuccess, setContactSuccess] = useState(false);
   const { data: scheduleSetting } = useQuery<{ value: string }>({
     queryKey: ["setting", "schedule_image_url"],
     queryFn: async () => {
@@ -1204,7 +1204,30 @@ export default function MemberPortal() {
 
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 80, damping: 20, delay: 0.1 }} viewport={{ once: true }}>
               <div className="bg-card border border-white/10 rounded-2xl p-5 md:p-8">
-                <form onSubmit={(e) => { e.preventDefault(); setContactSuccess(false); fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))}).then(r=>{if(r.ok){setContactSuccess(true);(e.target as HTMLFormElement).reset();}}); }} className="space-y-4 md:space-y-5">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const formData = new FormData(form);
+                    const name = String(formData.get("name") || "").trim();
+                    const phone = String(formData.get("phone") || "").trim();
+                    const message = String(formData.get("message") || "").trim();
+                    const subject = "شكاوي";
+                    const whatsappMessage = [
+                      "شكاوي",
+                      "",
+                      `Name: ${name}`,
+                      `Phone: ${phone}`,
+                      `Subject: ${subject}`,
+                      "",
+                      "Message:",
+                      message,
+                    ].join("\n");
+
+                    window.location.href = `https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(whatsappMessage)}`;
+                  }}
+                  className="space-y-4 md:space-y-5"
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.name}</Label>
@@ -1217,33 +1240,19 @@ export default function MemberPortal() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-white/70 text-sm font-medium">{t.contact.form.email}</Label>
-                    <input name="email" type="email" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
-                  </div>
-
-                  <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.subject}</Label>
-                    <div className="relative">
-                      <select name="subject" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm appearance-none cursor-pointer pr-10">
-                        <option value="membership">{t.contact.form.subj1}</option>
-                        <option value="class">{t.contact.form.subj2}</option>
-                        <option value="pt">{t.contact.form.subj3}</option>
-                        <option value="other">{t.contact.form.subj4}</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+                    <input
+                        name="subject"
+                        value="شكاوي"
+                        readOnly
+                        className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white/80 outline-none text-sm cursor-default"
+                      />
                     </div>
-                  </div>
 
                   <div className="space-y-1.5">
                     <Label className="text-white/70 text-sm font-medium">{t.contact.form.message}</Label>
                     <textarea name="message" required rows={3} className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all min-h-[100px] text-sm resize-y"></textarea>
                   </div>
-
-                  {contactSuccess && (
-                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-[#47D84B] text-sm font-medium flex items-center gap-2">
-                      <Check className="w-4 h-4" /> {t.contact.form.success}
-                    </motion.p>
-                  )}
 
                   <button type="submit" className={cn("w-full bg-[#7CFC00] text-black font-bold uppercase tracking-wider text-sm py-4 rounded-xl", HOME_BUTTON_PRIMARY)}>
                     {t.contact.form.send}
@@ -1267,10 +1276,20 @@ export default function MemberPortal() {
 
       <footer className="py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-center gap-0 mb-4 hover:opacity-80 transition-opacity">
-            <img src="/images/logo.png" alt="FIT & LIFT" className="h-[128px] w-auto object-contain" />
-            <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
-          </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 mb-4">
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-center gap-0 hover:opacity-80 transition-opacity">
+              <img src="/images/logo.png" alt="FIT & LIFT" className="h-[128px] w-auto object-contain" />
+              <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
+            </a>
+            <a
+              href={DEVELOPER_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-lg sm:text-xl font-bold text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors"
+            >
+              Developed by Ziad & Ziad
+            </a>
+          </div>
           <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} {t.footer.rights}</p>
         </div>
       </footer>
