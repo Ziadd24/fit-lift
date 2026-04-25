@@ -68,6 +68,7 @@ export default function AdminMembers() {
           <Search className="w-5 h-5 text-muted-foreground" />
           <input
             type="text"
+            dir="auto"
             placeholder="Search members by name or code..."
             className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-muted-foreground"
             value={search}
@@ -123,7 +124,7 @@ export default function AdminMembers() {
                       onClick={() => router.push(`/admin/members/${m.id}`)}
                     >
                       <td className="p-4">
-                        <p className="font-bold text-white">{m.name}</p>
+                        <p className="font-bold text-white" dir="auto">{m.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {m.email || m.phone || "No contact info"}
                         </p>
@@ -243,6 +244,7 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
           <Label>Full Name *</Label>
           <Input
             required
+            dir="auto"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
@@ -251,6 +253,7 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
           <Label>Membership Code *</Label>
           <Input
             required
+            dir="auto"
             value={formData.membership_code}
             onChange={(e) => setFormData({ ...formData, membership_code: e.target.value })}
           />
@@ -261,6 +264,7 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
         <div>
           <Label>Email</Label>
           <Input
+            dir="auto"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -269,6 +273,7 @@ function AddMemberForm({ onClose }: { onClose: () => void }) {
         <div>
           <Label>Phone</Label>
           <Input
+            dir="auto"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           />

@@ -58,7 +58,7 @@ function PhotoGrid({ photos, isLoading, emptyMessage, onDelete, isDeleting, onRe
           </div>
           <div className="p-3 flex-1 flex flex-col">
             <div className="flex justify-between items-start mb-1">
-              <Badge variant="outline" className="text-[9px]">{photo.caption || "Photo"}</Badge>
+              <Badge variant="outline" className="text-[9px]" dir="auto">{photo.caption || "Photo"}</Badge>
               <span className="text-[10px] text-muted-foreground">{format(new Date(photo.created_at), "MMM dd")}</span>
             </div>
           </div>
@@ -321,7 +321,7 @@ function UploadForm({ title, adminToken, captionField, coachSelect, onSuccess, p
             <span className="text-xs text-muted-foreground">JPG, PNG, GIF, WEBP — max 10MB (iPhone HEIC not supported, please convert to JPEG first)</span>
           </label>
         </div>
-        {captionField && <div><Label>Caption</Label><Input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Optional caption" /></div>}
+        {captionField && <div><Label>Caption</Label><Input dir="auto" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Optional caption" /></div>}
         {coachSelect && coachSelect.length > 0 && (
           <div><Label>Select Coach</Label>
             <select className="flex h-12 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2 text-base text-white" value={coachId} onChange={(e) => setCoachId(e.target.value)}>

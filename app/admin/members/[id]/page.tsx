@@ -143,7 +143,7 @@ export default function AdminMemberProfile() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-display text-white">{member.name}</h1>
+          <h1 className="text-3xl font-display text-white" dir="auto">{member.name}</h1>
           <p className="text-muted-foreground font-mono text-sm">{member.membership_code}</p>
         </div>
         <Badge variant={isActive ? "success" : "destructive"}>
@@ -210,6 +210,7 @@ export default function AdminMemberProfile() {
                 <div>
                   <Label>Full Name</Label>
                   <Input
+                    dir="auto"
                     value={editData.name}
                     onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                   />
@@ -217,6 +218,7 @@ export default function AdminMemberProfile() {
                 <div>
                   <Label>Email</Label>
                   <Input
+                    dir="auto"
                     type="email"
                     value={editData.email}
                     onChange={(e) => setEditData({ ...editData, email: e.target.value })}
@@ -225,6 +227,7 @@ export default function AdminMemberProfile() {
                 <div>
                   <Label>Phone</Label>
                   <Input
+                    dir="auto"
                     value={editData.phone}
                     onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                   />
@@ -280,6 +283,7 @@ export default function AdminMemberProfile() {
               <Label className="mb-0 shrink-0">Months</Label>
               <input
                 type="number"
+                dir="ltr"
                 min={1}
                 max={24}
                 value={renewMonths}
@@ -312,6 +316,7 @@ export default function AdminMemberProfile() {
                 <Label>Title *</Label>
                 <Input
                   required
+                  dir="auto"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Session reminder"
@@ -321,6 +326,7 @@ export default function AdminMemberProfile() {
                 <Label>Message *</Label>
                 <textarea
                   required
+                  dir="auto"
                   className="flex w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary min-h-[80px] resize-none placeholder:text-muted-foreground"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -375,8 +381,8 @@ export default function AdminMemberProfile() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <h4 className="font-bold text-white mb-1">{a.title}</h4>
-                    <p className="text-muted-foreground text-sm whitespace-pre-wrap">{a.content}</p>
+                    <h4 className="font-bold text-white mb-1" dir="auto">{a.title}</h4>
+                    <p className="text-muted-foreground text-sm whitespace-pre-wrap" dir="auto">{a.content}</p>
                   </Card>
                 ))}
               </div>

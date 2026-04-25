@@ -63,6 +63,7 @@ export default function AdminLogin() {
               <Input
                 id="username"
                 type="text"
+                dir="auto"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"

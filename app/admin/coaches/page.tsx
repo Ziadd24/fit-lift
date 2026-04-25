@@ -86,7 +86,7 @@ export default function AdminCoaches() {
         <form onSubmit={handleAdd} className="flex gap-4 items-end">
           <div className="flex-1">
             <Label>Coach Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mahmoud" required />
+            <Input dir="auto" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mahmoud" required />
           </div>
           <Button type="submit" disabled={!name.trim() || adding}>
             {adding ? "Adding..." : "Add Coach"}
@@ -112,7 +112,7 @@ export default function AdminCoaches() {
                   <UserCheck className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">{coach.name}</p>
+                  <p className="text-white font-bold text-sm" dir="auto">{coach.name}</p>
                   <p className="text-muted-foreground text-xs">{format(new Date(coach.created_at), "MMM dd, yyyy")}</p>
                 </div>
               </div>

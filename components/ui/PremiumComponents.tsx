@@ -101,11 +101,12 @@ export const Badge = ({
   children,
   variant = "default",
   className,
+  ...props
 }: {
   children: React.ReactNode;
   variant?: "default" | "success" | "destructive" | "outline" | "warning";
   className?: string;
-}) => {
+} & React.HTMLAttributes<HTMLSpanElement>) => {
   const variants = {
     default: "bg-primary/20 text-primary border border-primary/30",
     success: "bg-green-500/20 text-green-400 border border-green-500/30",
@@ -116,6 +117,7 @@ export const Badge = ({
 
   return (
     <span
+      {...props}
       className={cn(
         "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold font-display tracking-wide uppercase",
         variants[variant],

@@ -166,11 +166,12 @@ export default function AdminAnnouncements() {
                   <>
                     <div>
                       <Label>Popup Title</Label>
-                      <Input value={popupTitle} onChange={(e) => setPopupTitle(e.target.value)} placeholder="e.g. Special Offer!" />
+                      <Input dir="auto" value={popupTitle} onChange={(e) => setPopupTitle(e.target.value)} placeholder="e.g. Special Offer!" />
                     </div>
                     <div>
                       <Label>Popup Message</Label>
                       <textarea
+                        dir="auto"
                         className="flex w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white focus-visible:outline-none focus-visible:border-primary min-h-[80px] resize-none placeholder:text-muted-foreground"
                         value={popupMessage}
                         onChange={(e) => setPopupMessage(e.target.value)}
@@ -196,12 +197,13 @@ export default function AdminAnnouncements() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Title *</Label>
-                <Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Holiday Hours" />
+                <Input dir="auto" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Holiday Hours" />
               </div>
               <div>
                 <Label>Message Content *</Label>
                 <textarea
                   required
+                  dir="auto"
                   className="flex w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white focus-visible:outline-none focus-visible:border-primary min-h-[120px] resize-none placeholder:text-muted-foreground"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -262,8 +264,8 @@ export default function AdminAnnouncements() {
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
-                <h4 className="text-xl font-bold text-white mb-2">{a.title}</h4>
-                <p className="text-muted-foreground whitespace-pre-wrap">{a.content}</p>
+                <h4 className="text-xl font-bold text-white mb-2" dir="auto">{a.title}</h4>
+                <p className="text-muted-foreground whitespace-pre-wrap" dir="auto">{a.content}</p>
               </Card>
             ))
           )}

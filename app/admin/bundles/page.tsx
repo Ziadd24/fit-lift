@@ -166,15 +166,15 @@ export default function AdminBundles() {
           {bundles?.map((bundle: Bundle, index: number) => (
             <Card key={bundle.id} className={`p-6 flex flex-col ${bundle.highlight ? "border border-primary/50 bg-primary/5" : ""}`}>
               {bundle.highlight && <Badge className="mb-4 w-fit">Most Popular</Badge>}
-              <h3 className="text-2xl font-display text-white mb-2">{bundle.name}</h3>
+              <h3 className="text-2xl font-display text-white mb-2" dir="auto">{bundle.name}</h3>
               <div className="flex items-end gap-1 mb-4">
                 <span className="text-4xl font-black text-white">EGP {bundle.price}</span>
-                <span className="text-muted-foreground mb-1">{bundle.period}</span>
+                <span className="text-muted-foreground mb-1" dir="auto">{bundle.period}</span>
               </div>
               <ul className="space-y-2 mb-6 flex-1">
                 {bundle.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary flex-shrink-0" /> {feature}
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" /> <bdi dir="auto">{feature}</bdi>
                   </li>
                 ))}
               </ul>
@@ -286,6 +286,7 @@ function BundleForm({
           <Label>Bundle Name *</Label>
           <Input
             required
+            dir="auto"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="e.g., Basic, Premium, VIP"
@@ -296,6 +297,7 @@ function BundleForm({
           <Input
             required
             type="number"
+            dir="ltr"
             min="0"
             value={formData.price}
             onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
@@ -305,6 +307,7 @@ function BundleForm({
           <Label>Period *</Label>
           <Input
             required
+            dir="auto"
             value={formData.period}
             onChange={(e) => setFormData({ ...formData, period: e.target.value })}
             placeholder="/ mo, / week, / year"
@@ -332,6 +335,7 @@ function BundleForm({
           <Label>Features</Label>
           <div className="flex gap-2 mb-3">
             <Input
+              dir="auto"
               value={featureInput}
               onChange={(e) => setFeatureInput(e.target.value)}
               placeholder="Add a feature"
@@ -343,7 +347,7 @@ function BundleForm({
           </div>
           <div className="flex flex-wrap gap-2">
             {formData.features.map((feature, i) => (
-              <Badge key={i} variant="outline" className="gap-1">
+              <Badge key={i} variant="outline" className="gap-1" dir="auto">
                 {feature}
                 <button type="button" onClick={() => removeFeature(i)} className="hover:text-destructive">
                   <X className="w-3 h-3" />

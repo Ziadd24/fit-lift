@@ -167,7 +167,7 @@ export default function CoachesDirectory({
               {t.empty}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 xl:grid-cols-4 md:gap-6">
               {visibleCoaches.map((coach) => (
                 <motion.div
                   key={coach.id ?? coach.name}
