@@ -916,14 +916,14 @@ export default function MemberPortal() {
               { icon: Wind, title: t.services.items[2].title, desc: t.services.items[2].desc },
             ].map((s, i) => (
               <motion.div key={s.title} className="snap-start" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                <Card className={cn("p-3 md:p-6 h-full bg-card border-white/10", HOME_CARD)}>
-                  <div className="flex flex-row md:flex-col gap-3 md:gap-0 h-full items-center md:items-start">
-                    <div className="w-9 h-9 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <s.icon className="w-4 h-4 md:w-6 md:h-6 text-[#7CFC00]" />
+                <Card className={cn("p-3 md:p-5 h-full bg-card border-white/10", HOME_CARD)}>
+                  <div className="flex flex-col gap-2 h-full items-center text-center">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <s.icon className="w-5 h-5 md:w-6 md:h-6 text-[#7CFC00]" />
                     </div>
-                    <div className="flex-1 md:mt-3">
-                      <h4 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-2">{s.title}</h4>
-                      <p className="text-xs md:text-base text-white/60 leading-tight">{s.desc}</p>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-white mb-1">{s.title}</h4>
+                      <p className="text-xs text-white/60 leading-tight">{s.desc}</p>
                     </div>
                   </div>
                 </Card>
