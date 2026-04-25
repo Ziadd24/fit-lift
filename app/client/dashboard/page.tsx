@@ -9,6 +9,7 @@ import ProgressTab from "./ProgressTab";
 import CoachUploadsTab from "./CoachUploadsTab";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { useListTasks, useCreateTask, useUpdateTask, useDeleteTask, useListAnnouncements, useListPhotos, useListCalorieLogs, useListWorkouts } from "@/lib/api-hooks";
 import { useAuth } from "@/lib/use-auth";
 import { useProgressDashboardStore, useProgressDashboard } from "@/lib/use-progress-dashboard";
@@ -87,6 +88,26 @@ function usePrefersReducedMotion() {
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const GYM_WHATSAPP = "2010099887771";
+
+function formatSubscriptionDate(dateValue?: string | null, language: "en" | "ar" = "en") {
+  if (!dateValue) return null;
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const formatter = new Intl.DateTimeFormat(language === "ar" ? "ar-EG" : "en-GB", {
+    timeZone: "Africa/Cairo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+
+  return day && month && year ? `${day} / ${month} / ${year}` : null;
+}
 
 const CLIENT_DATA = {
   id: "FIT-2024-8842",
@@ -209,7 +230,7 @@ interface ExerciseLibraryItem {
   videoUrl: string;
 }
 
-type ThemeMode = "auto" | "dark";
+type ThemeMode = "dark";
 type UnitPreference = "kg" | "lbs";
 type HomeSectionKey = "workoutSummary" | "nutritionToday" | "goals";
 
@@ -1267,15 +1288,11 @@ function GlobalSearchModal({
 function SettingsModal({
   isOpen,
   onClose,
-  themeMode,
-  onThemeModeChange,
   unitPreference,
   onUnitPreferenceChange,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  themeMode: ThemeMode;
-  onThemeModeChange: (value: ThemeMode) => void;
   unitPreference: UnitPreference;
   onUnitPreferenceChange: (value: UnitPreference) => void;
 }) {
@@ -1294,10 +1311,6 @@ function SettingsModal({
           <button type="button" onClick={onClose} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "#FFFFFF", cursor: "pointer" }} aria-label="Close settings"><X size={16} /></button>
         </div>
         <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#7CFC00", fontWeight: 800, marginBottom: 12 }}>Theme</div>
-          <div style={{ display: "flex", gap: 8 }}>{(["auto", "dark"] as ThemeMode[]).map((mode) =><button key={mode} type="button" onClick={() => onThemeModeChange(mode)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: themeMode === mode ? "1px solid rgba(124,252,0,0.4)" : "1px solid rgba(255,255,255,0.1)", background: themeMode === mode ? "rgba(124,252,0,0.15)" : "rgba(255,255,255,0.04)", color: themeMode === mode ? "#7CFC00" : "#FFFFFF", fontWeight: 700, cursor: "pointer", textTransform: "capitalize", fontSize: 14 }}>{mode}</button>)}</div>
-        </div>
-        <div style={{ padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", marginTop: 12 }}>
           <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.8px", color: "#F59E0B", fontWeight: 800, marginBottom: 12 }}>Units</div>
           <div style={{ display: "flex", gap: 8 }}>{(["kg", "lbs"] as UnitPreference[]).map((unit) => <button key={unit} type="button" onClick={() => onUnitPreferenceChange(unit)} style={{ flex: 1, minHeight: 40, padding: "8px 12px", borderRadius: 10, border: unitPreference === unit ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.1)", background: unitPreference === unit ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)", color: unitPreference === unit ? "#FCD34D" : "#FFFFFF", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>{unit.toUpperCase()}</button>)}</div>
         </div>
@@ -1497,7 +1510,7 @@ export default function ClientDashboard() {
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [durationFilter, setDurationFilter] = useState("all");
   const [workoutTags, setWorkoutTags] = useState<Record<string, string[]>>({});
-  const [themeMode, setThemeMode] = useState<ThemeMode>("auto");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [unitPreference, setUnitPreference] = useState<UnitPreference>("kg");
   const [widgetOrder, setWidgetOrder] = useState<HomeSectionKey[]>(DEFAULT_WIDGET_ORDER);
   const [homeSections, setHomeSections] = useState({
@@ -1511,13 +1524,13 @@ export default function ClientDashboard() {
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState("all");
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
-  const { currentMember, logoutMember } = useAuth();
+  const { currentMember, memberCode: sessionMemberCode, setMemberAuth, logoutMember } = useAuth();
   const memberName = (() => {
   const name = currentMember?.name ?? "Member";
   const parts = name.trim().split(/\s+/);
   return parts.length > 2 ? `${parts[0]} ${parts[1]}` : name;
 })();
-  const memberCode = currentMember?.membership_code ?? "";
+  const memberCode = currentMember?.membership_code ?? sessionMemberCode ?? "";
   const memberType = currentMember?.membership_type ?? CLIENT_DATA.subscription.type;
   const isPrivate = hasPrivateAccess(currentMember?.membership_type);
 
@@ -1531,6 +1544,24 @@ export default function ClientDashboard() {
     : 30;
   const memberStatus = expiryDate ? getMembershipStatus(expiryDate.toISOString()) : "active";
   const daysLow = memberStatus === "expiring_soon" || memberStatus === "expired";
+  const formattedStartDate = formatSubscriptionDate(currentMember?.start_date, language);
+
+  const { data: refreshedMember } = useQuery({
+    queryKey: ["member-dashboard-refresh", memberCode],
+    queryFn: async () => {
+      const res = await fetch("/api/members/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ membershipCode: memberCode }),
+      });
+      if (!res.ok) throw new Error("Failed to refresh member");
+      return res.json();
+    },
+    enabled: !!memberCode,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
 
   const sideNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const bottomNavRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -1723,6 +1754,19 @@ export default function ClientDashboard() {
   const celebrationSignature = `${unlockedAchievements.map((badge) => badge.key).join("|")}:${weeklyChallenge.completed ? "challenge" : "in-progress"}:${dailyScoreValue >= 90 ? "score" : "score-pending"}`;
   
   useEffect(() => {
+    if (!refreshedMember || !memberCode) return;
+    const hasChanged =
+      !currentMember ||
+      refreshedMember.start_date !== currentMember.start_date ||
+      refreshedMember.sub_expiry_date !== currentMember.sub_expiry_date ||
+      refreshedMember.membership_type !== currentMember.membership_type;
+
+    if (hasChanged) {
+      setMemberAuth(memberCode, refreshedMember);
+    }
+  }, [currentMember, memberCode, refreshedMember, setMemberAuth]);
+
+  useEffect(() => {
     setMounted(true);
     const t = setTimeout(() => setHydrated(true), 150);
     return () => clearTimeout(t);
@@ -1765,11 +1809,11 @@ export default function ClientDashboard() {
     if (storedSettings) {
       try {
         const parsed = JSON.parse(storedSettings);
-        setThemeMode(parsed.themeMode || "auto");
+        setThemeMode("dark");
         setUnitPreference(parsed.unitPreference || "kg");
         setWidgetOrder(normalizeWidgetOrder(parsed.widgetOrder));
       } catch {
-        setThemeMode("auto");
+        setThemeMode("dark");
         setUnitPreference("kg");
         setWidgetOrder(DEFAULT_WIDGET_ORDER);
       }
@@ -1805,13 +1849,9 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!hydrated) return;
     const root = document.documentElement;
-    if (themeMode === "auto") {
-      root.removeAttribute("data-dashboard-theme");
-    } else {
-      root.setAttribute("data-dashboard-theme", themeMode);
-    }
+    root.setAttribute("data-dashboard-theme", "dark");
     if (settingsKeyRef.current) {
-      window.localStorage.setItem(settingsKeyRef.current, JSON.stringify({ themeMode, unitPreference, widgetOrder: normalizeWidgetOrder(widgetOrder) }));
+      window.localStorage.setItem(settingsKeyRef.current, JSON.stringify({ themeMode: "dark", unitPreference, widgetOrder: normalizeWidgetOrder(widgetOrder) }));
     }
   }, [hydrated, themeMode, unitPreference, widgetOrder]);
 
@@ -1926,8 +1966,6 @@ export default function ClientDashboard() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        themeMode={themeMode}
-        onThemeModeChange={setThemeMode}
         unitPreference={unitPreference}
         onUnitPreferenceChange={setUnitPreference}
       />
@@ -2356,10 +2394,15 @@ export default function ClientDashboard() {
                   <div style={{ fontSize: 10, color: "#5A5A5A", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
                     {t("startDate")}
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "#FFFFFF" }}>
-                    {currentMember?.start_date
-                      ? new Date(currentMember.start_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
-                      : "--"}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                    {memberStatus === "expired" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#EF4444", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.24)", borderRadius: 999, padding: "2px 8px" }}>
+                        {language === "ar" ? "منتهي" : "Expired"}
+                      </span>
+                    )}
+                    <div style={{ fontSize: 14, fontWeight: 500, color: currentMember?.start_date ? "#FFFFFF" : "var(--color-text-secondary)" }}>
+                      {formattedStartDate || (language === "ar" ? "مش مشترك لسه" : "--")}
+                    </div>
                   </div>
                 </div>
               </div>
