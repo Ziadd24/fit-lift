@@ -23,58 +23,7 @@ interface LocalTask {
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const WORKOUTS = [
-  {
-    id: 1,
-    title: "Leg Day — Heavy Squats",
-    coachAssigned: true,
-    status: "in-progress",
-    duration: "45 min",
-    calories: 380,
-    muscles: ["Quads", "Glutes", "Hamstrings"],
-    difficulty: "Hard",
-    sets: [
-      { exercise: "Barbell Back Squat", sets: 5, reps: "5", weight: 100, unit: "kg", done: true },
-      { exercise: "Romanian Deadlift", sets: 4, reps: "8", weight: 80, unit: "kg", done: true },
-      { exercise: "Leg Press", sets: 3, reps: "12", weight: 140, unit: "kg", done: false },
-      { exercise: "Leg Curl", sets: 3, reps: "15", weight: 50, unit: "kg", done: false },
-    ],
-  },
-  {
-    id: 2,
-    title: "Upper Body — Bench Press",
-    coachAssigned: true,
-    status: "todo",
-    duration: "60 min",
-    calories: 320,
-    muscles: ["Chest", "Shoulders", "Triceps"],
-    difficulty: "Medium",
-    sets: [
-      { exercise: "Flat Bench Press", sets: 4, reps: "8", weight: 80, unit: "kg", done: false },
-      { exercise: "Incline DB Press", sets: 3, reps: "10", weight: 30, unit: "kg", done: false },
-      { exercise: "Cable Fly", sets: 3, reps: "12", weight: 15, unit: "kg", done: false },
-      { exercise: "Tricep Pushdown", sets: 3, reps: "15", weight: 25, unit: "kg", done: false },
-      { exercise: "Overhead Press", sets: 3, reps: "8", weight: 50, unit: "kg", done: false },
-    ],
-  },
-  {
-    id: 3,
-    title: "Active Recovery & Stretch",
-    coachAssigned: false,
-    status: "todo",
-    duration: "20 min",
-    calories: 80,
-    muscles: ["Full Body", "Mobility"],
-    difficulty: "Easy",
-    sets: [
-      { exercise: "PNF Hip Flexor Stretch", sets: 2, reps: "60s", weight: 0, unit: "—", done: false },
-      { exercise: "World's Greatest Stretch", sets: 3, reps: "5/side", weight: 0, unit: "—", done: false },
-      { exercise: "Foam Roll IT Band", sets: 1, reps: "90s/side", weight: 0, unit: "—", done: false },
-    ],
-  },
-];
-
-const WEEK_PLAN = [
+const DEFAULT_WEEK_PLAN = [
   { day: "Mon", label: "Legs", done: false, color: "#7CFC00" },
   { day: "Tue", label: "Rest", done: false, color: "#5A5A5A" },
   { day: "Wed", label: "Upper", done: false, color: "#8B5CF6" },
@@ -903,9 +852,11 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   
   const [isWeeklyPlanModalOpen, setIsWeeklyPlanModalOpen] = useState(false);
   const [localWeekPlan, setLocalWeekPlan] = useState(() => {
-    if (typeof window === 'undefined') return WEEK_PLAN;
-    const saved = localStorage.getItem('workoutTabWeekPlan');
-    const version = localStorage.getItem('workoutTabWeekPlanVersion');
+    if (typeof window === 'undefined') return DEFAULT_WEEK_PLAN;
+    const weekPlanKey = `workoutTabWeekPlan_${memberId}`;
+    const versionKey = `workoutTabWeekPlanVersion_${memberId}`;
+    const saved = localStorage.getItem(weekPlanKey);
+    const version = localStorage.getItem(versionKey);
     // Version "2" ensures stale data with hardcoded done:true values is cleared
     if (saved && version === '2') {
       try {
@@ -914,9 +865,9 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
       } catch {}
     }
     // Clear stale data and start fresh with all days unchecked
-    localStorage.removeItem('workoutTabWeekPlan');
-    localStorage.setItem('workoutTabWeekPlanVersion', '2');
-    return WEEK_PLAN;
+    localStorage.removeItem(weekPlanKey);
+    localStorage.setItem(versionKey, '2');
+    return DEFAULT_WEEK_PLAN;
   });
 
   // Load tasks from localStorage or use defaults
@@ -1005,10 +956,12 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
   // Save weekly plan to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined' && localWeekPlan.length > 0) {
-      localStorage.setItem('workoutTabWeekPlan', JSON.stringify(localWeekPlan));
-      localStorage.setItem('workoutTabWeekPlanVersion', '2');
+      const weekPlanKey = `workoutTabWeekPlan_${memberId}`;
+      const versionKey = `workoutTabWeekPlanVersion_${memberId}`;
+      localStorage.setItem(weekPlanKey, JSON.stringify(localWeekPlan));
+      localStorage.setItem(versionKey, '2');
     }
-  }, [localWeekPlan]);
+  }, [localWeekPlan, memberId]);
 
   // Manual reset function
   const handleResetLocalTasks = () => {

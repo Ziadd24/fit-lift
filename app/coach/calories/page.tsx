@@ -41,14 +41,8 @@ interface AIResult {
 const MAX_PRIVATE_CLIENTS = 11;
 
 function buildPrivateClientRoster<T extends { name: string }>(members: T[]) {
-  const preferredName = "zooksh";
   return [...members]
-    .sort((a, b) => {
-      const aPriority = a.name.trim().toLowerCase() === preferredName ? 0 : 1;
-      const bPriority = b.name.trim().toLowerCase() === preferredName ? 0 : 1;
-      if (aPriority !== bPriority) return aPriority - bPriority;
-      return a.name.localeCompare(b.name);
-    })
+    .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, MAX_PRIVATE_CLIENTS);
 }
 

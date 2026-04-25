@@ -414,9 +414,23 @@ function trackSeeAllCoachesClick(language: "en" | "ar") {
   analyticsWindow.va?.track?.("main_page_see_all_coaches_clicked", { language });
 }
 
-function CoachesSection({ lang, t, dbCoaches, coachPhotoMap, onOpenPackages }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }>; onOpenPackages: () => void }) {
+function CoachesSection({ lang, t, dbCoaches, coachPhotoMap, onOpenPackages, isLoading }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }>; onOpenPackages: () => void; isLoading: boolean }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
   const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 4000);
+
+  if (isLoading) {
+    return (
+      <div className="relative">
+        <div className="flex overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar gap-4 md:gap-6 px-4 md:px-0 -mx-4 md:mx-0 max-w-full">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="shrink-0 snap-center w-[65vw] sm:w-[45vw] md:w-[280px] lg:w-[300px]">
+              <div className="w-full h-[380px] rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -758,7 +772,7 @@ export default function MemberPortal() {
     currentMember ? { memberId: currentMember.id } : undefined
   );
 
-  const { data: dbCoaches } = useQuery<any[]>({
+  const { data: dbCoaches, isLoading: coachesLoading } = useQuery<any[]>({
     queryKey: ["db-coaches"],
     queryFn: async () => {
       const res = await fetch("/api/coaches?limit=6");
@@ -974,7 +988,10 @@ export default function MemberPortal() {
           />
       
           <motion.p animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
-            className="text-white/60 text-[15px] sm:text-base leading-relaxed max-w-[90%] sm:max-w-md mb-10 sm:mb-10">
+            className={cn(
+              "leading-relaxed mb-10 sm:mb-10",
+              lang === "ar" ? "text-white/70 text-lg sm:text-xl font-semibold max-w-[90%] sm:max-w-lg" : "text-white/60 text-[15px] sm:text-base max-w-[90%] sm:max-w-md"
+            )}>
             {lang === "ar"
               ? "جيم متكامل مش ناقصه غيرك."
               : "Premium equipment, expert trainers, and a community that pushes you to be your best self."}
@@ -1130,7 +1147,7 @@ export default function MemberPortal() {
             <h2 className="text-sm text-primary font-bold uppercase tracking-widest mb-2">{t.coaches.tag}</h2>
             <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">{t.coaches.title}</h3>
           </div>
-          <CoachesSection lang={lang} t={t} dbCoaches={dbCoaches} coachPhotoMap={coachPhotoMap} onOpenPackages={() => setIsCoachPackagesOpen(true)} />
+          <CoachesSection lang={lang} t={t} dbCoaches={dbCoaches} coachPhotoMap={coachPhotoMap} onOpenPackages={() => setIsCoachPackagesOpen(true)} isLoading={coachesLoading} />
         </div>
       </section>
 
