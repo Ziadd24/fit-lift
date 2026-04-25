@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import { NextRequest } from "next/server";
 
 function getJwtSecret(): string {
@@ -70,21 +71,35 @@ export function timingSafeCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-// ─── Password hashing (backward-compatible) ───────────
+// ─── Password hashing (bcrypt - secure) ───────────────
 
-const PASSWORD_SALT = process.env.PASSWORD_SALT || "fitgym-salt-v1";
+const BCRYPT_ROUNDS = 10;
+
+// Legacy SHA256 hash detection (64 hex chars)
+function isLegacyHash(hash: string): boolean {
+  return /^[a-f0-9]{64}$/i.test(hash);
+}
 
 export async function hashPassword(password: string): Promise<string> {
-  return crypto
-    .createHash("sha256")
-    .update(password + PASSWORD_SALT)
-    .digest("hex");
+  // Use bcrypt for all new passwords
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 export async function verifyPassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  const computedHash = await hashPassword(password);
-  return timingSafeCompare(computedHash, hash);
+  // Check if this is a legacy SHA256 hash
+  if (isLegacyHash(hash)) {
+    // Verify using legacy method for backward compatibility
+    const PASSWORD_SALT = process.env.PASSWORD_SALT || "fitgym-salt-v1";
+    const computedHash = crypto
+      .createHash("sha256")
+      .update(password + PASSWORD_SALT)
+      .digest("hex");
+    return timingSafeCompare(computedHash, hash);
+  }
+  
+  // Modern bcrypt verification
+  return bcrypt.compare(password, hash);
 }

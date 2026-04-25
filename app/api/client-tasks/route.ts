@@ -4,7 +4,7 @@ import { verifyCoachAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const coachId = verifyCoachAuth(req);
+    const coachId = await verifyCoachAuth(req);
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const supabase = getSupabaseAdmin();
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const coachId = verifyCoachAuth(req);
+    const coachId = await verifyCoachAuth(req);
     const body = await req.json();
     const title = (body.title || "").slice(0, 200);
     const type = (body.type || "").slice(0, 50);

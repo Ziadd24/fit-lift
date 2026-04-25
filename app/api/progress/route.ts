@@ -136,8 +136,8 @@ function isMissingTableError(error: { message?: string; code?: string } | null) 
 
 async function resolveMemberAccess(req: NextRequest, requestedMemberId?: number | null) {
   const supabase = getSupabaseAdmin();
-  const coachId = verifyCoachAuth(req);
-  const isAdmin = verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  const isAdmin = await verifyAdminAuth(req);
 
   if (coachId || isAdmin) {
     if (!requestedMemberId) {

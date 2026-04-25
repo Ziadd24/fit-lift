@@ -6,7 +6,7 @@ import { validateImageFile, validateImageBytes } from "@/lib/validate-file";
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });

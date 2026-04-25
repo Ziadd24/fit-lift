@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminToken, timingSafeCompare } from "@/lib/auth";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { rateLimit, getClientIp, RateLimitPresets } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const limit = rateLimit(`admin-login:${ip}`, {
-    limit: 5,
-    windowMs: 15 * 60 * 1000,
-  });
+  const limit = await rateLimit(`admin-login:${ip}`, RateLimitPresets.login);
 
   if (!limit.allowed) {
     const retryAfterSec = Math.ceil((limit.resetAt - Date.now()) / 1000);

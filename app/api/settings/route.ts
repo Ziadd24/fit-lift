@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  if (!verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { key = "schedule_image_url", value } = body;
   if (!ALLOWED_SETTINGS_KEYS.has(key)) {

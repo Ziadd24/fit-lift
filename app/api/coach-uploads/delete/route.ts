@@ -3,8 +3,8 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 
 export async function DELETE(req: NextRequest) {
-  const coachId = verifyCoachAuth(req);
-  const isAdmin = verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  const isAdmin = await verifyAdminAuth(req);
   if (!coachId && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

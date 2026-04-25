@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await verifyAdminAuth(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = getSupabaseAdmin();
   const body = await req.json();

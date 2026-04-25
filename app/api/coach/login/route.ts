@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyPassword, createCoachToken } from "@/lib/auth";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { rateLimit, getClientIp, RateLimitPresets } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
-    const limit = rateLimit(`coach-login:${ip}`, {
-      limit: 10, windowMs: 15 * 60 * 1000,
-    });
+    const limit = await rateLimit(`coach-login:${ip}`, RateLimitPresets.login);
     if (!limit.allowed) {
       const retryAfterSec = Math.ceil((limit.resetAt - Date.now()) / 1000);
       return NextResponse.json(

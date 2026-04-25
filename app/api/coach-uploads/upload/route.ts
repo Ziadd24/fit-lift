@@ -4,8 +4,8 @@ import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
 import { validateUploadFile, validateUploadBytes, getFileTypeFromMimeType } from "@/lib/validate-upload";
 
 export async function POST(req: NextRequest) {
-  const coachId = verifyCoachAuth(req);
-  const isAdmin = verifyAdminAuth(req);
+  const coachId = await verifyCoachAuth(req);
+  const isAdmin = await verifyAdminAuth(req);
   if (!coachId && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

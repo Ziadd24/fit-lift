@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const supabase = getSupabaseAdmin();
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { name } = await req.json();
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!await verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await req.json();
