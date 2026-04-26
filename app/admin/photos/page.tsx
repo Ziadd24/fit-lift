@@ -287,8 +287,15 @@ function UploadForm({ title, adminToken, captionField, coachSelect, onSuccess, p
         headers: { Authorization: `Bearer ${adminToken}` },
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Upload failed"); setSaving(false); return; }
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok) {
+        const errorText = contentType.includes("application/json")
+          ? (await res.json()).error
+          : await res.text();
+        setError(errorText || "Upload failed");
+        setSaving(false);
+        return;
+      }
 
       setFile(null);
       setPreview(null);
