@@ -106,8 +106,11 @@ export default function UploadsTab({ coachId }: UploadsTabProps) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Upload failed");
+        const contentType = response.headers.get("content-type") || "";
+        const errorText = contentType.includes("application/json")
+          ? (await response.json()).error
+          : await response.text();
+        throw new Error(errorText || "Upload failed");
       }
 
       const result = await response.json();

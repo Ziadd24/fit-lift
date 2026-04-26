@@ -500,8 +500,11 @@ export function useUploadMessageImage() {
         body: formData,
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to upload image");
+        const contentType = res.headers.get("content-type") || "";
+        const errorText = contentType.includes("application/json")
+          ? (await res.json()).error
+          : await res.text();
+        throw new Error(errorText || "Failed to upload image");
       }
       const data = await res.json();
       return data.url;
