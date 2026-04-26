@@ -66,6 +66,8 @@ import {
   Upload,
 } from "lucide-react";
 
+const DEVELOPER_WHATSAPP_URL = "https://wa.me/201274374798";
+
 // ─── Motion Sensitivity Hook ─────────────────────────────────────────────────
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -3018,6 +3020,22 @@ export default function ClientDashboard() {
           )}
         </main>
 
+      </div>
+
+      <div style={{ padding: "0 16px 112px", textAlign: "center" }}>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
+          <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: "2px", color: "#7CFC00" }}>
+            FIT & LIFT
+          </span>
+          <a
+            href={DEVELOPER_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#60A5FA", fontSize: 20, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: "4px" }}
+          >
+            Developed by Ziad & Ziad
+          </a>
+        </div>
       </div>
 
       <MobileBottomNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenSettings={() => setIsSettingsOpen(true)} />
