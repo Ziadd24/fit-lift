@@ -7,9 +7,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const memberIdParam = searchParams.get("memberId");
   const memberId = memberIdParam ? parseInt(memberIdParam) : null;
+  const globalOnly = searchParams.get("global") === "true";
   const supabase = getSupabaseAdmin();
   let query = supabase.from("announcements").select("*, members(name)").order("created_at", { ascending: false });
-  if (memberId) query = query.or(`is_global.eq.true,target_member_id.eq.${memberId}`);
+  if (globalOnly) query = query.eq("is_global", true);
+  else if (memberId) query = query.or(`is_global.eq.true,target_member_id.eq.${memberId}`);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const announcements = (data || []).map((a: any) => ({

@@ -307,16 +307,17 @@ export function useReorderCoaches() {
 
 // ─── Announcements ──────────────────────────────────────────────────────────────
 
-export function useListAnnouncements(params?: { memberId?: number }) {
+export function useListAnnouncements(params?: { memberId?: number; global?: boolean }) {
   const { adminToken, currentMember } = useAuth();
   return useQuery<Announcement[]>({
     queryKey: ["announcements", params],
     queryFn: async () => {
-      const qs = params?.memberId
-        ? `?memberId=${params.memberId}`
-        : currentMember
-        ? `?memberId=${currentMember.id}`
-        : "";
+      const queryParams = new URLSearchParams();
+      if (params?.global) queryParams.append("global", "true");
+      if (params?.memberId) queryParams.append("memberId", String(params.memberId));
+      else if (!params?.global && currentMember) queryParams.append("memberId", String(currentMember.id));
+
+      const qs = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const res = await fetch(`/api/announcements${qs}`, {
         headers: getAuthHeaders(adminToken),
       });
