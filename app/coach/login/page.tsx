@@ -256,13 +256,13 @@ export default function CoachLoginPage() {
                 <div>
                   <Label className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                    Username or Email
+                    Username
                   </Label>
                   <Input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="coach@fitlift.com or username"
+                    placeholder="Enter your username"
                     required
                     disabled={isLockedOut}
                     className="mt-1.5"

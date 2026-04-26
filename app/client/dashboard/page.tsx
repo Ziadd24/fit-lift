@@ -3,6 +3,7 @@
 // Suppress hydration warnings from dynamic localStorage-dependent state
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import NutritionTab from "./NutritionTab";
 import WorkoutsTab from "./WorkoutsTab";
 import ProgressTab from "./ProgressTab";
@@ -2050,13 +2051,16 @@ export default function ClientDashboard() {
           }}
         >
           {/* Logo */}
-          <div
+          <Link
+            href="/"
             style={{
               padding: "24px 20px",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
               display: "flex",
               alignItems: "center",
               gap: 10,
+              textDecoration: "none",
+              cursor: "pointer",
             }}
           >
             <div
@@ -2079,7 +2083,7 @@ export default function ClientDashboard() {
             <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "2px", color: "#FFFFFF" }}>
               FIT & LIFT
             </span>
-          </div>
+          </Link>
 
           {/* Nav */}
           <nav style={{ padding: "16px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>

@@ -31,6 +31,22 @@ export default function AdminSettings() {
     fetchSetting();
   }, []);
 
+  // Cleanup: clear old gallery_images setting
+  useEffect(() => {
+    async function clearGalleryImages() {
+      try {
+        const headers: Record<string, string> = {};
+        if (adminToken) headers["Authorization"] = `Bearer ${adminToken}`;
+        await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({ key: "gallery_images", value: JSON.stringify([]) }),
+        });
+      } catch {}
+    }
+    clearGalleryImages();
+  }, [adminToken]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     setFile(f);
@@ -120,7 +136,7 @@ export default function AdminSettings() {
           <Calendar className="w-5 h-5 text-primary" /> Schedule Image
         </h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Upload a schedule image (PNG, JPG, PDF) that will be displayed on the homepage schedule section. 
+          Upload a schedule image (PNG, JPG, PDF) that will be displayed on the homepage schedule section.
           This replaces the default schedule table.
         </p>
 

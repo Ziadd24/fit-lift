@@ -301,6 +301,8 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                           </h3>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: "#8B8B8B" }}>
+                          <span style={{ color: "#7CFC00" }}>{lead.coach_name ? t("fromCoach", { name: lead.coach_name }) : t("fromCoach", { name: language === "ar" ? "الإدارة" : "Admin" })}</span>
+                          <span>•</span>
                           <span>{isNaN(files.length) ? "" : `${files.length} ${files.length === 1 ? (language === "ar" ? "ملف" : "file") : (language === "ar" ? "ملفات" : "files")}`}</span>
                           <span>•</span>
                           <span>{formatDate(lead.created_at)}</span>
@@ -485,9 +487,9 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                         </p>
                       )}
 
-                      {!isMobile && upload.coach_name && (
+                      {!isMobile && (upload.coach_name || upload.assignment_kind === "body_measurement_assignment") && (
                         <p className={`${isMobile ? "text-xs" : "text-sm"} mt-2`} style={{ color: "#7CFC00" }}>
-                          {t("fromCoach", { name: upload.coach_name })}
+                          {upload.coach_name ? t("fromCoach", { name: upload.coach_name }) : t("fromCoach", { name: language === "ar" ? "الإدارة" : "Admin" })}
                         </p>
                       )}
                     </div>

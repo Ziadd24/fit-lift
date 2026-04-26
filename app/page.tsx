@@ -149,6 +149,9 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
   ];
 
   const isMobileViewport = useIsMobileViewport();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(
     displayBundles.length,
     isMobileViewport ? 0 : 4000,
@@ -174,9 +177,9 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
           <motion.div
             key={i}
             className="shrink-0 snap-center w-[82vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(25%-12px)]"
-            initial={isMobileViewport ? false : { opacity: 0, y: 30 }}
-            whileInView={isMobileViewport ? undefined : { opacity: 1, y: 0 }}
-            transition={isMobileViewport ? undefined : { delay: i * 0.1 }}
+            initial={mounted && !isMobileViewport ? { opacity: 0, y: 30 } : false}
+            whileInView={mounted && !isMobileViewport ? { opacity: 1, y: 0 } : undefined}
+            transition={mounted && !isMobileViewport ? { delay: i * 0.1 } : undefined}
             viewport={{ once: true }}
           >
             <div
@@ -292,7 +295,7 @@ function CoachPackagesModal({
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
 
-    const mediaQuery = window.matchMedia("(max-width: 480px)");
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
     const handleMediaChange = (event: MediaQueryList | MediaQueryListEvent) => {
       setIsMobileSheet(event.matches);
     };
@@ -362,56 +365,67 @@ function CoachPackagesModal({
               transition={{ duration: 0.24, ease: "easeOut" }}
               onClick={(event) => event.stopPropagation()}
               className={cn(
-                "w-full border border-white/10 bg-[#0b0b0b] text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]",
-                isMobileSheet ? "rounded-t-[28px] px-4 pb-6 pt-4" : "max-w-[480px] rounded-[28px] p-6"
+                "w-full border bg-[#0b0b0b] text-white shadow-[0_24px_80px_rgba(0,0,0,0.6)] overflow-y-auto",
+                isMobileSheet
+                  ? "rounded-t-[24px] px-5 pb-8 pt-5 border-white/15 max-h-[85vh]"
+                  : "max-w-[520px] rounded-[24px] p-6 border-white/10"
               )}
             >
-              {isMobileSheet && <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-white/15" />}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-black">{copy.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/65">{copy.subtitle}</p>
+              {isMobileSheet && <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/20" />}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn("font-black", isMobileSheet ? "text-xl" : "text-2xl")}>{copy.title}</h3>
+                  <p className={cn("leading-relaxed text-white/70", isMobileSheet ? "mt-1.5 text-sm" : "mt-2 text-sm")}>
+                    {copy.subtitle}
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label={copy.close}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/70 transition-all hover:border-primary/50 hover:text-white"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-white/80 transition-all hover:border-primary/50 hover:text-white hover:bg-white/[0.08]"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className={cn("mt-5", isMobileSheet ? "space-y-4" : "space-y-3")}>
                 {COACH_PACKAGES.map((pkg) => (
                   <div
                     key={pkg.sessions}
                     className={cn(
-                      "rounded-2xl border px-4 py-4 transition-all",
+                      "rounded-2xl border transition-all",
+                      isMobileSheet ? "px-5 py-5" : "px-4 py-4",
                       pkg.popular
-                        ? "border-primary/40 bg-primary/[0.08] shadow-[0_0_28px_rgba(124,252,0,0.12)]"
-                        : "border-white/10 bg-white/[0.03]"
+                        ? "border-primary/50 bg-primary/[0.12] shadow-[0_0_32px_rgba(124,252,0,0.15)]"
+                        : "border-white/15 bg-white/[0.05]"
                     )}
                   >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-lg font-black">{pkg.label}</h4>
+                    <div className={cn(
+                      "flex gap-4",
+                      isMobileSheet ? "flex-col" : "flex-col sm:flex-row sm:items-center sm:justify-between"
+                    )}>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>{pkg.label}</h4>
                           {pkg.popular && (
-                            <span className="rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[11px] font-bold text-primary">
+                            <span className="rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-bold text-primary">
                               {copy.badge}
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 text-2xl font-black text-primary">
-                          {pkg.price} {copy.currency}
+                        <p className={cn("font-black text-primary", isMobileSheet ? "text-3xl" : "text-2xl")}>
+                          {pkg.price.toLocaleString()} <span className="text-base font-semibold text-white/70">{copy.currency}</span>
                         </p>
                       </div>
                       <a
                         href={getCoachPackageWhatsAppLink(pkg.label, pkg.price)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-5 text-sm font-black text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_22px_rgba(124,252,0,0.35)] active:scale-95"
+                        className={cn(
+                          "inline-flex items-center justify-center rounded-full bg-primary font-black text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(124,252,0,0.4)] active:scale-95",
+                          isMobileSheet ? "w-full min-h-14 px-6 text-base" : "min-h-12 px-5 text-sm"
+                        )}
                       >
                         {copy.cta}
                       </a>
@@ -420,7 +434,9 @@ function CoachPackagesModal({
                 ))}
               </div>
 
-              <p className="mt-5 text-xs leading-5 text-white/55">{copy.footer}</p>
+              <p className={cn("text-center", isMobileSheet ? "mt-6 text-sm leading-6 text-white/60" : "mt-5 text-xs leading-5 text-white/55")}>
+                {copy.footer}
+              </p>
             </motion.div>
           </div>
         </motion.div>
@@ -531,7 +547,7 @@ const translations = {
       { title: "Equipment Zone", desc: "State-of-the-art fitness floor featuring premium resistance machines, free weights, and cable systems for comprehensive strength training at every level." },
       { title: "High Quality Fitness Room", desc: "Spacious workout area with top-tier equipment, climate control, and dedicated zones for cardio, strength, and functional training." },
       { title: "Sauna & Spa", desc: "Recover and relax in our premium sauna and spa facilities—perfect for muscle recovery, stress relief, and post-workout rejuvenation." }
-    ]},
+    ], galleryBtn: "View Classes" },
     schedule: { tag: "Weekly Schedule", title1: "HRS", title2: "Schedule", filters: { all: "All Hours", men: "Men's Hours", women: "Women's Hours" }, labels: { menMorn: "Men (Morning)", women: "Women", menEve: "Men (Evening)" } },
     coaches: { tag: "The Elite Team", title: "Expert Coaches", coaches: [
       { name: "Coach Mahmoud", role: "Bodybuilding Expert", tagline: "10+ Years Experience" },
@@ -579,14 +595,15 @@ const translations = {
       coaches: "مدرب محترف", 
       active: "عضو بيتمرن" 
     },
-    services: { 
-      tag: "إيه اللي بنقدّمهولك", 
-      title: "مرافق عالمية المستوى", 
+    services: {
+      tag: "إيه اللي بنقدّمهولك",
+      title: "مرافق عالمية المستوى",
       items: [
         { title: "منطقة المعدات", desc: "أرضية رياضية مجهزة بأحدث أجهزة المقاومة والأوزان الحرة والكابلات. مناسبة للمبتدئين والمحترفين." },
         { title: "غرفة فيتنيس متكاملة", desc: "مساحة تمرين واسعة ومكيّفة. فيها مناطق للكارديو والقوة والتمارين الوظيفية." },
         { title: "ساونا وسبا", desc: "ريح عضلاتك بعد التمرين في ساونا وسبا VIP. مثالي للاستشفاء والاسترخاء." }
-      ]
+      ],
+      galleryBtn: "عرض المعرض"
     },
     schedule: { 
       tag: "الجدول الأسبوعي", 
@@ -689,7 +706,7 @@ function DynamicPopup() {
 }
 
 function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
-  const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
+  const { data: photos, isLoading } = useListPhotos({ global: true, category: "classes-pics" });
   const [index, setIndex] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
 
@@ -712,16 +729,6 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
 
   const next = useCallback(() => setIndex((i) => (i + 1) % totalImages), [totalImages]);
   const prev = useCallback(() => setIndex((i) => (i - 1 + totalImages) % totalImages), [totalImages]);
-
-  useEffect(() => {
-    if (totalImages <= 1) return;
-    const tick = () => {
-      if (document.visibilityState === "hidden") return;
-      setIndex((i) => (i + 1) % totalImages);
-    };
-    const timer = setInterval(tick, 2000);
-    return () => clearInterval(timer);
-  }, [totalImages]);
 
   useEffect(() => {
     galleryItems.forEach(({ src }) => {
@@ -1136,6 +1143,14 @@ export default function MemberPortal() {
                 </Card>
               </motion.div>
             ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => router.push("/gallery")}
+              className="inline-flex items-center gap-2 bg-primary text-black font-bold text-sm uppercase tracking-wider px-8 py-3 rounded-full transition-all hover:bg-[#6BE000] hover:shadow-[0_0_24px_rgba(124,252,0,0.4)] hover:scale-105 active:scale-95"
+            >
+              {t.services.galleryBtn}
+            </button>
           </div>
         </div>
       </section>

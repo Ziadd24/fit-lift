@@ -36,7 +36,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex w-60 flex-col flex-shrink-0 bg-card border-r border-white/5">
         {/* Logo */}
         <div className="p-5 flex-shrink-0">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <img src="/images/logo.png" alt="FitGym" className="h-10 w-auto object-contain" />
             <span className="text-lg font-black text-primary tracking-widest">FIT & LIFT</span>
           </Link>

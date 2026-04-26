@@ -21,15 +21,26 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
+    const searchTerm = name.trim();
+    console.log("[Coach Login] Searching for:", searchTerm);
+    
     const { data: coachRaw, error } = await supabase
       .from("coaches")
       .select("id, name, password_hash, created_at")
-      .ilike("name", name.trim())
+      .ilike("name", searchTerm)
       .single();
 
-    if (error || !coachRaw) {
+    if (error) {
+      console.error("[Coach Login] Supabase error:", error);
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
+    
+    if (!coachRaw) {
+      console.error("[Coach Login] No coach found for:", searchTerm);
+      return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
+    }
+    
+    console.log("[Coach Login] Found coach:", coachRaw.id, coachRaw.name);
 
     const isMatch = await verifyPassword(password, coachRaw.password_hash!);
     if (!isMatch) {
