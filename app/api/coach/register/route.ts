@@ -32,10 +32,28 @@ export async function POST(req: NextRequest) {
 
     const approvalRequired = process.env.COACH_APPROVAL_REQUIRED === "true";
     const password_hash = await hashPassword(password);
+
+    // Get max display_order to place new coach at the end
+    let maxOrder = 0;
+    const { data: maxOrderData } = await supabase
+      .from("coaches")
+      .select("display_order")
+      .order("display_order", { ascending: false })
+      .limit(1)
+      .single();
+    if (maxOrderData && typeof maxOrderData.display_order === "number") {
+      maxOrder = maxOrderData.display_order;
+    }
+
     const { data, error } = await supabase
       .from("coaches")
-      .insert({ name: name.trim(), password_hash, ...(approvalRequired ? { status: "pending" } : {}) })
-      .select("id, name, created_at")
+      .insert({
+        name: name.trim(),
+        password_hash,
+        display_order: maxOrder + 1,
+        ...(approvalRequired ? { status: "pending" } : {})
+      })
+      .select("id, name, display_order, created_at")
       .single();
 
     if (error) {

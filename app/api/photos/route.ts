@@ -61,10 +61,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    // Get max display_order to place new photo at the end
+    let maxOrder = 0;
+    const { data: maxOrderData } = await supabase
+      .from("photos")
+      .select("display_order")
+      .order("display_order", { ascending: false })
+      .limit(1)
+      .single();
+    if (maxOrderData && typeof maxOrderData.display_order === "number") {
+      maxOrder = maxOrderData.display_order;
+    }
+
     const photoRecord: Record<string, any> = {
       url,
       caption: caption || "",
       category: category || "gallery",
+      display_order: maxOrder + 1,
     };
 
     if (coachId) photoRecord.coach_id = coachId;
@@ -102,6 +115,7 @@ export async function POST(req: NextRequest) {
       member_id: insertedPhoto.member_id,
       category: insertedPhoto.category || "gallery",
       coach_id: insertedPhoto.coach_id,
+      display_order: insertedPhoto.display_order,
       created_at: insertedPhoto.created_at,
       member_name: insertedPhoto.members?.name ?? null,
       coach_name: insertedPhoto.coaches?.name ?? null,
