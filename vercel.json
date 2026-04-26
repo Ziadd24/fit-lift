@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "app/api/upload/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "app/api/upload-images/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "app/api/coach-uploads/upload/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "app/api/messages/upload/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}

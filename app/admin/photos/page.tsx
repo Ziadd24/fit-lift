@@ -2,13 +2,14 @@
 
 import React, { useState, useRef } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useListPhotos, useUploadPhoto, useDeletePhoto, useReorderPhotos, useReorderCoaches } from "@/lib/api-hooks";
+import { useListPhotos, useDeletePhoto, useReorderPhotos, useReorderCoaches } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
 import { Upload, Trash2, ImageIcon, Dumbbell, Camera, ArrowUp, ArrowDown, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
 import { format } from "date-fns";
+import { uploadImageDirect } from "@/lib/direct-upload";
 
 interface CoachItem { id: number; name: string; email: string; created_at: string; display_order: number; }
 
@@ -276,19 +277,29 @@ function UploadForm({ title, adminToken, captionField, coachSelect, onSuccess, p
         return;
       }
       const category = coachId ? "coach" : "gallery";
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("category", category);
-      if (caption) formData.append("caption", caption);
-      if (coachId) formData.append("coachId", coachId);
-
-      const res = await fetch("/api/upload", {
+      
+      // Upload directly to Supabase (bypasses Vercel 4.5MB limit)
+      const { url } = await uploadImageDirect(file);
+      
+      // Save record via API (small payload - just the URL)
+      const photoData = {
+        url,
+        caption: caption || "",
+        category,
+        coachId: coachId ? parseInt(coachId) : null,
+      };
+      
+      const res = await fetch("/api/photos", {
         method: "POST",
-        headers: { Authorization: `Bearer ${adminToken}` },
-        body: formData,
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}` 
+        },
+        body: JSON.stringify(photoData),
       });
-      const contentType = res.headers.get("content-type") || "";
+      
       if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
         const errorText = contentType.includes("application/json")
           ? (await res.json()).error
           : await res.text();
