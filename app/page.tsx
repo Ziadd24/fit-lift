@@ -66,7 +66,24 @@ function useIsVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.1)
   return isVisible;
 }
 
-function useCarousel(itemsLength: number, intervalMs = 4000) {
+function useIsMobileViewport() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateMobileState = () => setIsMobile(mediaQuery.matches);
+
+    updateMobileState();
+    mediaQuery.addEventListener("change", updateMobileState);
+    return () => mediaQuery.removeEventListener("change", updateMobileState);
+  }, []);
+
+  return isMobile;
+}
+
+function useCarousel(itemsLength: number, intervalMs = 4000, smoothScroll = true) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,15 +94,15 @@ function useCarousel(itemsLength: number, intervalMs = 4000) {
     if (!container) return;
     const card = container.children[index] as HTMLElement | undefined;
     if (!card) return;
-    container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
-  }, []);
+    container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: smoothScroll ? "smooth" : "auto" });
+  }, [smoothScroll]);
 
   useEffect(() => {
     if (itemsLength > 0) scrollToIndex(0);
   }, [itemsLength, scrollToIndex]);
 
   useEffect(() => {
-    if (itemsLength <= 1 || !isVisible) return;
+    if (itemsLength <= 1 || !isVisible || intervalMs <= 0) return;
     const timer = window.setInterval(() => {
       const nextIndex = (activeIndexRef.current + 1) % itemsLength;
       activeIndexRef.current = nextIndex;
@@ -131,13 +148,18 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
     { name: t.pricing.plans[4].name, price: 5000, period: t.pricing.plans[4].period, features: t.pricing.plans[4].features, highlight: false },
   ];
 
-  const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(displayBundles.length, 4000);
+  const isMobileViewport = useIsMobileViewport();
+  const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(
+    displayBundles.length,
+    isMobileViewport ? 0 : 4000,
+    !isMobileViewport
+  );
 
   return (
     <div className="relative">
       <div
         ref={pricingCarouselRef}
-        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-[9vw] md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 hide-scrollbar gap-5 px-[9vw] md:px-0 -mx-4 md:mx-0 max-w-full md:scroll-smooth touch-pan-x overscroll-x-contain"
         dir="ltr"
         onScroll={(e) => {
           const target = e.target as HTMLDivElement;
@@ -152,9 +174,9 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
           <motion.div
             key={i}
             className="shrink-0 snap-center w-[82vw] sm:w-[60vw] md:w-[calc(50%-10px)] xl:w-[calc(25%-12px)]"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            initial={isMobileViewport ? false : { opacity: 0, y: 30 }}
+            whileInView={isMobileViewport ? undefined : { opacity: 1, y: 0 }}
+            transition={isMobileViewport ? undefined : { delay: i * 0.1 }}
             viewport={{ once: true }}
           >
             <div
@@ -635,7 +657,8 @@ const translations = {
 };
 
 function DynamicPopup() {
-  const { data } = useQuery<Record<string, string>>({
+  const { data: announcements } = useListAnnouncements({ global: true });
+  const { data: popupSettings } = useQuery<Record<string, string>>({
     queryKey: ["popup-settings"],
     queryFn: async () => {
       const res = await fetch("/api/settings/batch", {
@@ -649,13 +672,20 @@ function DynamicPopup() {
     retry: false,
   });
 
-  const isEnabled = data?.popup_enabled === "true";
-  const title = data?.popup_title || "";
-  const message = data?.popup_message || "";
+  const latestAnnouncement = announcements?.find((announcement) => announcement.is_global);
+  const isEnabled = popupSettings?.popup_enabled === "true";
+  const title = latestAnnouncement?.title || popupSettings?.popup_title || "";
+  const message = latestAnnouncement?.content || popupSettings?.popup_message || "";
 
-  if (!isEnabled || !title || !message) return null;
+  if ((!latestAnnouncement && !isEnabled) || !title || !message) return null;
 
-  return <AnnouncementPopup title={title} message={message} />;
+  return (
+    <AnnouncementPopup
+      key={latestAnnouncement ? `announcement-${latestAnnouncement.id}` : "popup-settings"}
+      title={title}
+      message={message}
+    />
+  );
 }
 
 function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
