@@ -279,7 +279,7 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
       ) : (
         <div className="space-y-6">
           {visibleAssignments.length > 0 && (
-            <div className="space-y-4">
+            <div className={isMobile ? "grid grid-cols-2 gap-3" : "space-y-4"}>
               {visibleAssignments.map(({ assignmentId, lead, files }) => {
                 const status = statusStyles[lead.assignment_status || "pending"] || statusStyles.pending;
                 const measurementEntries = Object.entries(lead.measurement_fields || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined);
@@ -289,7 +289,7 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                     key={assignmentId}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl p-5"
+                    className={`${isMobile ? "rounded-2xl p-3 overflow-hidden" : "rounded-2xl p-5"}`}
                     style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)" }}
                   >
                     <div className={`${isMobile ? "space-y-3" : "flex items-start justify-between gap-4"} mb-4`}>
@@ -322,7 +322,7 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                       </span>
                     </div>
 
-                    {lead.coach_notes && (
+                    {!isMobile && lead.coach_notes && (
                       <div className="rounded-xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                         <div className="text-xs uppercase tracking-wide mb-2" style={{ color: "#7CFC00" }}>
                           {t("instructions")}
@@ -331,7 +331,7 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                       </div>
                     )}
 
-                    {measurementEntries.length > 0 && (
+                    {!isMobile && measurementEntries.length > 0 && (
                       <div className="mb-4">
                         <div className="text-xs uppercase tracking-wide mb-2" style={{ color: "#7CFC00" }}>
                           {t("requestedMeasurements")}
@@ -349,10 +349,17 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {files.map((file) => (
-                        <div key={file.id} className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <div className="h-36 flex items-center justify-center overflow-hidden" style={{ background: "rgba(0,0,0,0.35)" }}>
+                    <div className={`${isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"}`}>
+                      {(isMobile ? files.slice(0, 1) : files).map((file) => (
+                        <div
+                          key={file.id}
+                          className={`${isMobile ? "rounded-xl overflow-hidden" : "rounded-xl overflow-hidden"}`}
+                          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                        >
+                          <div
+                            className={`${isMobile ? "h-24 flex items-center justify-center overflow-hidden" : "h-36 flex items-center justify-center overflow-hidden"}`}
+                            style={{ background: "rgba(0,0,0,0.35)" }}
+                          >
                             {file.file_type === "image" ? (
                               <img
                                 src={file.file_url}
@@ -367,18 +374,40 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                                 onClick={() => setZoomedMedia({ url: file.file_url, name: file.file_name, type: file.file_type })}
                               />
                             ) : (
-                              <FileText size={36} style={{ color: "#8B5CF6" }} />
+                              <div className="w-full h-full flex items-center justify-center">
+                                <FileText size={isMobile ? 28 : 36} style={{ color: "#8B5CF6" }} />
+                              </div>
                             )}
                           </div>
-                          <div className="p-4">
-                            <div className="font-semibold truncate mb-1" style={{ color: "#FFFFFF" }}>{file.file_name}</div>
-                            <div className="text-xs mb-3" style={{ color: "#8B8B8B" }}>{formatFileSize(file.file_size)}</div>
+                          <div className={`${isMobile ? "p-3 min-w-0" : "p-4"}`}>
+                            <div>
+                              <div
+                                className={`${isMobile ? "text-sm leading-5 mb-1" : "font-semibold truncate mb-1"}`}
+                                style={{
+                                  color: "#FFFFFF",
+                                  fontWeight: 600,
+                                  ...(isMobile
+                                    ? {
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical" as const,
+                                        overflow: "hidden",
+                                      }
+                                    : {}),
+                                }}
+                              >
+                                {file.file_name}
+                              </div>
+                              <div className={`${isMobile ? "text-[10px] mb-2" : "text-xs mb-3"}`} style={{ color: "#8B8B8B" }}>
+                                {formatFileSize(file.file_size)}
+                              </div>
+                            </div>
                             <a
                               href={`${file.file_url}?download=${encodeURIComponent(file.file_name)}`}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"
+                              className={`${isMobile ? "inline-flex w-full justify-center items-center gap-1 px-2 py-1.5 rounded-xl text-[10px] font-semibold" : "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold"}`}
                               style={{ background: "rgba(124,252,0,0.12)", color: "#7CFC00", border: "1px solid rgba(124,252,0,0.25)" }}
                             >
-                              <Download size={14} /> {t("download")}
+                              <Download size={isMobile ? 13 : 14} /> {t("download")}
                             </a>
                           </div>
                         </div>
@@ -398,41 +427,41 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                   {t("sharedFiles")}
                 </h3>
               </div>
-              <div className="grid gap-4">
+              <div className={isMobile ? "grid grid-cols-2 gap-3" : "grid gap-4"}>
                 {visibleFiles.map((upload) => (
                   <motion.div
                     key={upload.id}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`${isMobile ? "flex flex-col gap-3 p-3" : "flex items-start gap-4 p-4"} rounded-xl`}
+                    className={`${isMobile ? "rounded-xl overflow-hidden" : "flex items-start gap-4 p-4 rounded-xl"}`}
                     style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)" }}
                   >
                     {upload.file_type === "image" ? (
                       <img
                         src={upload.file_url}
                         alt={upload.file_name}
-                        className={`${isMobile ? "w-full h-32 object-cover rounded-lg cursor-pointer" : "w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer"}`}
+                        className={`${isMobile ? "w-full h-28 object-cover cursor-pointer" : "w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer"}`}
                         onClick={() => setZoomedMedia({ url: upload.file_url, name: upload.file_name, type: upload.file_type })}
                       />
                     ) : upload.file_type === "video" ? (
                       <video
                         src={upload.file_url}
-                        className={`${isMobile ? "w-full h-32 object-cover rounded-lg cursor-pointer" : "w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer"}`}
+                        className={`${isMobile ? "w-full h-28 object-cover cursor-pointer" : "w-20 h-20 object-cover rounded-lg flex-shrink-0 cursor-pointer"}`}
                         onClick={() => setZoomedMedia({ url: upload.file_url, name: upload.file_name, type: upload.file_type })}
                       />
                     ) : (
                       <div
-                        className={`${isMobile ? "w-full h-24 rounded-lg flex items-center justify-center" : "w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0"}`}
+                        className={`${isMobile ? "w-full h-28 flex items-center justify-center" : "w-20 h-20 rounded-lg flex items-center justify-center flex-shrink-0"}`}
                         style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)" }}
                       >
                         <FileText size={32} style={{ color: "#8B5CF6" }} />
                       </div>
                     )}
 
-                    <div className={`${isMobile ? "w-full" : "flex-1"} min-w-0`}>
-                      <div className={`${isMobile ? "flex flex-col gap-2" : "flex items-start justify-between gap-4 mb-2"}`}>
+                    <div className={`${isMobile ? "p-3 min-w-0" : "flex-1"} min-w-0`}>
+                      <div className={`${isMobile ? "" : "flex items-start justify-between gap-4 mb-2"}`}>
                         <div>
-                          <h3 className={`${isMobile ? "font-semibold text-base" : "font-semibold text-lg"} mb-1`} style={{ color: "#FFFFFF", fontFamily: "Inter, sans-serif" }}>
+                          <h3 className={`${isMobile ? "text-sm leading-5" : "font-semibold text-lg"} mb-1`} style={{ color: "#FFFFFF", fontFamily: "Inter, sans-serif", ...(isMobile ? { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" } : {}) }}>
                             {upload.title || upload.file_name}
                           </h3>
                           <div className={`${isMobile ? "flex items-center gap-2 text-xs flex-wrap" : "flex items-center gap-2 text-sm"}`} style={{ color: "#8B8B8B" }}>
@@ -443,20 +472,20 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
                         </div>
                         <a
                           href={`${upload.file_url}?download=${encodeURIComponent(upload.file_name)}`}
-                          className={`${isMobile ? "flex items-center gap-1 px-3 py-1.5 rounded-md font-semibold text-xs" : "flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm"} transition-all hover:opacity-80`}
+                          className={`${isMobile ? "inline-flex w-full justify-center items-center gap-1 px-2 py-1.5 rounded-xl font-semibold text-[10px]" : "flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm"} transition-all hover:opacity-80`}
                           style={{ background: "rgba(124,252,0,0.15)", border: "1px solid rgba(124,252,0,0.3)", color: "#7CFC00" }}
                         >
                           <Download size={isMobile ? 14 : 16} /> {t("download")}
                         </a>
                       </div>
 
-                      {upload.description && (
+                      {!isMobile && upload.description && (
                         <p className={`${isMobile ? "text-xs" : "text-sm"} mt-2`} style={{ color: "#5A5A5A", lineHeight: 1.5 }}>
                           {upload.description}
                         </p>
                       )}
 
-                      {upload.coach_name && (
+                      {!isMobile && upload.coach_name && (
                         <p className={`${isMobile ? "text-xs" : "text-sm"} mt-2`} style={{ color: "#7CFC00" }}>
                           {t("fromCoach", { name: upload.coach_name })}
                         </p>
