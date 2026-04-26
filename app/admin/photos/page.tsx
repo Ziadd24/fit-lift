@@ -279,7 +279,7 @@ function UploadForm({ title, adminToken, captionField, coachSelect, onSuccess, p
       const category = coachId ? "coach" : "gallery";
       
       // Upload directly to Supabase (bypasses Vercel 4.5MB limit)
-      const { url } = await uploadImageDirect(file);
+      const { url } = await uploadImageDirect(file, adminToken || "");
       
       // Save record via API (small payload - just the URL)
       const photoData = {
