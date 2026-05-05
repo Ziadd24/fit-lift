@@ -42,7 +42,7 @@ export function AnnouncementPopup({ title: propTitle, message: propMessage }: { 
 
   useEffect(() => {
     if (loaded && enabled) {
-      const timer = setTimeout(() => { setIsVisible(true); }, 500);
+      const timer = setTimeout(() => setIsVisible(true), 500);
       return () => clearTimeout(timer);
     }
   }, [loaded, enabled]);
@@ -52,38 +52,35 @@ export function AnnouncementPopup({ title: propTitle, message: propMessage }: { 
   return (
     <AnimatePresence>
       {isVisible && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsVisible(false)}
-            className="fixed inset-0 bg-black/50 backdrop-blur-[4px] z-[999]"
-          />
-          <motion.div
-            initial={{ y: -100, x: "-50%", opacity: 0 }}
-            animate={{ y: 0, x: "-50%", opacity: 1 }}
-            exit={{ y: -100, x: "-50%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="fixed top-5 left-1/2 z-[1000] w-[90vw] min-w-[320px] max-w-md flex items-center gap-4 bg-gradient-to-br from-[#22c55e] to-[#16a34a] text-white p-5 rounded-2xl shadow-[0_20px_40px_rgba(34,197,94,0.3),inset_0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(34,197,94,0.2)]"
-          >
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0 text-xl">💪</div>
-            <div className="flex-1">
-              <div className="text-base font-bold mb-1 uppercase tracking-wider">{title}</div>
-              <div className="text-sm font-medium leading-relaxed opacity-95">{message}</div>
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -20, opacity: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="fixed top-16 left-0 right-0 z-[1000] bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 border-b-2 border-b-[#7CFC00]/60 shadow-xl min-h-[80px]"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 relative min-h-[100px]">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <div className="w-20 h-1 bg-[#7CFC00]/60"></div>
+              <img src="/images/logo.png" alt="FIT & LIFT" className="h-12 w-auto object-contain" />
+              <div className="w-20 h-1 bg-[#7CFC00]/60"></div>
+            </div>
+            <div className="pt-10 text-center">
+              <h3 className="text-xl sm:text-lg font-bold tracking-wide text-white mb-1 bg-gradient-to-r from-white to-zinc-200 bg-clip-text text-transparent drop-shadow-sm" dir="auto">{title}</h3>
+              <p className="text-base sm:text-sm text-zinc-300 leading-relaxed" dir="auto">{message}</p>
             </div>
             <button
               onClick={() => setIsVisible(false)}
               aria-label="Close announcement"
-              className="w-8 h-8 bg-white/15 hover:bg-white/25 rounded-lg flex items-center justify-center transition-all hover:rotate-90 shrink-0 border-none cursor-pointer text-white"
+              className="absolute top-2 right-4 w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white transition-colors group"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-90 transition-transform duration-200">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
-          </motion.div>
-        </>
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

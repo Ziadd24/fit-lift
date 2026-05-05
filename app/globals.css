@@ -1,5 +1,8 @@
-/* Google Font — scoped to dashboard only */
+/* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -47,16 +50,101 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Montserrat', 'Noto Sans Arabic', sans-serif;
     -webkit-font-smoothing: antialiased;
     position: relative;
     width: 100%;
     overflow-x: hidden;
   }
 
+  /* Arabic text rendering fixes */
+  [dir="rtl"], .arabic-text, html[dir="rtl"] {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    unicode-bidi: embed;
+    text-align: right;
+    direction: rtl;
+  }
+
+  /* Comprehensive Arabic letter connections */
+  .arabic-text, [lang="ar"], [dir="rtl"], html[dir="rtl"] * {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -moz-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    font-variant-ligatures: normal, contextual;
+    letter-spacing: 0 !important;
+    word-spacing: normal;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    -webkit-text-rendering: optimizeLegibility;
+    -moz-text-rendering: optimizeLegibility;
+  }
+
+  /* Force Arabic font on all elements when in RTL */
+  html[dir="rtl"] body,
+  html[dir="rtl"] div,
+  html[dir="rtl"] span,
+  html[dir="rtl"] h1,
+  html[dir="rtl"] h2,
+  html[dir="rtl"] h3,
+  html[dir="rtl"] h4,
+  html[dir="rtl"] h5,
+  html[dir="rtl"] h6,
+  html[dir="rtl"] p,
+  html[dir="rtl"] button,
+  html[dir="rtl"] a {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Montserrat', 'Noto Sans Arabic', sans-serif;
     @apply font-bold tracking-tight uppercase;
+  }
+
+  /* Arabic headings with proper connections */
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6,
+  h1[lang="ar"], h2[lang="ar"], h3[lang="ar"], h4[lang="ar"], h5[lang="ar"], h6[lang="ar"] {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    letter-spacing: 0 !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    font-variant-ligatures: normal, contextual;
+  }
+
+  /* Fix Arabic text in specific components */
+  [dir="rtl"] .text-white,
+  [dir="rtl"] .text-zinc-200,
+  [dir="rtl"] .text-primary,
+  [dir="rtl"] .text-amber-400,
+  [dir="rtl"] .text-primary-foreground,
+  [dir="rtl"] span,
+  [dir="rtl"] button,
+  [dir="rtl"] a {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    letter-spacing: 0 !important;
+  }
+
+  /* Specific fixes for problematic text */
+  [dir="rtl"] .text-xs,
+  [dir="rtl"] .text-sm,
+  [dir="rtl"] .text-base,
+  [dir="rtl"] .text-lg,
+  [dir="rtl"] .text-xl,
+  [dir="rtl"] .text-2xl {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    letter-spacing: 0 !important;
+  }
+
+  /* Force Arabic connections for all text in RTL */
+  html[dir="rtl"] * {
+    font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', sans-serif !important;
+    font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    -webkit-font-feature-settings: "liga" 1, "calt" 1, "rlig" 1;
+    letter-spacing: 0 !important;
   }
 
   ::selection {

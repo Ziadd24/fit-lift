@@ -37,7 +37,6 @@ export function CoachCard({
           src={imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(coach.name)}`}
           alt={coach.name}
           className="w-full h-full object-cover"
-          loading="lazy"
           decoding="async"
           onError={(e) => {
             (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(coach.name)}`;

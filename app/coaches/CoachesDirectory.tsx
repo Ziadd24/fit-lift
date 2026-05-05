@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Search } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, Search, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/PremiumComponents";
 import { CoachCard, type CoachListItem } from "@/components/ui/CoachCard";
+import { cn } from "@/lib/utils";
 
 type CoachPhoto = {
   coach_id: number | null;
@@ -15,6 +16,182 @@ type CoachPhoto = {
 };
 
 const GYM_PHONE = "201009987771";
+
+const COACH_PACKAGES = [
+  { sessions: 10, label: "10 جلسات", price: 1500, popular: false },
+  { sessions: 15, label: "15 جلسة", price: 1900, popular: false },
+  { sessions: 20, label: "20 جلسة", price: 2400, popular: true },
+  { sessions: 30, label: "30 جلسة", price: 3400, popular: false },
+] as const;
+
+function getCoachPackageWhatsAppLink(packageLabel: string, price: number) {
+  const message = `أهلاً، أنا عايز أشترك في باقة ${packageLabel} بـ ${price} جنيه. ممكن نكمل التفاصيل؟`;
+  return `https://wa.me/${GYM_PHONE}?text=${encodeURIComponent(message)}`;
+}
+
+function CoachPackagesModal({
+  open,
+  onClose,
+  lang,
+}: {
+  open: boolean;
+  onClose: () => void;
+  lang: "en" | "ar";
+}) {
+  const [isMobileSheet, setIsMobileSheet] = useState(false);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const handleMediaChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      setIsMobileSheet(event.matches);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const handlePopState = () => {
+      onClose();
+    };
+
+    handleMediaChange(mediaQuery);
+    document.body.style.overflow = "hidden";
+    window.history.pushState({ coachPackagesModal: true }, "");
+    mediaQuery.addEventListener("change", handleMediaChange);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      document.body.style.overflow = "";
+      mediaQuery.removeEventListener("change", handleMediaChange);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+      if (window.history.state?.coachPackagesModal) {
+        window.history.back();
+      }
+    };
+  }, [open, onClose]);
+
+  const copy = lang === "ar"
+    ? {
+        title: "اختر باقتك",
+        subtitle: "اختر عدد الجلسات الللي يناسبك، وتواصل معانا على واتساب عشان تدفع.",
+        cta: "احجز دلوقتي",
+        badge: "الأكثر طلبًا",
+        footer: "الدفع بيكون كاش أو فودافون كاش عند الحجز.",
+        close: "إغلاق",
+        currency: "جنيه",
+      }
+    : {
+        title: "Choose Your Package",
+        subtitle: "Pick the number of sessions that fits you, then message us on WhatsApp to complete payment.",
+        cta: "Pay on WhatsApp",
+        badge: "Most Popular",
+        footer: "Payment is available in cash or via Vodafone Cash when booking.",
+        close: "Close",
+        currency: "EGP",
+      };
+
+  const panelAnimation = isMobileSheet
+    ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
+    : { initial: { opacity: 1, scale: 0.96, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 1, scale: 0.96, y: 16 } };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <div className={cn("flex min-h-full justify-center", isMobileSheet ? "items-end" : "items-center p-4 sm:p-6")} dir={lang === "ar" ? "rtl" : "ltr"}>
+            <motion.div
+              {...panelAnimation}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                "w-full border bg-[#0b0b0b] text-white shadow-[0_24px_80px_rgba(0,0,0,0.6)] overflow-y-auto",
+                isMobileSheet
+                  ? "rounded-t-[24px] px-5 pb-8 pt-5 border-white/15 max-h-[85vh]"
+                  : "max-w-[520px] rounded-[24px] p-6 border-white/10"
+              )}
+            >
+              {isMobileSheet && <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/20" />}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn("font-black", isMobileSheet ? "text-xl" : "text-2xl")}>{copy.title}</h3>
+                  <p className={cn("leading-relaxed text-white/70", isMobileSheet ? "mt-1.5 text-sm" : "mt-2 text-sm")}>
+                    {copy.subtitle}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={copy.close}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-white/80 transition-all hover:border-primary/50 hover:text-white hover:bg-white/[0.08]"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className={cn("mt-5", isMobileSheet ? "space-y-4" : "space-y-3")}>
+                {COACH_PACKAGES.map((pkg) => (
+                  <div
+                    key={pkg.sessions}
+                    className={cn(
+                      "rounded-2xl border transition-all",
+                      isMobileSheet ? "px-5 py-5" : "px-4 py-4",
+                      pkg.popular
+                        ? "border-primary/50 bg-primary/[0.12] shadow-[0_0_32px_rgba(124,252,0,0.15)]"
+                        : "border-white/15 bg-white/[0.05]"
+                    )}
+                  >
+                    <div className={cn(
+                      "flex gap-4",
+                      isMobileSheet ? "flex-col" : "flex-col sm:flex-row sm:items-center sm:justify-between"
+                    )}>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>{pkg.label}</h4>
+                          {pkg.popular && (
+                            <span className="rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-bold text-primary">
+                              {copy.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className={cn("font-black text-primary", isMobileSheet ? "text-3xl" : "text-2xl")}>
+                          {pkg.price.toLocaleString()} <span className="text-base font-semibold text-white/70">{copy.currency}</span>
+                        </p>
+                      </div>
+                      <a
+                        href={getCoachPackageWhatsAppLink(pkg.label, pkg.price)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "inline-flex items-center justify-center rounded-full bg-primary font-black text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(124,252,0,0.4)] active:scale-95",
+                          isMobileSheet ? "w-full min-h-14 px-6 text-base" : "min-h-12 px-5 text-sm"
+                        )}
+                      >
+                        {copy.cta}
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className={cn("text-center", isMobileSheet ? "mt-6 text-sm leading-6 text-white/60" : "mt-5 text-xs leading-5 text-white/55")}>
+                {copy.footer}
+              </p>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 const copy = {
   en: {
@@ -75,6 +252,7 @@ export default function CoachesDirectory({
   initialSort: "asc" | "desc";
 }) {
   const t = copy[lang];
+  const [isCoachPackagesOpen, setIsCoachPackagesOpen] = useState(false);
 
   const { data: coaches = [], isLoading } = useQuery<CoachListItem[]>({
     queryKey: ["coaches-page-list"],
@@ -180,7 +358,7 @@ export default function CoachesDirectory({
                     caption={photoMap[coach.id ?? -1]?.caption}
                     imageUrl={photoMap[coach.id ?? -1]?.url}
                     ctaLabel={t.cta}
-                    ctaHref={getCoachWhatsAppLink(coach.name)}
+                    onCtaClick={() => setIsCoachPackagesOpen(true)}
                   />
                 </motion.div>
               ))}
@@ -188,6 +366,11 @@ export default function CoachesDirectory({
           )}
         </div>
       </motion.div>
+      <CoachPackagesModal 
+        open={isCoachPackagesOpen} 
+        onClose={() => setIsCoachPackagesOpen(false)} 
+        lang={lang} 
+      />
     </main>
   );
 }

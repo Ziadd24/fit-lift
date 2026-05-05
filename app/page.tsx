@@ -154,7 +154,7 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
 
   const { activeIndex, setActiveIndex, setActiveIndexOnly, containerRef: pricingCarouselRef, goNext: pricingNext, goPrev: pricingPrev } = useCarousel(
     displayBundles.length,
-    isMobileViewport ? 0 : 4000,
+    isMobileViewport ? 0 : 5000,
     !isMobileViewport
   );
 
@@ -346,7 +346,7 @@ function CoachPackagesModal({
 
   const panelAnimation = isMobileSheet
     ? { initial: { y: "100%" }, animate: { y: 0 }, exit: { y: "100%" } }
-    : { initial: { opacity: 0, scale: 0.96, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.96, y: 16 } };
+    : { initial: { opacity: 1, scale: 0.96, y: 16 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 1, scale: 0.96, y: 16 } };
 
   return (
     <AnimatePresence>
@@ -455,7 +455,7 @@ function trackSeeAllCoachesClick(language: "en" | "ar") {
 
 function CoachesSection({ lang, t, dbCoaches, coachPhotoMap, onOpenPackages, isLoading }: { lang: "en" | "ar"; t: any; dbCoaches: any[] | undefined; coachPhotoMap: Record<string, { url: string; caption?: string }>; onOpenPackages: () => void; isLoading: boolean }) {
   const allCoaches = dbCoaches && dbCoaches.length > 0 ? dbCoaches : t.coaches.coaches.map((c: any) => ({ name: c.name }));
-  const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 4000);
+  const { activeIndex: activeCoachIndex, setActiveIndex: setActiveCoachIndex, setActiveIndexOnly: setActiveCoachIndexOnly, containerRef: coachCarouselRef, goNext: coachNext, goPrev: coachPrev } = useCarousel(allCoaches.length, 5000);
 
   if (isLoading) {
     return (
@@ -603,7 +603,7 @@ const translations = {
         { title: "غرفة فيتنيس متكاملة", desc: "مساحة تمرين واسعة ومكيّفة. فيها مناطق للكارديو والقوة والتمارين الوظيفية." },
         { title: "ساونا وسبا", desc: "ريح عضلاتك بعد التمرين في ساونا وسبا VIP. مثالي للاستشفاء والاسترخاء." }
       ],
-      galleryBtn: "عرض المعرض"
+      galleryBtn: "شوف الكلاسات"
     },
     schedule: { 
       tag: "الجدول الأسبوعي", 
@@ -674,11 +674,10 @@ const translations = {
 };
 
 function DynamicPopup() {
-  const { data: announcements } = useListAnnouncements({ global: true });
   const { data: popupSettings } = useQuery<Record<string, string>>({
     queryKey: ["popup-settings"],
     queryFn: async () => {
-      const res = await fetch("/api/settings/batch", {
+      const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keys: ["popup_enabled", "popup_title", "popup_message"] }),
@@ -689,16 +688,15 @@ function DynamicPopup() {
     retry: false,
   });
 
-  const latestAnnouncement = announcements?.find((announcement) => announcement.is_global);
   const isEnabled = popupSettings?.popup_enabled === "true";
-  const title = latestAnnouncement?.title || popupSettings?.popup_title || "";
-  const message = latestAnnouncement?.content || popupSettings?.popup_message || "";
+  const title = popupSettings?.popup_title || "";
+  const message = popupSettings?.popup_message || "";
 
-  if ((!latestAnnouncement && !isEnabled) || !title || !message) return null;
+  if (!isEnabled || !title || !message) return null;
 
   return (
     <AnnouncementPopup
-      key={latestAnnouncement ? `announcement-${latestAnnouncement.id}` : "popup-settings"}
+      key="popup-settings"
       title={title}
       message={message}
     />
@@ -706,7 +704,7 @@ function DynamicPopup() {
 }
 
 function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
-  const { data: photos, isLoading } = useListPhotos({ global: true, category: "classes-pics" });
+  const { data: photos, isLoading } = useListPhotos({ global: true, category: "gallery" });
   const [index, setIndex] = useState(0);
   const galleryRef = useRef<HTMLDivElement>(null);
 
@@ -737,6 +735,17 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
     });
   }, [galleryItems]);
 
+  // Auto-swipe every 5 seconds
+  useEffect(() => {
+    if (totalImages <= 1) return;
+    
+    const interval = setInterval(() => {
+      next();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [totalImages, next]);
+
   return (
     <div ref={galleryRef} className="rounded-2xl overflow-hidden h-72 md:h-80 relative group bg-black">
       {isLoading && (
@@ -754,7 +763,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             opacity: idx === index ? 1 : 0,
-            transition: 'opacity 1.2s ease-in-out',
+            transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
             willChange: 'opacity',
             zIndex: idx === index ? 1 : 0,
           }}
@@ -799,7 +808,14 @@ export default function MemberPortal() {
     retry: false,
   });
   const scheduleImageUrl = scheduleSetting?.value || "";
-  const [lang, setLang] = useState<"en" | "ar">("en");
+  const [lang, setLang] = useState<"en" | "ar">(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get('lang');
+      return (urlLang === "ar" ? "ar" : "en");
+    }
+    return "en";
+  });
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const t = translations[lang];
   
@@ -1008,11 +1024,26 @@ export default function MemberPortal() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 70, damping: 18 }}
             className="font-extrabold uppercase leading-[1.1] mb-5 sm:mb-6 max-w-3xl"
-            style={{ fontSize: 'clamp(54px, 14vw, 108px)', letterSpacing: '2px', fontFamily: "'Montserrat', sans-serif" }}
+            style={{ 
+              fontSize: lang === "ar" ? 'clamp(64px, 16vw, 120px)' : 'clamp(54px, 14vw, 108px)', 
+              letterSpacing: lang === "ar" ? '0px' : '2px', 
+              fontFamily: lang === "ar" ? "'Cairo', 'Tajawal', sans-serif" : "'Montserrat', sans-serif",
+              lineHeight: lang === "ar" ? '1.2' : '1.1'
+            }}
           >
             <span className="text-white block">{lang === "ar" ? "اكسر" : "Push Your"}</span>
             <span className="text-primary block">{lang === "ar" ? "حدودك." : "Limits."}</span>
-            <span className="block" style={{ color: '#0a0a0a', WebkitTextStroke: '2px rgba(255,255,255,0.5)', paintOrder: 'stroke fill', letterSpacing: '-1px', fontSize: '0.82em', lineHeight: '1.15', marginTop: '0.1em', display: 'block' }}>
+            <span className="block" style={{ 
+              color: '#0a0a0a', 
+              WebkitTextStroke: '2px rgba(255,255,255,0.5)', 
+              paintOrder: 'stroke fill', 
+              letterSpacing: lang === "ar" ? '0px' : '-1px', 
+              fontSize: lang === "ar" ? '0.75em' : '0.82em', 
+              lineHeight: lang === "ar" ? '1.3' : '1.15', 
+              marginTop: '0.1em', 
+              display: 'block',
+              fontFamily: lang === "ar" ? "'Cairo', 'Tajawal', sans-serif" : "'Montserrat', sans-serif"
+            }}>
               {lang === "ar" ? "أوصل لأقصى إمكانياتك." : "Reach Your Potential."}
             </span>
           </motion.h1>
@@ -1146,7 +1177,7 @@ export default function MemberPortal() {
           </div>
           <div className="flex justify-center mt-8">
             <button
-              onClick={() => router.push("/gallery")}
+              onClick={() => router.push(lang === "ar" ? "/gallery?lang=ar" : "/gallery")}
               className="inline-flex items-center gap-2 bg-primary text-black font-bold text-sm uppercase tracking-wider px-8 py-3 rounded-full transition-all hover:bg-[#6BE000] hover:shadow-[0_0_24px_rgba(124,252,0,0.4)] hover:scale-105 active:scale-95"
             >
               {t.services.galleryBtn}
@@ -1319,23 +1350,18 @@ export default function MemberPortal() {
         <WhatsAppIcon className="w-7 h-7 text-white" />
       </a>
 
-      <footer className="py-12 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 mb-4">
-            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-center gap-0 hover:opacity-80 transition-opacity">
-              <img src="/images/logo.png" alt="FIT & LIFT" className="h-[128px] w-auto object-contain" />
-              <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
-            </a>
-            <a
-              href={DEVELOPER_WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg sm:text-xl font-bold text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors"
-            >
-              Developed by Ziad & Ziad
-            </a>
-          </div>
+      <footer className="py-8 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
           <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} {t.footer.rights}</p>
+          <a
+            href={DEVELOPER_WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Powered by Ziad & Ziad
+          </a>
         </div>
       </footer>
 

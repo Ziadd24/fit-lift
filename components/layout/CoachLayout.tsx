@@ -22,7 +22,6 @@ import { useCoachLanguage } from "@/lib/coach-language";
 import { cn } from "@/lib/utils";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], weight: ["400", "500", "600", "700", "800"] });
-const DEVELOPER_WHATSAPP_URL = "https://wa.me/201274374798";
 
 export function CoachLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -218,19 +217,6 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
             {children}
-            <div className="pt-10 pb-24 md:pb-6 text-center">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
-                <span className="text-lg sm:text-xl font-black text-primary tracking-widest">FIT & LIFT</span>
-                <a
-                  href={DEVELOPER_WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-lg sm:text-xl font-bold text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors"
-                >
-                  Developed by Ziad & Ziad
-                </a>
-              </div>
-            </div>
           </div>
         </main>
 

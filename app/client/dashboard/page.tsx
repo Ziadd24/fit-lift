@@ -2,12 +2,12 @@
 
 // Suppress hydration warnings from dynamic localStorage-dependent state
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import Link from "next/link";
-import NutritionTab from "./NutritionTab";
-import WorkoutsTab from "./WorkoutsTab";
-import ProgressTab from "./ProgressTab";
-import CoachUploadsTab from "./CoachUploadsTab";
+const NutritionTab = React.lazy(() => import("./NutritionTab"));
+const WorkoutsTab = React.lazy(() => import("./WorkoutsTab"));
+const ProgressTab = React.lazy(() => import("./ProgressTab"));
+const CoachUploadsTab = React.lazy(() => import("./CoachUploadsTab"));
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -66,8 +66,6 @@ import {
   BookOpen,
   Upload,
 } from "lucide-react";
-
-const DEVELOPER_WHATSAPP_URL = "https://wa.me/201274374798";
 
 // ─── Motion Sensitivity Hook ─────────────────────────────────────────────────
 function usePrefersReducedMotion() {
@@ -1561,8 +1559,8 @@ export default function ClientDashboard() {
       return res.json();
     },
     enabled: !!memberCode,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 
@@ -1607,115 +1605,116 @@ export default function ClientDashboard() {
 
   const displayTasks = dbTasks || [];
 
-  const taskStats = {
-    total: displayTasks.length,
-    completed: displayTasks.filter((t: any) => t.status === 'done').length,
-    coach: displayTasks.filter((t: any) => t.coach_assigned || t.coachAssigned).length,
-    personal: displayTasks.filter((t: any) => !t.coach_assigned && !t.coachAssigned).length,
-  };
+  const {
+    taskStats,
+    finishedWorkouts,
+    efficiency,
+    filteredTasks,
+    isEmptyDashboard,
+    todayCalories,
+    todayProtein,
+    todayWorkoutCount,
+    workoutsInProgress,
+    nutritionRisk,
+    urgentItems,
+    dailyScoreValue,
+    streakDays,
+    weeklyChallenge,
+    achievements,
+    statTrendCards,
+    nextWorkoutTask,
+  } = useMemo(() => {
+    const stats = {
+      total: displayTasks.length,
+      completed: displayTasks.filter((t: any) => t.status === 'done').length,
+      coach: displayTasks.filter((t: any) => t.coach_assigned || t.coachAssigned).length,
+      personal: displayTasks.filter((t: any) => !t.coach_assigned && !t.coachAssigned).length,
+    };
+    const fw = displayTasks.filter((t: any) => t.type === "workout" && t.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
+    const eff = displayTasks.length > 0 ? Math.round((displayTasks.filter((t: any) => t.status === "done").length / displayTasks.length) * 100) : 0;
+    const tc = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.calories || 0), 0);
+    const tp = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.protein || 0), 0);
+    const wip = workouts.filter((w: any) => w.status === "in-progress" || w.status === "in_progress").length;
+    const nr = tc > 0 && (tc < 1600 || tp < 120);
+    const nwt = (displayTasks.find((task: any) => task.type === "workout" && task.status !== "done") || null) as any;
+    const sd = Math.max(1, Math.min(30, workouts.length * 3 + stats.completed + (nutritionLogs.length > 0 ? 2 : 0)));
+    const weightCard = weightCards?.find((m: any) => m.label === "Body Weight");
+    const weightValue = weightCard?.latest?.value;
+    const weightUnit = weightCard?.latest?.unit || "kg";
+    const weightPoints = weightCard?.history || [];
+    const weightDelta = weightCard?.trendValue ? `${weightCard.trendValue >= 0 ? "+" : ""}${weightCard.trendValue.toFixed(1)} ${weightUnit}` : "--";
+    const weeklyWorkoutGoal = 4;
 
-  const finishedWorkouts = displayTasks.filter((t: any) => t.type === "workout" && t.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
-  const efficiency = displayTasks.length > 0 ? Math.round((displayTasks.filter((t: any) => t.status === "done").length / displayTasks.length) * 100) : 0;
+    return {
+      taskStats: stats,
+      finishedWorkouts: fw,
+      efficiency: eff,
+      filteredTasks: displayTasks.filter((task: any) => {
+        switch (taskFilter) {
+          case 'coach': return task.coach_assigned || task.coachAssigned;
+          case 'personal': return !task.coach_assigned && !task.coachAssigned;
+          case 'completed': return task.status === 'done';
+          default: return true;
+        }
+      }),
+      isEmptyDashboard:
+        displayTasks.length === 0 &&
+        workouts.length === 0 &&
+        nutritionLogs.length === 0 &&
+        galleryPhotos.length === 0 &&
+        (!announcements || announcements.length === 0),
+      todayCalories: tc,
+      todayProtein: tp,
+      todayWorkoutCount: displayTasks.filter((task: any) => task.type === "workout" && task.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length,
+      workoutsInProgress: wip,
+      nutritionRisk: nr,
+      urgentItems: [
+        nwt ? { key: "workout", label: "Workout pending", detail: nwt.title } : null,
+        nr ? { key: "nutrition", label: "Nutrition risk", detail: "Calories or protein too low today" } : null,
+      ].filter(Boolean) as { key: string; label: string; detail: string }[],
+      dailyScoreValue: Math.min(
+        100,
+        Math.round(
+          (stats.total ? (stats.completed / stats.total) * 45 : 15) +
+          Math.min(tc / 22, 35) +
+          Math.min(tp / 6, 20)
+        )
+      ),
+      streakDays: sd,
+      weeklyChallenge: {
+        title: "Momentum Builder",
+        description: "Finish 4 meaningful actions this week across training and nutrition.",
+        progress: Math.min(100, Math.round((((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) / weeklyWorkoutGoal) * 100)),
+        completed: ((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) >= weeklyWorkoutGoal,
+        helper: `${Math.min(workouts.length * 2 + nutritionLogs.length, weeklyWorkoutGoal)} of ${weeklyWorkoutGoal} actions done`,
+      } as WeeklyChallenge,
+      achievements: [
+        { key: "first-workout", title: "First Workout", description: "You broke the seal and showed up for session one.", achieved: workouts.length > 0, icon: <Dumbbell size={20} /> },
+        { key: "ten-workouts", title: "10 Workouts Completed", description: "Consistency is starting to compound in a real way.", achieved: workouts.length >= 10, icon: <Trophy size={20} /> },
+        { key: "thirty-streak", title: "30-Day Streak", description: "Your momentum has turned into a real training habit.", achieved: sd >= 30, icon: <Flame size={20} /> },
+        { key: "first-pr", title: "First PR", description: "A new best means you are clearly stronger than yesterday.", achieved: workouts.length >= 2, icon: <Star size={20} /> },
+        { key: "early-bird", title: "Early Bird", description: "Up before the noise. Your first 5AM-style effort is on the board.", achieved: new Date().getHours() <= 5 && workouts.length > 0, icon: <Clock size={20} /> },
+      ] as AchievementBadge[],
+      statTrendCards: [
+        { key: "weight", label: "Weight", value: weightValue ? `${weightValue} ${weightUnit}` : "--", delta: weightDelta, color: "#8B5CF6", points: weightPoints.length > 0 ? weightPoints : [83.7] },
+        { key: "workouts", label: "Workouts in progress", value: `${wip}`, delta: "in progress", color: "#7CFC00", points: [0, 1, 1, 2, 1, 2, Math.max(wip, 1)] },
+        { key: "calories", label: "Calories", value: `${tc || 0} kcal`, delta: `${tp || 0}g protein`, color: "#F59E0B", points: [1750, 1880, 1930, 2010, 1840, 2060, tc || 1920] },
+      ],
+      nextWorkoutTask: nwt,
+    };
+  }, [displayTasks, workouts, nutritionLogs, galleryPhotos, announcements, weightCards, taskFilter]);
+
   const finishedCount = useCountUp(finishedWorkouts, 1100);
   const effCount = useCountUp(efficiency, 1200);
-
-  const filteredTasks = displayTasks.filter((task: any) => {
-    switch (taskFilter) {
-      case 'coach': return task.coach_assigned || task.coachAssigned;
-      case 'personal': return !task.coach_assigned && !task.coachAssigned;
-      case 'completed': return task.status === 'done';
-      default: return true;
-    }
-  });
     const demoKeyRef = useRef<string | null>(null);
   const workoutTagKeyRef = useRef<string | null>(null);
   const settingsKeyRef = useRef<string | null>(null);
-  const isEmptyDashboard =
-    displayTasks.length === 0 &&
-    workouts.length === 0 &&
-    nutritionLogs.length === 0 &&
-    galleryPhotos.length === 0 &&
-    (!announcements || announcements.length === 0);
   const checklistItems = [
     { key: "profile", label: "Complete your profile", done: Boolean(currentMember?.name && memberCode) },
     { key: "workout", label: "Finish your first workout", done: workouts.length > 0 },
     { key: "meal", label: "Log your first meal", done: nutritionLogs.length > 0 },
     { key: "goal", label: "Set your first goal", done: workouts.length > 0 || nutritionLogs.length > 0 },
   ].filter(Boolean) as { key: string; label: string; done: boolean }[];
-  const nextWorkoutTask = (displayTasks.find((task: any) => task.type === "workout" && task.status !== "done") || null) as any;
-  const todayCalories = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.calories || 0), 0);
-  const todayProtein = nutritionLogs.reduce((sum: number, entry: any) => sum + (entry.result?.totals?.protein || 0), 0);
-  const todayWorkoutCount = displayTasks.filter((task: any) => task.type === "workout" && task.status === "done").length + workouts.filter((w: any) => w.status === "done" || w.done).length;
-  const workoutsInProgress = workouts.filter((w: any) => w.status === "in-progress" || w.status === "in_progress").length;
-  const nutritionRisk = todayCalories > 0 && (todayCalories < 1600 || todayProtein < 120);
-  const urgentItems = [
-    nextWorkoutTask ? { key: "workout", label: "Workout pending", detail: nextWorkoutTask.title } : null,
-    nutritionRisk ? { key: "nutrition", label: "Nutrition risk", detail: "Calories or protein too low today" } : null,
-  ].filter(Boolean) as { key: string; label: string; detail: string }[];
-  const dailyScoreValue = Math.min(
-    100,
-    Math.round(
-      (taskStats.total ? (taskStats.completed / taskStats.total) * 45 : 15) +
-      Math.min(todayCalories / 22, 35) +
-      Math.min(todayProtein / 6, 20)
-    )
-  );
-  const weightCard = weightCards?.find((m) => m.label === "Body Weight");
-  const weightValue = weightCard?.latest?.value;
-  const weightUnit = weightCard?.latest?.unit || "kg";
-  const weightPoints = weightCard?.history || [];
-  const weightDelta = weightCard?.trendValue ? `${weightCard.trendValue >= 0 ? "+" : ""}${weightCard.trendValue.toFixed(1)} ${weightUnit}` : "--";
-  const statTrendCards = [
-    { key: "weight", label: "Weight", value: weightValue ? `${weightValue} ${weightUnit}` : "--", delta: weightDelta, color: "#8B5CF6", points: weightPoints.length > 0 ? weightPoints : [83.7] },
-    { key: "workouts", label: "Workouts in progress", value: `${workoutsInProgress}`, delta: "in progress", color: "#7CFC00", points: [0, 1, 1, 2, 1, 2, Math.max(workoutsInProgress, 1)] },
-    { key: "calories", label: "Calories", value: `${todayCalories || 0} kcal`, delta: `${todayProtein || 0}g protein`, color: "#F59E0B", points: [1750, 1880, 1930, 2010, 1840, 2060, todayCalories || 1920] },
-  ];
-  const streakDays = Math.max(1, Math.min(30, workouts.length * 3 + taskStats.completed + (nutritionLogs.length > 0 ? 2 : 0)));
-  const weeklyWorkoutGoal = 4;
-  const weeklyChallenge: WeeklyChallenge = {
-    title: "Momentum Builder",
-    description: "Finish 4 meaningful actions this week across training and nutrition.",
-    progress: Math.min(100, Math.round((((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) / weeklyWorkoutGoal) * 100)),
-    completed: ((workouts.length * 2) + Math.min(nutritionLogs.length, 4)) >= weeklyWorkoutGoal,
-    helper: `${Math.min(workouts.length * 2 + nutritionLogs.length, weeklyWorkoutGoal)} of ${weeklyWorkoutGoal} actions done`,
-  };
-  const achievements: AchievementBadge[] = [
-    {
-      key: "first-workout",
-      title: "First Workout",
-      description: "You broke the seal and showed up for session one.",
-      achieved: workouts.length > 0,
-      icon: <Dumbbell size={20} />,
-    },
-    {
-      key: "ten-workouts",
-      title: "10 Workouts Completed",
-      description: "Consistency is starting to compound in a real way.",
-      achieved: workouts.length >= 10,
-      icon: <Trophy size={20} />,
-    },
-    {
-      key: "thirty-streak",
-      title: "30-Day Streak",
-      description: "Your momentum has turned into a real training habit.",
-      achieved: streakDays >= 30,
-      icon: <Flame size={20} />,
-    },
-    {
-      key: "first-pr",
-      title: "First PR",
-      description: "A new best means you are clearly stronger than yesterday.",
-      achieved: workouts.length >= 2,
-      icon: <Star size={20} />,
-    },
-    {
-      key: "early-bird",
-      title: "Early Bird",
-      description: "Up before the noise. Your first 5AM-style effort is on the board.",
-      achieved: new Date().getHours() <= 5 && workouts.length > 0,
-      icon: <Clock size={20} />,
-    },
-  ];
   const unlockedAchievements = achievements.filter((badge) => badge.achieved);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchWorkoutResults = SEARCH_WORKOUT_LIBRARY.filter((item) => {
@@ -2957,28 +2956,36 @@ export default function ClientDashboard() {
           {/* ── Tabs Content ─────────────────────────────────────────────────── */}
           {activeNav === "workouts" && (
             <DashboardErrorBoundary label="Workouts">
-              <WorkoutsTab isPrivate={isPrivate} memberId={memberId!} unitPreference={unitPreference} />
+              <Suspense fallback={<div className="py-10 text-center text-muted-foreground text-sm">Loading workouts...</div>}>
+                <WorkoutsTab isPrivate={isPrivate} memberId={memberId!} unitPreference={unitPreference} />
+              </Suspense>
             </DashboardErrorBoundary>
           )}
 
           {activeNav === "nutrition" && (
             <DashboardErrorBoundary label="Nutrition">
               <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <NutritionTab isPrivate={isPrivate} memberId={memberId!} demoMode={demoMode} />
+                <Suspense fallback={<div className="py-10 text-center text-muted-foreground text-sm">Loading nutrition...</div>}>
+                  <NutritionTab isPrivate={isPrivate} memberId={memberId!} demoMode={demoMode} />
+                </Suspense>
               </motion.div>
             </DashboardErrorBoundary>
           )}
 
           {activeNav === "progress" && (
             <DashboardErrorBoundary label="Progress">
-              <ProgressTab isPrivate={isPrivate} memberId={memberId!} />
+              <Suspense fallback={<div className="py-10 text-center text-muted-foreground text-sm">Loading progress...</div>}>
+                <ProgressTab isPrivate={isPrivate} memberId={memberId!} />
+              </Suspense>
             </DashboardErrorBoundary>
           )}
 
           {activeNav === "coach_uploads" && (
             <DashboardErrorBoundary label="Assessments">
               <motion.div initial="hidden" animate="visible" variants={cardVariants} custom={0} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <CoachUploadsTab isPrivate={isPrivate} memberId={memberId!} />
+                <Suspense fallback={<div className="py-10 text-center text-muted-foreground text-sm">Loading assessments...</div>}>
+                  <CoachUploadsTab isPrivate={isPrivate} memberId={memberId!} />
+                </Suspense>
               </motion.div>
             </DashboardErrorBoundary>
           )}
@@ -3024,22 +3031,6 @@ export default function ClientDashboard() {
           )}
         </main>
 
-      </div>
-
-      <div style={{ padding: "0 16px 112px", textAlign: "center" }}>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
-          <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: "2px", color: "#7CFC00" }}>
-            FIT & LIFT
-          </span>
-          <a
-            href={DEVELOPER_WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#60A5FA", fontSize: 20, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: "4px" }}
-          >
-            Developed by Ziad & Ziad
-          </a>
-        </div>
       </div>
 
       <MobileBottomNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenSettings={() => setIsSettingsOpen(true)} />
