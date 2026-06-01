@@ -26,36 +26,37 @@ export async function POST(req: NextRequest) {
     
     const { data: coachRaw, error } = await supabase
       .from("coaches")
-      .select("id, name, password_hash, created_at")
+      .select("id, name, display_name, password_hash, created_at")
       .ilike("name", searchTerm)
       .single();
 
-    if (error) {
-      console.error("[Coach Login] Supabase error:", error);
-      return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
-    }
-    
-    if (!coachRaw) {
-      console.error("[Coach Login] No coach found for:", searchTerm);
+    if (error || !coachRaw) {
+      console.error("[Coach Login] Supabase error or no coach found:", error?.message || "no data");
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
     
     console.log("[Coach Login] Found coach:", coachRaw.id, coachRaw.name);
 
-    const isMatch = await verifyPassword(password, coachRaw.password_hash!);
+    if (!coachRaw.password_hash) {
+      console.error("[Coach Login] Coach has no password_hash set:", coachRaw.id);
+      return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
+    }
+
+    const isMatch = await verifyPassword(password, coachRaw.password_hash);
     if (!isMatch) {
+      console.log("[Coach Login] Password mismatch for coach:", coachRaw.id);
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
 
     const safeCoach = {
-      id: coachRaw.id, name: coachRaw.name,
+      id: coachRaw.id, name: coachRaw.name, display_name: coachRaw.display_name,
       created_at: coachRaw.created_at,
     };
     return NextResponse.json({
       success: true, token: await createCoachToken(coachRaw.id), coach: safeCoach,
     });
   } catch (err: any) {
-    console.error("Coach Login Error:", err);
+    console.error("Coach Login Error:", err?.message || err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

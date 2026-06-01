@@ -63,6 +63,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
 
   if (!_hasHydrated || !coachToken) return null;
 
+  const displayName = currentCoach?.display_name || currentCoach?.name || "Coach";
   const initials = currentCoach?.name
     ? currentCoach.name
         .split(" ")
@@ -122,7 +123,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
                   {t("coachHub").split(" ")[0]} <span className="text-primary">{t("coachHub").split(" ").slice(1).join(" ")}</span>
                 </h1>
                 {currentCoach && (
-                  <p className="text-xs text-muted-foreground truncate max-w-[160px] mt-0.5">{currentCoach.name}</p>
+                  <p className="text-xs text-muted-foreground truncate max-w-[160px] mt-0.5">{displayName}</p>
                 )}
               </div>
 
@@ -313,7 +314,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{currentCoach?.name || "Coach"}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>{displayName}</div>
                       <div style={{ fontSize: 12, color: "#7CFC00" }}>{t("online")}</div>
                     </div>
                   </div>

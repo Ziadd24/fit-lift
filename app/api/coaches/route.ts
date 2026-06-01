@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("coaches")
-    .select("id, name, display_order")
+    .select("id, name, display_name, display_order")
     .order("display_order", { ascending: true });
 
   if (limit && Number.isFinite(limit) && limit > 0) {

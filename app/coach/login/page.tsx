@@ -110,14 +110,22 @@ export default function CoachLoginPage() {
               setLockoutTime(30);
               setError(`Too many failed attempts. Locked out for 30 seconds.`);
             } else {
-              // Human-readable error messages
+            // Human-readable error messages — match actual API responses
               const message = err?.message || "";
-              if (message.includes("401") || message.includes("Unauthorized")) {
+              const statusCode = err?.statusCode || err?.status || "";
+
+              if (message.includes("Invalid") || message.includes("401") || message.includes("Unauthorized") || statusCode === 401) {
                 setError("Incorrect username or password. Please try again.");
-              } else if (message.includes("Network")) {
+              } else if (message.includes("Network") || message.includes("Failed to fetch") || message.includes("fetch failed")) {
                 setError("Connection issue. Please check your internet and try again.");
-              } else if (message.includes("not found")) {
+              } else if (message.includes("not found") || message.includes("No coach") || message.includes("No account")) {
                 setError("No account found with this username. Please check or contact your admin.");
+              } else if (message.includes("pending") || message.includes("approval") || message.includes("approve")) {
+                setError("Your account is pending admin approval. Please contact your administrator.");
+              } else if (message.includes("rate limit") || message.includes("429") || message.includes("Too many")) {
+                setError("Too many login attempts. Please wait a moment and try again.");
+              } else if (message.includes("Internal server error") || message.includes("500")) {
+                setError("Server error. Please try again later or contact your administrator.");
               } else {
                 setError("Login failed. Please try again or contact your administrator.");
               }

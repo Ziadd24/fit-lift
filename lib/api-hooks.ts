@@ -810,7 +810,11 @@ export function useCoachLogin() {
 
         const err = await res.json();
 
-        throw new Error(err.error || "Invalid credentials");
+        const error = new Error(err.error || "Invalid credentials") as any;
+
+        error.statusCode = res.status;
+
+        throw error;
 
       }
 

@@ -54,7 +54,7 @@ export type Announcement = {
 export type Coach = {
   id: number;
   name: string;
-  email: string;
+  display_name: string | null;
   created_at: string;
 };
 

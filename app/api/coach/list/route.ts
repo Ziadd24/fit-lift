@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("coaches")
-    .select("id, name, created_at, display_order")
+    .select("id, name, display_name, created_at, display_order")
     .order("display_order", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data || []);
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("coaches")
     .insert({ name: name.trim(), password_hash: "admin-only-display-coach" })
-    .select("id, name, created_at")
+    .select("id, name, display_name, created_at")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });

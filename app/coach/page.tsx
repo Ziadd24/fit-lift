@@ -95,6 +95,7 @@ function buildPrivateRoster(members: Member[]) {
 export default function CoachDashboard() {
   const router = useRouter();
   const { currentCoach, coachToken } = useAuth();
+  const coachDisplayName = currentCoach?.display_name || currentCoach?.name || "Coach";
   const { setSelectedClient } = useClientContext();
   const { t, isRTL, language, setLanguage, formatNumber } = useCoachLanguage();
   const { data: membersPage, refetch: refetchMembers } = useListMembers(1, undefined, undefined, undefined, { pageSize: "all" });
@@ -408,7 +409,7 @@ export default function CoachDashboard() {
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â HEADER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
         <div className={`flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 ${isRTL ? "lg:flex-row-reverse" : ""}`}>
           <div>
-            <h1 className="text-3xl font-bold text-white" style={{ fontWeight: 700 }}>{t("welcomeBack", { name: currentCoach?.name || "Coach" })}</h1>
+            <h1 className="text-3xl font-bold text-white" style={{ fontWeight: 700 }}>{t("welcomeBack", { name: coachDisplayName })}</h1>
             <p className="text-sm mt-1" style={{ color: "#8B8B8B" }}>{t("coachingOverview")}</p>
           </div>
 

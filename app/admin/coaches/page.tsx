@@ -11,6 +11,7 @@ import { format } from "date-fns";
 interface CoachItem {
   id: number;
   name: string;
+  display_name: string | null;
   created_at: string;
 }
 
@@ -112,7 +113,7 @@ export default function AdminCoaches() {
                   <UserCheck className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm" dir="auto">{coach.name}</p>
+                  <p className="text-white font-bold text-sm" dir="auto">{coach.display_name || coach.name}</p>
                   <p className="text-muted-foreground text-xs">{format(new Date(coach.created_at), "MMM dd, yyyy")}</p>
                 </div>
               </div>

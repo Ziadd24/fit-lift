@@ -10,6 +10,7 @@ const HOME_CARD = `${HOME_LIFT} ${HOME_GLOW}`;
 export interface CoachListItem {
   id?: number;
   name: string;
+  display_name?: string | null;
   display_order?: number | null;
 }
 
@@ -44,7 +45,7 @@ export function CoachCard({
         />
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-grow">
-        <h4 className="text-white font-bold text-sm md:text-lg">{coach.name}</h4>
+        <h4 className="text-white font-bold text-sm md:text-lg">{coach.display_name || coach.name}</h4>
         <div className="h-6 mt-1">
           {caption ? <p className="text-white/60 text-xs line-clamp-1">{caption}</p> : <span className="invisible text-xs">&nbsp;</span>}
         </div>
