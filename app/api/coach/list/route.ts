@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from("coaches")
     .select("id, name, display_name, created_at, display_order")
+    .eq("password_hash", "admin-only-display-coach")
     .order("display_order", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data || []);
