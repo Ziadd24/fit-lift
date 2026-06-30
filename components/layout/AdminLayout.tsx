@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, Megaphone, Image as ImageIcon, LogOut, Activity, Dumbbell, Settings, UserCheck } from "lucide-react";
+import { Users, Megaphone, Image as ImageIcon, LogOut, Activity, Dumbbell, Settings, UserCheck, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { label: "Coaches", href: "/admin/coaches", icon: UserCheck },
   { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
   { label: "Photos", href: "/admin/photos", icon: ImageIcon },
+  { label: "Transformations", href: "/admin/transformations", icon: Sparkles },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

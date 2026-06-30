@@ -4,8 +4,6 @@ import "./globals.css";
 
 import { Providers } from "./providers";
 
-import { Analytics } from "@vercel/analytics/next";
-
 
 
 export const metadata: Metadata = {
@@ -63,9 +61,7 @@ export default function RootLayout({
 }) {
 
   return (
-
-    <html lang="en" suppressHydrationWarning>
-
+    <html lang="en" suppressHydrationWarning data-dashboard-theme="dark">
       <head>
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -85,13 +81,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground overflow-x-hidden">
 
         <Providers>{children}</Providers>
-
-        <Analytics />
-
       </body>
 
     </html>
 
   );
-
 }

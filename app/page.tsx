@@ -530,6 +530,263 @@ function CoachesSection({ lang, t, dbCoaches, coachPhotoMap, onOpenPackages, isL
     </div>
   );
 }
+
+function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, isSplit }: { name: string; duration: string; stats: string; beforeImg: string | null; afterImg: string | null; lang: "en" | "ar"; isSplit?: boolean }) {
+  const [sliderVal, setSliderVal] = useState(50);
+  
+  if (isSplit && beforeImg) {
+    return (
+      <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full flex flex-col", HOME_CARD)}>
+        {/* Before/After Slider Container - Legacy Split Image Mode */}
+        <div className="aspect-[3/4] overflow-hidden bg-black/40 relative select-none">
+          {/* Before Image (underneath) - left half of split image */}
+          <img
+            src={beforeImg}
+            alt={`${name} Before`}
+            className="absolute top-0 left-0 h-full w-[200%] max-w-none object-cover"
+            decoding="async"
+          />
+          {/* Label: BEFORE */}
+          <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
+            {lang === "ar" ? "قبل" : "Before"}
+          </span>
+
+          {/* After Image (overlay, clipped) - right half of split image */}
+          <div 
+            className="absolute inset-0 w-full h-full overflow-hidden"
+            style={{ clipPath: `inset(0 0 0 ${sliderVal}%)` }}
+          >
+            <img
+              src={beforeImg}
+              alt={`${name} After`}
+              className="absolute top-0 left-[-100%] h-full w-[200%] max-w-none object-cover"
+              decoding="async"
+            />
+          </div>
+          {/* Label: AFTER */}
+          <span className="absolute top-3 right-3 bg-primary text-[10px] font-bold text-black uppercase px-2 py-0.5 rounded tracking-wider z-10">
+            {lang === "ar" ? "بعد" : "After"}
+          </span>
+
+          {/* Vertical Divider Line */}
+          <div 
+            className="absolute top-0 bottom-0 w-0.5 bg-primary pointer-events-none z-20 shadow-[0_0_10px_rgba(124,252,0,0.5)]"
+            style={{ left: `${sliderVal}%` }}
+          />
+
+          {/* Slider Handle Button */}
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary text-black flex items-center justify-center pointer-events-none z-20 shadow-[0_0_15px_rgba(124,252,0,0.6)] border border-black/10"
+            style={{ left: `${sliderVal}%` }}
+          >
+            <div className="flex gap-0.5">
+              <ChevronLeft className="w-3.5 h-3.5 -mr-1 text-black" />
+              <ChevronRight className="w-3.5 h-3.5 -ml-1 text-black" />
+            </div>
+          </div>
+
+          {/* Invisible Range Input for Interaction */}
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={sliderVal}
+            onChange={(e) => setSliderVal(Number(e.target.value))}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
+            aria-label="Before and after slider"
+          />
+        </div>
+
+        {/* Info details */}
+        <div className="p-3 md:p-4 flex flex-col flex-grow">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <h4 className="text-white font-bold text-sm md:text-base" dir="auto">{name}</h4>
+            <span className="text-[#a8ff3e] font-bold text-xs shrink-0">{duration}</span>
+          </div>
+          <p className="text-white/60 text-xs mt-1" dir="auto">{stats}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const hasBoth = beforeImg && afterImg;
+  const showImg = afterImg || beforeImg || "";
+  
+  return (
+    <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full flex flex-col", HOME_CARD)}>
+      {/* Before/After Slider Container - Separate Images Mode */}
+      <div className="aspect-[3/4] overflow-hidden bg-black/40 relative select-none">
+        {!hasBoth ? (
+          // Static single image display
+          <>
+            {showImg && (
+              <img
+                src={showImg}
+                alt={name}
+                className="w-full h-full object-cover"
+                decoding="async"
+              />
+            )}
+            <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
+              {beforeImg ? (lang === "ar" ? "قبل" : "Before") : (lang === "ar" ? "بعد" : "After")}
+            </span>
+          </>
+        ) : (
+          // Interactive slider display
+          <>
+            {/* Before Image (underneath) */}
+            <img
+              src={beforeImg!}
+              alt={`${name} Before`}
+              className="absolute inset-0 w-full h-full object-cover"
+              decoding="async"
+            />
+            {/* Label: BEFORE */}
+            <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
+              {lang === "ar" ? "قبل" : "Before"}
+            </span>
+
+            {/* After Image (overlay, clipped) */}
+            <div 
+              className="absolute inset-0 w-full h-full overflow-hidden"
+              style={{ clipPath: `inset(0 0 0 ${sliderVal}%)` }}
+            >
+              <img
+                src={afterImg!}
+                alt={`${name} After`}
+                className="absolute inset-0 w-full h-full object-cover"
+                decoding="async"
+              />
+            </div>
+            {/* Label: AFTER */}
+            <span className="absolute top-3 right-3 bg-primary text-[10px] font-bold text-black uppercase px-2 py-0.5 rounded tracking-wider z-10">
+              {lang === "ar" ? "بعد" : "After"}
+            </span>
+
+            {/* Vertical Divider Line */}
+            <div 
+              className="absolute top-0 bottom-0 w-0.5 bg-primary pointer-events-none z-20 shadow-[0_0_10px_rgba(124,252,0,0.5)]"
+              style={{ left: `${sliderVal}%` }}
+            />
+
+            {/* Slider Handle Button */}
+            <div 
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-primary text-black flex items-center justify-center pointer-events-none z-20 shadow-[0_0_15px_rgba(124,252,0,0.6)] border border-black/10"
+              style={{ left: `${sliderVal}%` }}
+            >
+              <div className="flex gap-0.5">
+                <ChevronLeft className="w-3.5 h-3.5 -mr-1 text-black" />
+                <ChevronRight className="w-3.5 h-3.5 -ml-1 text-black" />
+              </div>
+            </div>
+
+            {/* Invisible Range Input for Interaction */}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={sliderVal}
+              onChange={(e) => setSliderVal(Number(e.target.value))}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
+              aria-label="Before and after slider"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Info details */}
+      <div className="p-3 md:p-4 flex flex-col flex-grow">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <h4 className="text-white font-bold text-sm md:text-base" dir="auto">{name}</h4>
+          <span className="text-[#a8ff3e] font-bold text-xs shrink-0">{duration}</span>
+        </div>
+        <p className="text-white/60 text-xs mt-1" dir="auto">{stats}</p>
+      </div>
+    </Card>
+  );
+}
+
+function TransformationsSection({ lang, t, transformations }: { lang: "en" | "ar"; t: any; transformations: any[] }) {
+  const { activeIndex: activeTransIndex, setActiveIndex: setActiveTransIndex, setActiveIndexOnly: setActiveTransIndexOnly, containerRef: transCarouselRef, goNext: transNext, goPrev: transPrev } = useCarousel(transformations.length, 5000);
+
+  return (
+    <div className="relative">
+      <div
+        ref={transCarouselRef}
+        dir="ltr"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar gap-4 md:gap-6 px-4 md:px-0 -mx-4 md:mx-0 max-w-full scroll-smooth touch-pan-x overscroll-x-contain"
+        onScroll={(e) => {
+          const target = e.target as HTMLDivElement;
+          const firstCard = target.children[0] as HTMLElement | undefined;
+          if (!firstCard) return;
+          const cardWidth = firstCard.offsetWidth + (window.innerWidth >= 768 ? 24 : 16);
+          const newIndex = Math.round(target.scrollLeft / cardWidth);
+          setActiveTransIndexOnly(newIndex);
+        }}
+      >
+        {transformations.map((trans: any, i: number) => {
+          const weightLost = trans.weight_lost_kg;
+          const muscleGained = trans.muscle_gained_kg;
+          let statsText = trans.stats || "";
+          
+          if (!statsText) {
+            if (lang === "ar") {
+              const parts = [];
+              if (weightLost) parts.push(`–${weightLost} كجم`);
+              if (muscleGained) parts.push(`+${muscleGained} كجم عضل`);
+              statsText = parts.join(" / ");
+            } else {
+              const parts = [];
+              if (weightLost) parts.push(`–${weightLost} kg`);
+              if (muscleGained) parts.push(`+${muscleGained} kg muscle`);
+              statsText = parts.join(" / ");
+            }
+          }
+
+          const durationText = trans.duration_weeks
+            ? (lang === "ar" ? `${trans.duration_weeks} أسابيع` : `${trans.duration_weeks} Weeks`)
+            : trans.duration;
+
+          return (
+            <motion.div key={trans.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} viewport={{ once: true }} className="shrink-0 snap-center w-[65vw] sm:w-[45vw] md:w-[280px] lg:w-[300px]">
+              <TransformationCard
+                name={trans.member_name}
+                duration={durationText}
+                stats={statsText}
+                beforeImg={trans.before_image_url}
+                afterImg={trans.after_image_url}
+                lang={lang}
+                isSplit={trans.isSplit}
+              />
+            </motion.div>
+          );
+        })}
+      </div>
+      {transformations.length > 1 && (
+        <>
+          <div className="flex justify-center gap-2 mt-4" dir="ltr">
+            {transformations.map((_item: any, i: number) => (
+              <button
+                key={i}
+                onClick={() => { setActiveTransIndex(i); }}
+                aria-label={`Go to transformation ${i + 1}`}
+                className={`h-1.5 rounded-full transition-[width,background-color,box-shadow] duration-300 ease-out ${i === activeTransIndex ? "w-6 bg-[#7CFC00] shadow-[0_0_8px_rgba(124,252,0,0.5)]" : "w-1.5 bg-white/20"}`}
+              />
+            ))}
+          </div>
+          <button onClick={transPrev} aria-label="Previous transformation" className="flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button onClick={transNext} aria-label="Next transformation" className="flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-9 h-9 md:w-10 md:h-10 rounded-full bg-black/60 border border-white/15 text-white items-center justify-center opacity-60 hover:opacity-100 hover:bg-[#7CFC00] hover:text-black hover:scale-110 transition-all z-10">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -564,7 +821,18 @@ const translations = {
     ], currency: "EGP", button: "Subscribe Now", msg: "Hi! I'm interested in the {plan} membership plan (EGP {price})." },
     contact: { tag: "Get In Touch", title1: "Contact", title2: "Us", desc: "Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.", labels: { address: "Address", phone: "Phone", hours: "Working Hours" }, hoursText: "24/7 (Except Thu: Ends at 12AM)", mapTitle: "Visit Our Real Location", mapBtn: "Open in Google Maps", form: { name: "Your Name", phone: "Phone Number", email: "Email Address", subject: "Subject", subj1: "Membership Inquiry", subj2: "Class Question", subj3: "Personal Training", subj4: "Other", message: "Message", send: "Send Message", success: "Message sent successfully!" } },
     footer: { rights: "FIT & LIFT. All rights reserved." },
-    modal: { title: "Member Login", desc: "Enter your membership code to access your portal.", code: "Membership Code", placeholder: "e.g. FL-1234", btn: "Access Portal", loading: "Verifying..." }
+    modal: { title: "Member Login", desc: "Enter your membership code to access your portal.", code: "Membership Code", placeholder: "e.g. FL-1234", btn: "Access Portal", loading: "Verifying..." },
+    transformations: {
+      tag: "REAL RESULTS",
+      title: "BEFORE & AFTER",
+      link: "See all transformations",
+      items: [
+        { name: "Ahmed", duration: "10 Weeks", stats: "–10 kg / +3 kg muscle" },
+        { name: "Nour", duration: "8 Weeks", stats: "–7 kg / +2 kg muscle" },
+        { name: "Omar", duration: "12 Weeks", stats: "–15 kg / +4 kg muscle" },
+        { name: "Fatma", duration: "6 Weeks", stats: "–5 kg / +1.5 kg muscle" }
+      ]
+    }
   },
   ar: {
     nav: { 
@@ -669,6 +937,17 @@ const translations = {
       placeholder: "مثال: FL-1234", 
       btn: "دخول", 
       loading: "جاري التحقق..." 
+    },
+    transformations: {
+      tag: "نتائج حقيقية",
+      title: "قبل وبعد",
+      link: "شوف كل التحولات",
+      items: [
+        { name: "أحمد", duration: "١٠ أسابيع", stats: "–١٠ كجم / +٣ كجم عضل" },
+        { name: "نور", duration: "٨ أسابيع", stats: "–٧ كجم / +٢ كجم عضل" },
+        { name: "عمر", duration: "١٢ أسبوع", stats: "–١٥ كجم / +٤ كجم عضل" },
+        { name: "فاطمة", duration: "٦ أسابيع", stats: "–٥ كجم / +١.٥ كجم عضل" }
+      ]
     }
   }
 };
@@ -860,6 +1139,28 @@ export default function MemberPortal() {
     }
     return byName;
   }, [coachPhotos, dbCoaches]);
+
+  const { data: dbTransformations = [] } = useQuery<any[]>({
+    queryKey: ["db-transformations-public"],
+    queryFn: async () => {
+      const res = await fetch("/api/transformations");
+      if (!res.ok) return [];
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const fallbackTransformations = useMemo(() => [
+    { id: "p1", member_name: lang === "ar" ? "أحمد" : "Ahmed", duration: lang === "ar" ? "١٠ أسابيع" : "10 Weeks", stats: lang === "ar" ? "–١٠ كجم / +٣ كجم عضل" : "–10 kg / +3 kg muscle", before_image_url: "/images/ahmed_transform.png", after_image_url: "/images/ahmed_transform.png", isSplit: true },
+    { id: "p2", member_name: lang === "ar" ? "نور" : "Nour", duration: lang === "ar" ? "٨ أسابيع" : "8 Weeks", stats: lang === "ar" ? "–٧ كجم / +٢ كجم عضل" : "–7 kg / +2 kg muscle", before_image_url: "/images/nour_transform.png", after_image_url: "/images/nour_transform.png", isSplit: true },
+    { id: "p3", member_name: lang === "ar" ? "عمر" : "Omar", duration: lang === "ar" ? "١٢ أسبوع" : "12 Weeks", stats: lang === "ar" ? "–١٥ كجم / +٤ كجم عضل" : "–15 kg / +4 kg muscle", before_image_url: "/images/omar_transform.png", after_image_url: "/images/omar_transform.png", isSplit: true },
+    { id: "p4", member_name: lang === "ar" ? "فاطمة" : "Fatma", duration: lang === "ar" ? "٦ أسابيع" : "6 Weeks", stats: lang === "ar" ? "–٥ كجم / +١.٥ كجم عضل" : "–5 kg / +1.5 kg muscle", before_image_url: "/images/fatma_transform.png", after_image_url: "/images/fatma_transform.png", isSplit: true },
+  ], [lang]);
+
+  const visibleTransformations = useMemo(() => {
+    const fromDb = dbTransformations.filter((t: any) => t.is_visible);
+    return fromDb.length > 0 ? fromDb : fallbackTransformations;
+  }, [dbTransformations, fallbackTransformations]);
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -1227,6 +1528,22 @@ export default function MemberPortal() {
         </div>
       </section>
 
+      {visibleTransformations && visibleTransformations.length > 0 && (
+        <section id="transformations" className="py-24 bg-background border-t border-white/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: '#a8ff3e' }}>
+                {t.transformations.tag}
+              </h2>
+              <h3 className="text-4xl md:text-5xl font-display text-white font-bold uppercase">
+                {t.transformations.title}
+              </h3>
+            </div>
+            <TransformationsSection lang={lang} t={t} transformations={visibleTransformations} />
+          </div>
+        </section>
+      )}
+
       <section id="pricing" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 100, damping: 18 }} viewport={{ once: true, margin: "-50px" }} className="text-center mb-16">
@@ -1350,17 +1667,25 @@ export default function MemberPortal() {
         <WhatsAppIcon className="w-7 h-7 text-white" />
       </a>
 
-      <footer className="py-8 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+      <footer className="py-12 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 mb-4">
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center justify-center gap-0 hover:opacity-80 transition-opacity">
+              <img src="/images/logo.png" alt="FIT & LIFT" className="h-[128px] w-auto object-contain" />
+              <span className="text-xl font-black text-primary tracking-widest -ml-4">FIT & LIFT</span>
+            </a>
+          </div>
           <p className="text-muted-foreground text-sm">© {new Date().getFullYear()} {t.footer.rights}</p>
           <a
             href={DEVELOPER_WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            className="inline-block mt-3 font-mono text-base sm:text-lg text-white/85 hover:text-white transition-colors"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Powered by Ziad & Ziad
+            <span>{"< "}</span>
+            <span>Developed by="</span>
+            <span className="text-primary font-bold">Ziad & Ziad</span>
+            <span>" andPowered=true /&gt;</span>
           </a>
         </div>
       </footer>

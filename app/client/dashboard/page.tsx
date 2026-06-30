@@ -3033,6 +3033,22 @@ export default function ClientDashboard() {
 
       </div>
 
+      <div style={{ padding: "0 16px 112px", textAlign: "center" }}>
+        <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 12 }}>
+          © {new Date().getFullYear()} {language === "ar" ? "FIT & LIFT. كل الحقوق محفوظة." : "FIT & LIFT. All rights reserved."}
+        </p>
+        <a
+          href="https://wa.me/201274374798"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block font-mono text-base sm:text-lg text-white/85 hover:text-white transition-colors"
+        >
+          <span>{"< "}</span>
+          <span>Developed by="</span>
+          <span style={{ color: "#7CFC00", fontWeight: 700 }}>Ziad & Ziad</span>
+          <span>" andPowered=true /&gt;</span>
+        </a>
+      </div>
       <MobileBottomNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenSettings={() => setIsSettingsOpen(true)} />
 
       {/* ─── Task Modal ──────────────────────────────────────── */}

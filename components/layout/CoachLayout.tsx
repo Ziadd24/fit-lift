@@ -218,6 +218,22 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
             {children}
+            <div className="pt-10 pb-24 md:pb-6 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
+                © {new Date().getFullYear()} FIT & LIFT. {language === "ar" ? "جميع الحقوق محفوظة" : "All rights reserved."}
+              </p>
+              <a
+                href="https://wa.me/201274374798"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block font-mono text-base sm:text-lg text-white/85 hover:text-white transition-colors"
+              >
+                <span>{"< "}</span>
+                <span>Developed by="</span>
+                <span className="text-primary font-bold">Ziad & Ziad</span>
+                <span>" andPowered=true /&gt;</span>
+              </a>
+            </div>
           </div>
         </main>
 
