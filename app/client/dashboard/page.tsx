@@ -1525,7 +1525,7 @@ export default function ClientDashboard() {
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState("all");
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
-  const { currentMember, memberCode: sessionMemberCode, setMemberAuth, logoutMember } = useAuth();
+  const { currentMember, memberCode: sessionMemberCode, memberToken, setMemberAuth, logoutMember } = useAuth();
   const memberName = (() => {
   const name = currentMember?.name ?? "Member";
   const parts = name.trim().split(/\s+/);
@@ -1552,13 +1552,16 @@ export default function ClientDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/members/lookup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(memberToken ? { Authorization: `Bearer ${memberToken}` } : {}),
+        },
         body: JSON.stringify({ membershipCode: memberCode }),
       });
       if (!res.ok) throw new Error("Failed to refresh member");
       return res.json();
     },
-    enabled: !!memberCode,
+    enabled: !!memberCode && !!memberToken,
     refetchInterval: 60000,
     refetchOnWindowFocus: false,
     retry: false,
@@ -1764,7 +1767,7 @@ export default function ClientDashboard() {
       refreshedMember.membership_type !== currentMember.membership_type;
 
     if (hasChanged) {
-      setMemberAuth(memberCode, refreshedMember);
+      setMemberAuth(memberToken, memberCode, refreshedMember);
     }
   }, [currentMember, memberCode, refreshedMember, setMemberAuth]);
 

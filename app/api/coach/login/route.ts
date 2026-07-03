@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const searchTerm = name.trim();
-    console.log("[Coach Login] Searching for:", searchTerm);
     
     const { data: coachRaw, error } = await supabase
       .from("coaches")
@@ -35,8 +34,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
     
-    console.log("[Coach Login] Found coach:", coachRaw.id, coachRaw.name);
-
     if (!coachRaw.password_hash) {
       console.error("[Coach Login] Coach has no password_hash set:", coachRaw.id);
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
@@ -44,7 +41,6 @@ export async function POST(req: NextRequest) {
 
     const isMatch = await verifyPassword(password, coachRaw.password_hash);
     if (!isMatch) {
-      console.log("[Coach Login] Password mismatch for coach:", coachRaw.id);
       return NextResponse.json({ error: "Invalid name or password" }, { status: 401 });
     }
 

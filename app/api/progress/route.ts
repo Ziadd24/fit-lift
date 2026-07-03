@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminAuth, verifyCoachAuth } from "@/lib/auth";
+import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 type BodyMetricEntry = {
@@ -161,27 +161,17 @@ async function resolveMemberAccess(req: NextRequest, requestedMemberId?: number 
     };
   }
 
-  const authHeader = req.headers.get("Authorization");
-  const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!memberCode) {
+  const authedMemberId = verifyMemberAuth(req);
+  if (!authedMemberId) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
-  let query = supabase
-    .from("members")
-    .select("id")
-    .eq("membership_code", memberCode);
-
-  if (requestedMemberId) {
-    query = query.eq("id", requestedMemberId);
+  // Member can only access their own profile
+  if (requestedMemberId && requestedMemberId !== authedMemberId) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  const { data: member } = await query.single();
-  if (!member) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  return { memberId: member.id as number, role: "member", supabase };
+  return { memberId: authedMemberId, role: "member", supabase };
 }
 
 function sanitizeMetrics(metrics: unknown): BodyMetricEntry[] {

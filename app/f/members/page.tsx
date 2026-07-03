@@ -121,7 +121,7 @@ export default function AdminMembers() {
                     <tr
                       key={m.id}
                       className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                      onClick={() => router.push(`/admin/members/${m.id}`)}
+                      onClick={() => router.push(`/f/members/${m.id}`)}
                     >
                       <td className="p-4">
                         <p className="font-bold text-white" dir="auto">{m.name}</p>
@@ -149,7 +149,7 @@ export default function AdminMembers() {
                             className="text-primary hover:bg-primary/10 hover:text-primary px-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/admin/members/${m.id}`);
+                              router.push(`/f/members/${m.id}`);
                             }}
                           >
                             <Eye className="w-4 h-4" />

@@ -24,6 +24,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@features/*": [
+        "./features/*"
       ]
     },
     "target": "ES2017"

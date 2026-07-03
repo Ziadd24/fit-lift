@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/use-auth";
 import { useLookupMember, useListAnnouncements, useListPhotos } from "@/lib/api-hooks";
@@ -538,13 +539,14 @@ function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, 
     return (
       <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full flex flex-col", HOME_CARD)}>
         {/* Before/After Slider Container - Legacy Split Image Mode */}
-        <div className="aspect-[3/4] overflow-hidden bg-black/40 relative select-none">
+        <div className="aspect-[3/4] overflow-hidden bg-black/40 dashboard-skeleton relative select-none">
           {/* Before Image (underneath) - left half of split image */}
-          <img
+          <Image
             src={beforeImg}
             alt={`${name} Before`}
-            className="absolute top-0 left-0 h-full w-[200%] max-w-none object-cover"
-            decoding="async"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="!w-[200%] !h-full !max-w-none object-cover"
           />
           {/* Label: BEFORE */}
           <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
@@ -556,11 +558,12 @@ function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, 
             className="absolute inset-0 w-full h-full overflow-hidden"
             style={{ clipPath: `inset(0 0 0 ${sliderVal}%)` }}
           >
-            <img
+            <Image
               src={beforeImg}
               alt={`${name} After`}
-              className="absolute top-0 left-[-100%] h-full w-[200%] max-w-none object-cover"
-              decoding="async"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="!left-[-100%] !w-[200%] !h-full !max-w-none object-cover"
             />
           </div>
           {/* Label: AFTER */}
@@ -615,16 +618,17 @@ function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, 
   return (
     <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full flex flex-col", HOME_CARD)}>
       {/* Before/After Slider Container - Separate Images Mode */}
-      <div className="aspect-[3/4] overflow-hidden bg-black/40 relative select-none">
+      <div className="aspect-[3/4] overflow-hidden bg-black/40 dashboard-skeleton relative select-none">
         {!hasBoth ? (
           // Static single image display
           <>
             {showImg && (
-              <img
+              <Image
                 src={showImg}
                 alt={name}
-                className="w-full h-full object-cover"
-                decoding="async"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
             )}
             <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
@@ -635,11 +639,12 @@ function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, 
           // Interactive slider display
           <>
             {/* Before Image (underneath) */}
-            <img
+            <Image
               src={beforeImg!}
               alt={`${name} Before`}
-              className="absolute inset-0 w-full h-full object-cover"
-              decoding="async"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
             {/* Label: BEFORE */}
             <span className="absolute top-3 left-3 bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white uppercase px-2 py-0.5 rounded tracking-wider z-10 border border-white/10">
@@ -651,11 +656,12 @@ function TransformationCard({ name, duration, stats, beforeImg, afterImg, lang, 
               className="absolute inset-0 w-full h-full overflow-hidden"
               style={{ clipPath: `inset(0 0 0 ${sliderVal}%)` }}
             >
-              <img
+              <Image
                 src={afterImg!}
                 alt={`${name} After`}
-                className="absolute inset-0 w-full h-full object-cover"
-                decoding="async"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
               />
             </div>
             {/* Label: AFTER */}
@@ -1009,7 +1015,7 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
 
   useEffect(() => {
     galleryItems.forEach(({ src }) => {
-      const img = new Image();
+      const img = new window.Image();
       img.src = src;
     });
   }, [galleryItems]);
@@ -1033,13 +1039,14 @@ function PhotoGallery({ lang }: { lang: "en" | "ar" }) {
         </div>
       )}
       {galleryItems.map((item, idx) => (
-        <img
+        <Image
           key={item.key}
           src={item.src}
           alt={lang === "ar" ? "\u0635\u0648\u0631\u0629 \u0645\u0646 \u0627\u0644\u062c\u064a\u0645" : "Gallery photo"}
           loading="eager"
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          sizes="(max-width: 768px) 100vw, 80vw"
+          className="object-cover"
           style={{
             opacity: idx === index ? 1 : 0,
             transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1188,7 +1195,7 @@ export default function MemberPortal() {
       { membershipCode: code },
       {
         onSuccess: (member: Member) => {
-          setMemberAuth(member.membership_code, member);
+          setMemberAuth(null, member.membership_code, member);
           setIsLoginModalOpen(false);
           setCode("");
         },
@@ -1206,10 +1213,12 @@ export default function MemberPortal() {
       <section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
       
         <div className="absolute inset-0 z-0">
-          <img
+          <Image
             src="/images/gym-hero.jpg"
             alt={lang === "ar" ? "\u062c\u064a\u0645 FIT & LIFT" : "Fit & Lift Gym Interior"}
-            className="w-full h-full object-cover object-center"
+            fill
+            priority
+            className="object-cover object-center"
           />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.55) 100%)' }} />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgb(10,10,10) 0%, transparent 40%)' }} />
@@ -1218,10 +1227,10 @@ export default function MemberPortal() {
       
         <div className="absolute top-0 left-0 w-[5px] h-full bg-primary z-30" />
       
-        <nav className="fixed top-0 left-0 right-0 z-50 h-[72px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(4px)' }}>
-          <div className="max-w-[1440px] mx-auto px-8 lg:px-[120px] h-full flex items-center justify-between">
+        <nav className="fixed top-0 left-0 right-0 z-50 h-[72px] lg:h-[88px]" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%)', backdropFilter: 'blur(4px)' }}>
+          <div className="max-w-[1440px] mx-auto px-8 md:px-16 lg:px-[120px] h-full flex items-center justify-between">
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 flex-shrink-0">
-              <img src="/images/logo.png" alt="Fit and Lift" className="h-[72px] w-auto object-contain" />
+              <Image src="/images/logo.png" alt="Fit and Lift" width={100} height={48} priority style={{ height: '48px', width: 'auto' }} className="object-contain" />
               <span className="text-lg font-black text-primary tracking-widest hidden sm:block">FIT & LIFT</span>
             </a>
       
@@ -1502,10 +1511,13 @@ export default function MemberPortal() {
             className={cn("rounded-2xl overflow-hidden border border-white/10 bg-black/40", HOME_CARD)}
           >
             {scheduleImageUrl ? (
-              <img
+              <Image
                 src={scheduleImageUrl}
                 alt={lang === "ar" ? "\u062c\u062f\u0648\u0644 \u0627\u0644\u062c\u064a\u0645" : "Gym Schedule"}
-                className="w-full h-auto object-contain"
+                width={1200}
+                height={1600}
+                style={{ width: '100%', height: 'auto' }}
+                className="object-contain"
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-24 text-center">

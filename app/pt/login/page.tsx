@@ -7,6 +7,7 @@ import { useCoachLogin } from "@/lib/api-hooks";
 import { Button, Input, Label } from "@/components/ui/PremiumComponents";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Shield, Zap, Lock, Mail, Loader2 } from "lucide-react";
+import { PremiumLoader } from "@/components/ui/PremiumLoader";
 
 /* Password strength calculator */
 function calculatePasswordStrength(password: string): { score: number; label: string; color: string } {
@@ -48,7 +49,7 @@ export default function CoachLoginPage() {
   // Redirect if already logged in (with loading state to prevent flash)
   useEffect(() => {
     if (coachToken) {
-      router.push("/coach");
+      router.push("/pt");
     } else {
       // Small delay to prevent flash
       const timer = setTimeout(() => setIsCheckingAuth(false), 300);
@@ -99,7 +100,7 @@ export default function CoachLoginPage() {
           onSuccess: (res) => {
             setFailedAttempts(0);
             setCoachAuth(res.token, res.coach, false);
-            router.push("/coach");
+            router.push("/pt");
           },
           onError: (err: any) => {
             const newAttempts = failedAttempts + 1;
@@ -143,18 +144,7 @@ export default function CoachLoginPage() {
 
   // Loading state while checking auth
   if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading...</p>
-        </motion.div>
-      </div>
-    );
+    return <PremiumLoader fullScreen />;
   }
 
   return (
@@ -326,7 +316,7 @@ export default function CoachLoginPage() {
               <div className="mt-6 pt-6 border-t border-white/5">
                 <p className="text-xs text-muted-foreground text-center">
                   Having trouble?{" "}
-                  <a href="/admin/support" className="text-primary hover:underline">
+                  <a href="/f/support" className="text-primary hover:underline">
                     Contact your administrator
                   </a>
                 </p>

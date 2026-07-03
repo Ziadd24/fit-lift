@@ -37,13 +37,13 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const navItems = [
-    { label: t("dashboard"), href: "/coach", icon: Activity },
-    { label: t("schedule"), href: "/coach/schedule", icon: Calendar },
-    { label: t("nutrition"), href: "/coach/calories", icon: Utensils },
+    { label: t("dashboard"), href: "/pt", icon: Activity },
+    { label: t("schedule"), href: "/pt/schedule", icon: Calendar },
+    { label: t("nutrition"), href: "/pt/calories", icon: Utensils },
   ];
 
   React.useEffect(() => {
-    if (!coachToken && !isLoggingOutRef.current) router.push("/coach/login");
+    if (!coachToken && !isLoggingOutRef.current) router.push("/pt/login");
   }, [coachToken, router]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +58,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
   };
 
   React.useEffect(() => {
-    if (_hasHydrated && !coachToken && !isLoggingOutRef.current) router.push("/coach/login");
+    if (_hasHydrated && !coachToken && !isLoggingOutRef.current) router.push("/pt/login");
   }, [_hasHydrated, coachToken, router]);
 
   if (!_hasHydrated || !coachToken) return null;
@@ -73,7 +73,7 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
         .slice(0, 2)
     : "CO";
 
-  const isActive = (href: string) => pathname === href || (href !== "/coach" && pathname.startsWith(href));
+  const isActive = (href: string) => pathname === href || (href !== "/pt" && pathname.startsWith(href));
 
   const handleLogout = () => {
     isLoggingOutRef.current = true;

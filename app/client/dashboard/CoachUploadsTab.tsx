@@ -68,7 +68,7 @@ function formatDate(dateString: string) {
 }
 
 export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTabProps) {
-  const { currentMember } = useAuth();
+  const { currentMember, memberToken } = useAuth();
   const { language, t } = useClientLanguage();
   const isMobile = useIsMobile();
   const [uploads, setUploads] = useState<CoachUpload[]>([]);
@@ -129,7 +129,9 @@ export default function CoachUploadsTab({ isPrivate, memberId }: CoachUploadsTab
   const fetchUploads = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/coach-uploads/list?member_id=${memberId}`);
+      const response = await fetch(`/api/coach-uploads/list?member_id=${memberId}`, {
+        headers: memberToken ? { Authorization: `Bearer ${memberToken}` } : {},
+      });
       if (!response.ok) throw new Error("Failed to fetch uploads");
       const data = await response.json();
       setUploads(data.uploads || []);

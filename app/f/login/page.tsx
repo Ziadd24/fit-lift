@@ -27,7 +27,7 @@ export default function AdminLogin() {
         onSuccess: (res) => {
           if (res.success && res.token) {
             setAdminToken(res.token);
-            router.push("/admin");
+            router.push("/f");
           }
         },
         onError: () => {

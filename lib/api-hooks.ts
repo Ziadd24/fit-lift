@@ -5,14 +5,7 @@ import type { Member, Photo, Announcement, Coach, Message, Session } from "@/lib
 import { useAuth } from "@/lib/use-auth";
 
 
-
-function getAuthHeaders(token?: string | null): Record<string, string> {
-
-  return token ? { Authorization: `Bearer ${token}` } : {};
-
-}
-
-
+import { getAuthHeaders } from "@/features/shared/utils/api";
 
 // â”€â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -58,9 +51,9 @@ export function useListMembers(
 
 ) {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || memberCode;
+  const token = adminToken || coachToken || memberToken;
 
   const pageSize = options?.pageSize;
 
@@ -210,9 +203,9 @@ export function useCreateMember() {
 
 export function useUpdateMember() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || memberCode;
+  const token = adminToken || coachToken || memberToken;
 
   const queryClient = useQueryClient();
 
@@ -392,7 +385,7 @@ export function useAssignMember() {
 
 export function useListPhotos(params?: { memberId?: number; global?: boolean; category?: string }) {
 
-  const { adminToken, memberCode } = useAuth();
+  const { adminToken, memberToken } = useAuth();
 
   return useQuery<Photo[]>({
 
@@ -414,7 +407,7 @@ export function useListPhotos(params?: { memberId?: number; global?: boolean; ca
 
       const res = await fetch(`/api/photos${qs}`, {
 
-        headers: getAuthHeaders(adminToken || memberCode),
+        headers: getAuthHeaders(adminToken || memberToken),
 
       });
 
@@ -742,6 +735,9 @@ export function useDeleteAnnouncement() {
 
 
 
+export { useAdminLogin, useCoachLogin, useCoachRegister } from "@/features/auth/services/api";
+
+/*
 export function useAdminLogin() {
 
   return useMutation<
@@ -865,8 +861,8 @@ export function useCoachRegister() {
     },
 
   });
-
 }
+*/
 
 
 
@@ -906,9 +902,9 @@ export function useListConversations() {
 
 export function useListMessages(memberId: number | null) {
 
-  const { coachToken, memberCode, currentMember } = useAuth();
+  const { coachToken, memberToken } = useAuth();
 
-  const token = coachToken || memberCode || currentMember?.membership_code;
+  const token = coachToken || memberToken;
 
   return useQuery<Message[]>({
 
@@ -1262,9 +1258,9 @@ export interface CalorieLog {
 
 export function useListCalorieLogs(memberId?: number | "null" | "all") {
 
-  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
+  const token = adminToken || coachToken || memberToken;
 
   return useQuery<CalorieLog[]>({
 
@@ -1350,9 +1346,9 @@ export function useVerifyCalorieLog() {
 
 export function useSaveCalorieLog() {
 
-  const { adminToken, coachToken, memberCode, currentMember } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = currentMember && memberCode ? memberCode : (coachToken || adminToken || memberCode);
+  const token = adminToken || coachToken || memberToken;
 
   const queryClient = useQueryClient();
 
@@ -1396,9 +1392,9 @@ export function useSaveCalorieLog() {
 
 export function useDeleteCalorieLog() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || memberCode;
+  const token = adminToken || coachToken || memberToken;
 
   const queryClient = useQueryClient();
 
@@ -1459,27 +1455,22 @@ export interface ClientTask {
 
 
 export function useListTasks(memberId?: number) {
-
+  const { adminToken, coachToken, memberToken } = useAuth();
+  const token = adminToken || coachToken || memberToken || "";
   return useQuery<ClientTask[]>({
-
     queryKey: ["client_tasks", memberId],
-
     queryFn: async () => {
-
       const qs = memberId ? `?memberId=${memberId}` : "";
-
-      const res = await fetch(`/api/client-tasks${qs}`);
-
+      const res = await fetch(`/api/client-tasks${qs}`, {
+        headers: getAuthHeaders(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch tasks");
-
       return res.json();
-
     },
 
     enabled: !!memberId,
 
     refetchInterval: 30000,
-
     staleTime: 60000,
 
   });
@@ -1490,9 +1481,9 @@ export function useListTasks(memberId?: number) {
 
 export function useCreateTask() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1536,9 +1527,9 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1582,9 +1573,9 @@ export function useUpdateTask() {
 
 export function useDeleteTask() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1616,7 +1607,7 @@ export function useDeleteTask() {
 
 
 
-// â”€â”€â”€ Client Workouts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ————————————————————————————————————————————————————————————————
 
 
 
@@ -1649,27 +1640,22 @@ export interface ClientWorkout {
 
 
 export function useListWorkouts(memberId?: number) {
-
+  const { adminToken, coachToken, memberToken } = useAuth();
+  const token = adminToken || coachToken || memberToken || "";
   return useQuery<ClientWorkout[]>({
-
     queryKey: ["client_workouts", memberId],
-
     queryFn: async () => {
-
       const qs = memberId ? `?memberId=${memberId}` : "";
-
-      const res = await fetch(`/api/client-workouts${qs}`);
-
+      const res = await fetch(`/api/client-workouts${qs}`, {
+        headers: getAuthHeaders(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch workouts");
-
       return res.json();
-
     },
 
     enabled: !!memberId,
 
     refetchInterval: 30000,
-
     staleTime: 60000,
 
   });
@@ -1680,9 +1666,9 @@ export function useListWorkouts(memberId?: number) {
 
 export function useCreateWorkout() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1726,9 +1712,9 @@ export function useCreateWorkout() {
 
 export function useUpdateWorkout() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1772,9 +1758,9 @@ export function useUpdateWorkout() {
 
 export function useDeleteWorkout() {
 
-  const { adminToken, coachToken, memberCode } = useAuth();
+  const { adminToken, coachToken, memberToken } = useAuth();
 
-  const token = adminToken || coachToken || "";
+  const token = adminToken || coachToken || memberToken || "";
 
   const queryClient = useQueryClient();
 
@@ -1807,21 +1793,17 @@ export function useDeleteWorkout() {
 
 
 export function useListWeeklyPlans(memberId?: number) {
-
+  const { adminToken, coachToken, memberToken } = useAuth();
+  const token = adminToken || coachToken || memberToken || "";
   return useQuery<any[]>({
-
     queryKey: ["weekly_plans", memberId],
-
     queryFn: async () => {
-
       const qs = memberId ? `?member_id=${memberId}` : "";
-
-      const res = await fetch(`/api/weekly-plans${qs}`);
-
+      const res = await fetch(`/api/weekly-plans${qs}`, {
+        headers: getAuthHeaders(token),
+      });
       if (!res.ok) throw new Error("Failed to fetch weekly plans");
-
       return res.json();
-
     },
 
     enabled: !!memberId,
@@ -1833,27 +1815,23 @@ export function useListWeeklyPlans(memberId?: number) {
 
 
 export function useSaveWeeklyPlan() {
-
+  const { adminToken, coachToken, memberToken } = useAuth();
+  const token = adminToken || coachToken || memberToken || "";
   const queryClient = useQueryClient();
-
   return useMutation<any[], Error, { member_id: number; plans: any[] }>({
-
     mutationFn: async ({ member_id, plans }) => {
-
       const res = await fetch("/api/weekly-plans", {
-
         method: "POST",
-
-        headers: { "Content-Type": "application/json" },
-
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(token),
+        },
         body: JSON.stringify({ member_id, plans }),
-
       });
 
       if (!res.ok) throw new Error("Failed to save weekly plan");
 
       return res.json();
-
     },
 
     onSuccess: () => {

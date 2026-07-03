@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth, verifyAdminAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyAdminAuth, verifyMemberAuth } from "@/lib/auth";
 
 type CalorieResult = Record<string, any> & {
   shared_with_coach?: boolean;
@@ -22,8 +22,7 @@ export async function GET(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
-    const authHeader = req.headers.get("Authorization");
-    const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const authedMemberId = verifyMemberAuth(req);
 
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
@@ -38,14 +37,8 @@ export async function GET(req: NextRequest) {
         if (!isAdmin && coachId) {
           query = query.not("member_id", "is", null);
         } else if (!isAdmin) {
-          if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-          const { data: member } = await supabase
-            .from("members")
-            .select("id")
-            .eq("membership_code", memberCode)
-            .single();
-          if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-          query = query.eq("member_id", member.id);
+          if (!authedMemberId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          query = query.eq("member_id", authedMemberId);
         } else {
           query = query.not("member_id", "is", null);
         }
@@ -56,27 +49,15 @@ export async function GET(req: NextRequest) {
         }
 
         if (!isAdmin && !coachId) {
-          if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-          const { data: member } = await supabase
-            .from("members")
-            .select("id")
-            .eq("id", parsedId)
-            .eq("membership_code", memberCode)
-            .single();
-          if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          if (!authedMemberId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          if (parsedId !== authedMemberId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         query = query.eq("member_id", parsedId);
       }
     } else if (!coachId && !isAdmin) {
-      if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("membership_code", memberCode)
-        .single();
-      if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      query = query.eq("member_id", member.id);
+      if (!authedMemberId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      query = query.eq("member_id", authedMemberId);
     }
 
     const startOfToday = new Date();
@@ -107,8 +88,7 @@ export async function POST(req: NextRequest) {
   try {
     const coachId = verifyCoachAuth(req);
     const isAdmin = verifyAdminAuth(req);
-    const authHeader = req.headers.get("Authorization");
-    const memberCode = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const authedMemberId = verifyMemberAuth(req);
 
     const { member_id, meal, result, category } = await req.json();
     if (!meal || !result || !category) {
@@ -139,19 +119,19 @@ export async function POST(req: NextRequest) {
         sharedWithCoach = true;
         sharedCoachId = coachId;
       } else {
-        if (!memberCode) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        const { data: member } = await supabaseCheck
-          .from("members")
-          .select("id, coach_id, membership_type")
-          .eq("membership_code", memberCode)
-          .single();
-        if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        if (resolvedMemberId && member.id !== resolvedMemberId) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!authedMemberId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (resolvedMemberId && authedMemberId !== resolvedMemberId) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
-        resolvedMemberId = member.id;
-        sharedWithCoach = isFiniteId(member.coach_id);
-        sharedCoachId = sharedWithCoach ? member.coach_id : null;
+        resolvedMemberId = authedMemberId;
+        // Check if member has a coach for sharing
+        const { data: memberInfo } = await supabaseCheck
+          .from("members")
+          .select("coach_id")
+          .eq("id", authedMemberId)
+          .single();
+        sharedWithCoach = !!memberInfo?.coach_id;
+        sharedCoachId = memberInfo?.coach_id ?? null;
       }
     }
 

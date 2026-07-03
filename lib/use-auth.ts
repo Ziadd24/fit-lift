@@ -20,9 +20,10 @@ interface AuthState {
   setAdminToken: (token: string | null) => void;
 
   memberCode: string | null;
+  memberToken: string | null;
   currentMember: Member | null;
   memberLoginAt: number | null;
-  setMemberAuth: (code: string | null, member: Member | null) => void;
+  setMemberAuth: (token: string | null, code: string | null, member: Member | null) => void;
 
   coachToken: string | null;
   currentCoach: Coach | null;
@@ -50,6 +51,7 @@ export const useAuth = create<AuthState>()(
         set({
           adminToken: token,
           adminLoginAt: token ? Date.now() : null,
+          memberToken: null,
           memberCode: null,
           currentMember: null,
           memberLoginAt: null,
@@ -60,10 +62,12 @@ export const useAuth = create<AuthState>()(
         }),
 
       memberCode: null,
+      memberToken: null,
       currentMember: null,
       memberLoginAt: null,
-      setMemberAuth: (code, member) =>
+      setMemberAuth: (token, code, member) =>
         set({
+          memberToken: token,
           memberCode: code,
           currentMember: member,
           memberLoginAt: code ? Date.now() : null,
@@ -87,13 +91,14 @@ export const useAuth = create<AuthState>()(
           coachRememberMe: rememberMe,
           adminToken: null,
           adminLoginAt: null,
+          memberToken: null,
           memberCode: null,
           currentMember: null,
           memberLoginAt: null,
         }),
 
       logoutMember: () =>
-        set({ memberCode: null, currentMember: null, memberLoginAt: null }),
+        set({ memberToken: null, memberCode: null, currentMember: null, memberLoginAt: null }),
 
       logoutAdmin: () =>
         set({ adminToken: null, adminLoginAt: null }),
@@ -107,7 +112,7 @@ export const useAuth = create<AuthState>()(
 
         // Clear expired member session
         if (memberLoginAt && now - memberLoginAt > MEMBER_SESSION_TTL_MS) {
-          set({ memberCode: null, currentMember: null, memberLoginAt: null });
+          set({ memberToken: null, memberCode: null, currentMember: null, memberLoginAt: null });
         }
 
         // Clear expired admin session
@@ -135,12 +140,19 @@ export const useAuth = create<AuthState>()(
           state.adminToken = null;
           state.adminLoginAt = null;
         }
+        if (state && state.memberToken && state.memberToken.length < 20) {
+          state.memberToken = null;
+          state.memberCode = null;
+          state.currentMember = null;
+          state.memberLoginAt = null;
+        }
       },
       // Only persist what we need — don't persist functions
       partialize: (state) => ({
         adminToken: state.adminToken,
         adminLoginAt: state.adminLoginAt,
         memberCode: state.memberCode,
+        memberToken: state.memberToken,
         currentMember: state.currentMember,
         memberLoginAt: state.memberLoginAt,
         coachToken: state.coachToken,

@@ -336,7 +336,7 @@ export default function AdminMemberProfile() {
       <AdminLayout>
         <div className="text-center py-20">
           <p className="text-muted-foreground text-xl">Member not found.</p>
-          <Button className="mt-4" onClick={() => router.push("/admin/members")}>
+          <Button className="mt-4" onClick={() => router.push("/f/members")}>
             Back to Members
           </Button>
         </div>
@@ -353,7 +353,7 @@ export default function AdminMemberProfile() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/admin/members")}
+          onClick={() => router.push("/f/members")}
           className="text-muted-foreground hover:text-white px-2"
         >
           <ArrowLeft className="w-5 h-5" />

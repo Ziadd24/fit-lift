@@ -8,14 +8,14 @@ import { useAuth } from "@/lib/use-auth";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/admin", icon: Activity },
-  { label: "Members", href: "/admin/members", icon: Users },
-  { label: "Bundles", href: "/admin/bundles", icon: Dumbbell },
-  { label: "Coaches", href: "/admin/coaches", icon: UserCheck },
-  { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { label: "Photos", href: "/admin/photos", icon: ImageIcon },
-  { label: "Transformations", href: "/admin/transformations", icon: Sparkles },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "Dashboard", href: "/f", icon: Activity },
+  { label: "Members", href: "/f/members", icon: Users },
+  { label: "Bundles", href: "/f/bundles", icon: Dumbbell },
+  { label: "Coaches", href: "/f/coaches", icon: UserCheck },
+  { label: "Announcements", href: "/f/announcements", icon: Megaphone },
+  { label: "Photos", href: "/f/photos", icon: ImageIcon },
+  { label: "Transformations", href: "/f/transformations", icon: Sparkles },
+  { label: "Settings", href: "/f/settings", icon: Settings },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (_hasHydrated && !adminToken) {
-      router.push("/admin/login");
+      router.push("/f/login");
     }
   }, [_hasHydrated, adminToken, router]);
 
@@ -68,7 +68,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         {/* Sign out */}
         <div className="p-3 flex-shrink-0 border-t border-white/5">
           <button
-            onClick={() => { logoutAdmin(); router.push("/admin/login"); }}
+            onClick={() => { logoutAdmin(); router.push("/f/login"); }}
             className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
           >
             <LogOut className="w-5 h-5" />

@@ -528,7 +528,7 @@ function buildGoalHistory(
 }
 
 export function useProgressDashboard(memberId?: number) {
-  const { currentMember, memberCode, coachToken, adminToken } = useAuth();
+  const { currentMember, memberCode, coachToken, adminToken, memberToken } = useAuth();
   const queryClient = useQueryClient();
   const {
     period,
@@ -544,7 +544,7 @@ export function useProgressDashboard(memberId?: number) {
   } = useProgressDashboardStore();
 
   const resolvedMemberId = memberId || currentMember?.id;
-  const token = adminToken || coachToken || memberCode || currentMember?.membership_code;
+  const token = adminToken || coachToken || memberToken;
   const channelRef = useRef<BroadcastChannel | null>(null);
 
   const profileQuery = useQuery<ProgressProfile>({

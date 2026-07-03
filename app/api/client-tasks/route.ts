@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     const coachId = await verifyCoachAuth(req);
+    const authedMemberId = verifyMemberAuth(req);
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const supabase = getSupabaseAdmin();
@@ -20,6 +21,13 @@ export async function GET(req: NextRequest) {
           .eq("coach_id", coachId)
           .single();
         if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+      } else if (authedMemberId) {
+        // Member can only access their own tasks
+        if (parsedId !== authedMemberId) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
       const { data, error } = await supabase
@@ -31,7 +39,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(data ?? []);
     }
 
-    if (!coachId) return NextResponse.json({ error: "memberId is required for clients" }, { status: 400 });
+    // No memberId provided
+    if (authedMemberId) {
+      // Member without explicit memberId — use their own ID
+      const { data, error } = await supabase
+        .from("client_tasks")
+        .select("*")
+        .eq("member_id", authedMemberId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return NextResponse.json(data ?? []);
+    }
+
+    if (!coachId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // No memberId: all tasks for coach's roster
     const { data: coachMembers } = await supabase
@@ -56,12 +76,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const coachId = await verifyCoachAuth(req);
+    const authedMemberId = verifyMemberAuth(req);
     const body = await req.json();
     const title = (body.title || "").slice(0, 200);
     const type = (body.type || "").slice(0, 50);
     if (!title || !type) return NextResponse.json({ error: "title and type are required" }, { status: 400 });
     if (!body.member_id || typeof body.member_id !== "number") {
       return NextResponse.json({ error: "Valid member_id is required" }, { status: 400 });
+    }
+    if (!coachId && authedMemberId) {
+      if (body.member_id !== authedMemberId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if (!coachId && !authedMemberId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase.from("client_tasks").insert({

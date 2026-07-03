@@ -28,6 +28,10 @@ function getFriendlyAnalysisError(error: unknown) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { meal, image } = await req.json();
     if (!meal && !image) {
       return NextResponse.json({ error: "Please describe a meal or provide an image." }, { status: 400 });
@@ -91,7 +95,6 @@ Rules:
     }
 
     const text = result.response.text().trim();
-    console.log("[analyze] Raw Gemini Response:", text);
     
     let parsed;
     try {

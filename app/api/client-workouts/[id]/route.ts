@@ -4,6 +4,10 @@ import { verifyCoachAuth } from "@/lib/auth";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id: idParam } = await params;
     const body = await req.json();
     const supabase = getSupabaseAdmin();
@@ -17,6 +21,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const authHeader = req.headers.get("Authorization");
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id: idParam } = await params;
     const supabase = getSupabaseAdmin();
     const { error } = await supabase.from("client_workouts").delete().eq("id", parseInt(idParam));

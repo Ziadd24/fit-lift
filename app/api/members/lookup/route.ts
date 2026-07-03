@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
 import { rateLimit, getClientIp, RateLimitPresets } from "@/lib/rate-limit";
 import { getMembershipCodeLookupCandidates } from "@/lib/member-code";
 
@@ -29,6 +30,14 @@ export async function POST(req: NextRequest) {
         },
       }
     );
+  }
+
+  // Require authentication: member JWT, admin JWT, or coach JWT
+  const authedMemberId = verifyMemberAuth(req);
+  const isAdmin = verifyAdminAuth(req);
+  const coachId = verifyCoachAuth(req);
+  if (!authedMemberId && !isAdmin && !coachId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: { membershipCode?: string };

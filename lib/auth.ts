@@ -61,6 +61,40 @@ export function verifyCoachAuth(request: NextRequest): number | null {
   } catch { return null; }
 }
 
+// ─── Member ─────────────────────────────────────────
+
+const MEMBER_TOKEN_EXPIRY = "24h";
+
+export async function createMemberToken(memberId: number): Promise<string> {
+  return jwt.sign(
+    { role: "member", sub: memberId, iat: Math.floor(Date.now() / 1000) },
+    getJwtSecret(),
+    { expiresIn: MEMBER_TOKEN_EXPIRY }
+  );
+}
+
+export function verifyMemberAuth(request: NextRequest): number | null {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7);
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as {
+      role?: string;
+      sub?: number;
+    };
+    if (decoded.role !== "member" || typeof decoded.sub !== "number") return null;
+    return decoded.sub;
+  } catch { return null; }
+}
+
+/**
+ * Normalize a phone number by stripping all non-digit characters.
+ * Used for comparing stored phone numbers with user input.
+ */
+export function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
 // ─── Timing-safe compare ──────────────────────────────
 
 export function timingSafeCompare(a: string, b: string): boolean {

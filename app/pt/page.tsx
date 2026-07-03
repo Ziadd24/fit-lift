@@ -522,7 +522,7 @@ export default function CoachDashboard() {
             <div style={{ ...cardStyle, padding: 24, height: 280, display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div className="flex items-center justify-between w-full mb-3">
                 <span className="font-semibold text-white" style={{ fontSize: 18 }}>{t("dailyNutrition")}</span>
-                <Link href="/coach/calories"
+                <Link href="/pt/calories"
                   className={`flex items-center gap-1 text-[11px] font-bold transition-opacity hover:opacity-80 ${isRTL ? "flex-row-reverse" : ""}`}
                   style={{ color: "#7CFC00" }}>
                   <Utensils className="w-3 h-3" /> {t("track")} <ArrowRight className={`w-3 h-3 ${isRTL ? "rotate-180" : ""}`} />
@@ -577,7 +577,7 @@ export default function CoachDashboard() {
                           <Edit2 className="w-3 h-3" />
                         </button>
                       </p>
-                      <Link href="/coach/calories"
+                      <Link href="/pt/calories"
                         className={`inline-flex items-center gap-1 mt-2 text-[11px] font-bold px-3 py-1.5 rounded-full transition-all hover:scale-105 ${isRTL ? "flex-row-reverse" : ""}`}
                         style={{ background: "rgba(124,252,0,0.12)", color: "#7CFC00", border: "1px solid rgba(124,252,0,0.2)" }}>
                         <Utensils className="w-3 h-3" /> {t("logFirstMeal")}
@@ -595,7 +595,7 @@ export default function CoachDashboard() {
           </motion.div>
         </div>
 
-        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â CLIENT ROSTER CAROUSEL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â  CLIENT ROSTER CAROUSEL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â  */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -879,8 +879,10 @@ export default function CoachDashboard() {
                             </button>
                             <button
                               onClick={() => {
-                                setSelectedClient(m.id, m.name);
-                                router.push("/coach/calories");
+                                if ((m as any).target_calories > 0) {
+                                  router.push("/pt/calories");
+                                  setSelectedClient(m.id, m.name);
+                                }
                               }}
                               className="text-xs font-bold transition-colors hover:opacity-80"
                               style={{ color: "#7CFC00" }}
@@ -925,8 +927,10 @@ export default function CoachDashboard() {
                         <td className="p-4 text-right" style={{ paddingRight: 24 }}>
                           <button
                             onClick={() => {
-                              setSelectedClient(m.id, m.name);
-                              router.push("/coach/calories");
+                              if ((m as any).target_calories > 0) {
+                                router.push("/pt/calories");
+                                setSelectedClient(m.id, m.name);
+                              }
                             }}
                             className="text-xs font-bold mr-2 transition-colors hover:opacity-80"
                             style={{ color: "#7CFC00" }}

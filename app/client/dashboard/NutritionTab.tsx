@@ -217,14 +217,14 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
   const [liveAnnouncement, setLiveAnnouncement] = useState("");
   const { disableHeavyAnimations } = useDashboardMotion();
   const queryClient = useQueryClient();
-  const { memberCode, currentMember } = useAuth();
+  const { memberToken, currentMember } = useAuth();
 
   // ── Nutrition Goals ──
   const [editingGoals, setEditingGoals] = useState(false);
   const [goalDraft, setGoalDraft] = useState({ calories: 2200, protein: 180, carbs: 220, fat: 70 });
   const [savingGoals, setSavingGoals] = useState(false);
 
-  const token = memberCode || currentMember?.membership_code || "";
+  const token = memberToken || "";
   const { data: progressProfile } = useQuery({
     queryKey: ["progress_profile", memberId],
     queryFn: async () => {
@@ -377,7 +377,10 @@ export default function NutritionTab({ isPrivate, memberId, demoMode = false }: 
     try {
       const res = await fetch("/api/calories/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ meal: trimmed, image }),
       });
       const data = await res.json();

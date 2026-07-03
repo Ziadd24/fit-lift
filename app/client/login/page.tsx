@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check } from "lucide-react";
+import { ArrowRight, Lock, Loader2, Smartphone, LogOut, Check, Phone } from "lucide-react";
+import { PremiumLoader } from "@/components/ui/PremiumLoader";
 import Image from "next/image";
-import { useLookupMember } from "@/lib/api-hooks";
+import { useMemberLogin } from "@/features/auth/services/api";
 import { useAuth } from "@/lib/use-auth";
 
 /* ── Screen-reader only utility (WCAG) ── */
@@ -29,15 +30,16 @@ const SrOnly = ({ children }: { children: React.ReactNode }) => (
 
 export default function ClientLoginPage() {
   const [code, setCode] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [memberName, setMemberName] = useState("");
   const router = useRouter();
 
   const { setMemberAuth, currentMember, logoutMember } = useAuth();
-  const lookupMutation = useLookupMember();
+  const loginMutation = useMemberLogin();
 
-  const isLoading = lookupMutation.isPending;
+  const isLoading = loginMutation.isPending;
   const [hydrated, setHydrated] = useState(false);
 
   // Wait for Zustand to hydrate from localStorage before doing auth checks
@@ -61,17 +63,17 @@ export default function ClientLoginPage() {
     e.preventDefault();
     setError("");
 
-    lookupMutation.mutate(
-      { membershipCode: code.trim() },
+    loginMutation.mutate(
+      { membershipCode: code.trim(), phone: phone.trim() },
       {
-        onSuccess: (member) => {
-          setMemberAuth(member.membership_code, member);
-          setMemberName(member.name);
+        onSuccess: (data) => {
+          setMemberAuth(data.token, data.member.membership_code, data.member);
+          setMemberName(data.member.name);
           setLoginSuccess(true);
           setTimeout(() => router.replace("/client/dashboard"), 1200);
         },
-        onError: (err) => {
-          setError(err.message || "Member not found. Please check your code.");
+        onError: (err: any) => {
+          setError(err.message || "Invalid credentials. Please check your code and phone number.");
         },
       }
     );
@@ -83,12 +85,21 @@ export default function ClientLoginPage() {
     if (error) setError("");
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(e.target.value);
+    if (error) setError("");
+  };
+
   const inputBase =
     "w-full h-14 bg-[rgba(255,255,255,0.04)] border rounded-xl pl-11 pr-12 text-base text-white outline-none transition-colors duration-200 font-['Inter',sans-serif] focus:bg-[rgba(255,255,255,0.06)]";
 
   const inputNormal = `${inputBase} border-white/[0.08] focus:border-[rgba(124,252,0,0.4)] placeholder:text-[#8B8B8B]`;
   const inputError = `${inputBase} border-[rgba(239,68,68,0.4)] focus:border-[rgba(239,68,68,0.5)] placeholder:text-[#8B8B8B]`;
   const inputDisabled = "opacity-50 cursor-not-allowed";
+
+  if (!hydrated || currentMember) {
+    return <PremiumLoader fullScreen />;
+  }
 
   return (
     <div
@@ -145,7 +156,8 @@ export default function ClientLoginPage() {
               alt="FIT & LIFT"
               width={140}
               height={44}
-              className="h-11 w-auto object-contain"
+              className="h-11 object-contain"
+              style={{ width: "auto" }}
               priority
             />
           </div>
@@ -179,7 +191,8 @@ export default function ClientLoginPage() {
               alt=""
               width={40}
               height={40}
-              className="h-10 w-auto object-contain shrink-0"
+              className="h-10 object-contain shrink-0"
+              style={{ width: "auto" }}
               priority
             />
             <div>
@@ -245,7 +258,7 @@ export default function ClientLoginPage() {
                     Welcome Back
                   </h2>
                   <p className="text-sm text-[#8B8B8B] leading-relaxed">
-                    Enter your membership code to access your dashboard.
+                    Enter your membership code and phone number to access your dashboard.
                   </p>
                 </div>
 
@@ -305,14 +318,49 @@ export default function ClientLoginPage() {
                       />
                     </div>
                     <p className="text-[15px] text-[#8B8B8B] mt-1.5">
-                      دخل كود العضويه
+                      دخل كود العضويه بتاعك
+                    </p>
+                  </div>
+
+                  {/* Phone field */}
+                  <div>
+                    <label
+                      htmlFor="phone-input"
+                      className="text-xs font-semibold text-[#8B8B8B] uppercase tracking-[1px] mb-2 block"
+                    >
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone
+                        size={16}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B8B8B] pointer-events-none"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="phone-input"
+                        type="tel"
+                        inputMode="numeric"
+                        value={phone}
+                        onChange={handlePhoneChange}
+                        placeholder="Enter your phone number"
+                        required
+                        disabled={isLoading}
+                        autoComplete="tel"
+                        aria-describedby={error ? "login-error" : undefined}
+                        aria-invalid={!!error}
+                        aria-required="true"
+                        className={`${error ? inputError : inputNormal} ${isLoading ? inputDisabled : ""}`}
+                      />
+                    </div>
+                    <p className="text-[15px] text-[#8B8B8B] mt-1.5">
+                      دخل رقم الموبايل المسجل
                     </p>
                   </div>
 
                   {/* Submit button */}
                   <motion.button
                     type="submit"
-                    disabled={isLoading || !code.trim()}
+                    disabled={isLoading || !code.trim() || !phone.trim()}
                     whileHover={{ scale: isLoading ? 1 : 1.01 }}
                     whileTap={{ scale: isLoading ? 1 : 0.97 }}
                     aria-busy={isLoading}

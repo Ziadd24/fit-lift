@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
 import { Card } from "@/components/ui/PremiumComponents";
 import { cn } from "@/lib/utils";
 
@@ -31,17 +33,19 @@ export function CoachCard({
   onCtaClick?: () => void;
   className?: string;
 }) {
+  const [imgError, setImgError] = useState(false);
+  const finalImageUrl = imgError || !imageUrl ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(coach.name)}` : imageUrl;
+
   return (
     <Card className={cn("group border border-white/10 bg-card overflow-hidden h-full", HOME_CARD, className)}>
       <div className="aspect-[3/4] overflow-hidden bg-black/40 relative">
-        <img
-          src={imageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(coach.name)}`}
+        <Image
+          src={finalImageUrl}
           alt={coach.name}
-          className="w-full h-full object-cover"
-          decoding="async"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(coach.name)}`;
-          }}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={() => setImgError(true)}
         />
       </div>
       <div className="p-3 md:p-4 flex flex-col flex-grow">

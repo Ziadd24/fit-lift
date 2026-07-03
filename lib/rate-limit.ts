@@ -122,6 +122,11 @@ async function redisRateLimit(key: string, options: RateLimitOptions): Promise<R
 
 // Main rate limit function - async to support Redis
 export async function rateLimit(key: string, options: RateLimitOptions): Promise<RateLimitResult> {
+  // Bypass rate limiting in development to prevent lockouts
+  if (process.env.NODE_ENV === "development") {
+    return { allowed: true, remaining: 999, resetAt: Date.now() + options.windowMs };
+  }
+
   const redis = getRedis();
   if (redis) {
     return redisRateLimit(key, options);
