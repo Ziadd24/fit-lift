@@ -38,12 +38,6 @@ const HOME_BUTTON_SECONDARY = "transition-all duration-300 hover:scale-105 hover
 const ARABIC_LANG_LABEL = "\u0639\u0631\u0628\u064a";
 const GYM_PHONE = process.env.NEXT_PUBLIC_GYM_WHATSAPP_NUMBER || "201009987771";
 const DEVELOPER_WHATSAPP_URL = "https://wa.me/201274374798";
-const COACH_PACKAGES = [
-  { sessions: 10, label: "10 جلسات", price: 1500, popular: false },
-  { sessions: 15, label: "15 جلسة", price: 1900, popular: false },
-  { sessions: 20, label: "20 جلسة", price: 2400, popular: true },
-  { sessions: 30, label: "30 جلسة", price: 3400, popular: false },
-] as const;
 
 const getCoachWhatsAppLink = (coachName: string, _lang: "en" | "ar") => {
   const message = `كنت حابب اشترك برايفت مع كابتن ${coachName} وحابب اعرف التفاصيل`;
@@ -344,6 +338,15 @@ function CoachPackagesModal({
     };
   }, [open, onClose]);
 
+  const { data: packages = [] } = useQuery({
+    queryKey: ["coach-packages-public"],
+    queryFn: async () => {
+      const res = await fetch("/api/coach-packages");
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
   const copy = lang === "ar"
     ? {
         title: "\u0627\u062e\u062a\u0627\u0631 \u0628\u0627\u0642\u062a\u0643",
@@ -410,7 +413,7 @@ function CoachPackagesModal({
               </div>
 
               <div className={cn("mt-5", isMobileSheet ? "space-y-4" : "space-y-3")}>
-                {COACH_PACKAGES.map((pkg) => (
+                {packages.map((pkg: any) => (
                   <div
                     key={pkg.sessions}
                     className={cn(
@@ -427,7 +430,9 @@ function CoachPackagesModal({
                     )}>
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>{pkg.label}</h4>
+                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>
+                            {lang === "ar" ? pkg.label_ar : pkg.label_en}
+                          </h4>
                           {pkg.popular && (
                             <span className="rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-bold text-primary">
                               {copy.badge}
@@ -439,7 +444,7 @@ function CoachPackagesModal({
                         </p>
                       </div>
                       <a
-                        href={getCoachPackageWhatsAppLink(pkg.label, pkg.price)}
+                        href={getCoachPackageWhatsAppLink(lang === "ar" ? pkg.label_ar : pkg.label_en, pkg.price)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(

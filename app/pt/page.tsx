@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CoachLayout } from "@/components/layout/CoachLayout";
-import { useListMembers, useUpdateMember, useSearchUnassignedMembers, useAssignMember, useCreateWorkout } from "@/lib/api-hooks";
+import { useListMembers, useUpdateMember, useCreateWorkout } from "@/lib/api-hooks";
 import { useClientContext } from "@/lib/use-client-context";
 import { Button, Badge, Input, Label } from "@/components/ui/PremiumComponents";
 import {
@@ -167,17 +167,6 @@ export default function CoachDashboard() {
   const assignmentInputRef = useRef<HTMLInputElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Search & Assign Unassigned Members ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
-  const [assignSearchQuery, setAssignSearchQuery] = useState("");
-  const [debouncedAssignSearch, setDebouncedAssignSearch] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedAssignSearch(assignSearchQuery), 500);
-    return () => clearTimeout(t);
-  }, [assignSearchQuery]);
-
-  const { data: unassignedPage, isLoading: isSearchingUnassigned } = useSearchUnassignedMembers(debouncedAssignSearch);
-  const unassignedMembers = unassignedPage?.members || [];
-  const assignMemberMutation = useAssignMember();
   const createWorkoutMutation = useCreateWorkout();
 
   const handleEditClient = (e: React.FormEvent) => {
@@ -989,51 +978,6 @@ export default function CoachDashboard() {
         )}
       </div>
 
-      {/* ══ ASSIGN CLIENT MODAL ══ */}
-      <AnimatePresence>
-        {isAddOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddOpen(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={isRTL ? "text-right" : ""} style={{ ...cardStyle, width: "100%", maxWidth: 520, padding: 32, position: "relative" }}>
-              <div className={`flex justify-between items-center mb-6 ${isRTL ? "flex-row-reverse" : ""}`}>
-                <h2 className="text-xl font-bold text-white">{t("assignClientToRoster")}</h2>
-                <button onClick={() => setIsAddOpen(false)} style={{ color: "#8B8B8B" }}><X className="w-5 h-5" /></button>
-              </div>
-              <div className="space-y-4">
-                <Input
-                  placeholder={t("searchUnassigned")}
-                  value={assignSearchQuery}
-                  onChange={(e) => setAssignSearchQuery(e.target.value)}
-                />
-                <div className="max-h-60 overflow-y-auto space-y-2 mt-4 pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#333 transparent" }}>
-                  {isSearchingUnassigned ? (
-                     <div className="text-sm text-gray-400 text-center py-4">{t("searchInProgress")}</div>
-                  ) : unassignedMembers.length === 0 ? (
-                     <div className="text-sm text-gray-500 text-center py-4">{t("noUnassignedMembers")}</div>
-                  ) : (
-                    unassignedMembers.map((m: Member) => (
-                      <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5 ${isRTL ? "flex-row-reverse text-right" : ""}`}>
-                        <div>
-                          <div className="text-white font-bold">{m.name}</div>
-                          <div className="text-xs text-gray-400">{m.membership_code}</div>
-                        </div>
-                        <button
-                          onClick={() => assignMemberMutation.mutate({ id: m.id, action: "assign" }, { onSuccess: () => { refetchMembers(); setIsAddOpen(false); setAssignSearchQuery(""); }})}
-                          disabled={assignMemberMutation.isPending}
-                          className="px-4 py-1.5 rounded-lg text-sm font-bold text-black hover:opacity-80 disabled:opacity-50 transition-opacity"
-                          style={{ background: "#7CFC00" }}
-                        >
-                          {assignMemberMutation.isPending ? t("assigningWorkout") : t("assign")}
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â EDIT CLIENT MODAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â */}
       <AnimatePresence>

@@ -107,14 +107,11 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Member not found" }, { status: 404 });
 
   if (action === "assign") {
-    // Prevent stealing another coach's client unless admin
-    if (!isAdmin && existing.coach_id !== null && existing.coach_id !== coachId) {
-      return NextResponse.json(
-        { error: "This member is already assigned to another coach" },
-        { status: 409 }
-      );
+    // Coaches can no longer assign clients to themselves; only admins can
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Only admins can assign members to coaches" }, { status: 403 });
     }
-    const newCoachId = isAdmin ? (body.coach_id ?? coachId) : coachId;
+    const newCoachId = body.coach_id ?? coachId;
     const { data, error } = await supabase
       .from("members")
       .update({ coach_id: newCoachId })
@@ -126,9 +123,9 @@ export async function PATCH(
   }
 
   if (action === "unassign") {
-    // Coach can only unassign their own client; admin can unassign anyone
-    if (!isAdmin && existing.coach_id !== coachId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Coach can no longer unassign their own client; only admins can
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Only admins can unassign members from coaches" }, { status: 403 });
     }
     const { data, error } = await supabase
       .from("members")

@@ -476,7 +476,7 @@ function TransformationForm({
         beforeUrl = await uploadTransformationImage(
           beforeFile,
           adminToken || "",
-          `before/${recordId}.jpg`
+          `before/${recordId}-${Date.now()}.jpg`
         );
       }
 
@@ -485,7 +485,7 @@ function TransformationForm({
         afterUrl = await uploadTransformationImage(
           afterFile,
           adminToken || "",
-          `after/${recordId}.jpg`
+          `after/${recordId}-${Date.now()}.jpg`
         );
       }
 

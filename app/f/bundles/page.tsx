@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
-import { Plus, Trash2, Edit, Dumbbell, Check, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Edit, Dumbbell, Check, X, ArrowUp, ArrowDown, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/use-auth";
+import { useCoachPackages, useAddCoachPackage, useUpdateCoachPackage, useDeleteCoachPackage } from "@/features/admin/services/api";
 
 interface Bundle {
   id: number;
@@ -26,6 +27,7 @@ function getAuthHeaders(token?: string | null): Record<string, string> {
 export default function AdminBundles() {
   const { adminToken } = useAuth();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"memberships" | "coach-sessions">("memberships");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<Bundle | null>(null);
 
@@ -128,13 +130,33 @@ export default function AdminBundles() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-display text-white">Membership Bundles</h1>
-          <p className="text-muted-foreground">Manage gym membership packages and pricing.</p>
+          <h1 className="text-3xl font-display text-white">Packages & Bundles</h1>
+          <p className="text-muted-foreground">Manage gym membership bundles and coach private session pricing.</p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)}>
-          <Plus className="w-5 h-5 mr-2" /> Add Bundle
-        </Button>
       </div>
+
+      <div className="flex gap-2 mb-8 p-1 bg-white/5 rounded-xl w-fit">
+        <button 
+          onClick={() => setActiveTab("memberships")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "memberships" ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white"}`}
+        >
+          <Dumbbell className="w-4 h-4" /> Gym Memberships
+        </button>
+        <button 
+          onClick={() => setActiveTab("coach-sessions")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "coach-sessions" ? "bg-white/10 text-white shadow-sm" : "text-white/50 hover:text-white"}`}
+        >
+          <Users className="w-4 h-4" /> Coach Sessions
+        </button>
+      </div>
+
+      {activeTab === "memberships" && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-end mb-6">
+            <Button onClick={() => setIsAddOpen(true)}>
+              <Plus className="w-5 h-5 mr-2" /> Add Bundle
+            </Button>
+          </div>
 
       {(isAddOpen || editingBundle) && (
         <BundleForm
@@ -220,7 +242,139 @@ export default function AdminBundles() {
           ))}
         </div>
       )}
+        </div>
+      )}
+
+      {activeTab === "coach-sessions" && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <PackagePricingTab />
+        </div>
+      )}
     </AdminLayout>
+  );
+}
+
+function PackagePricingTab() {
+  const { data: packages = [], isLoading } = useCoachPackages();
+  const addMutation = useAddCoachPackage();
+  const updateMutation = useUpdateCoachPackage();
+  const deleteMutation = useDeleteCoachPackage();
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [newPkg, setNewPkg] = useState({ sessions: 10, label_en: "", label_ar: "", price: 0, popular: false, display_order: 0 });
+  const [editingPkgId, setEditingPkgId] = useState<number | null>(null);
+  const [editPkg, setEditPkg] = useState({ sessions: 10, label_en: "", label_ar: "", price: 0, popular: false, display_order: 0 });
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    addMutation.mutate(newPkg, {
+      onSuccess: () => {
+        setIsAdding(false);
+        setNewPkg({ sessions: 10, label_en: "", label_ar: "", price: 0, popular: false, display_order: 0 });
+      }
+    });
+  };
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingPkgId === null) return;
+    updateMutation.mutate({ id: editingPkgId, ...editPkg }, {
+      onSuccess: () => {
+        setEditingPkgId(null);
+      }
+    });
+  };
+
+  const togglePopular = (pkg: any) => {
+    updateMutation.mutate({ ...pkg, popular: !pkg.popular });
+  };
+
+  const startEdit = (pkg: any) => {
+    setEditingPkgId(pkg.id);
+    setEditPkg({
+      sessions: pkg.sessions,
+      label_en: pkg.label_en,
+      label_ar: pkg.label_ar,
+      price: pkg.price,
+      popular: pkg.popular,
+      display_order: pkg.display_order
+    });
+  };
+
+  if (isLoading) return <p className="text-muted-foreground">Loading packages...</p>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <p className="text-white/70 text-sm">Manage the private session pricing tiers shown on the homepage.</p>
+        <Button onClick={() => setIsAdding(!isAdding)} variant={isAdding ? "ghost" : "primary"}>
+          {isAdding ? "Cancel" : <><Plus className="w-4 h-4 mr-2" /> Add Package</>}
+        </Button>
+      </div>
+
+      {isAdding && (
+        <Card className="p-5 bg-secondary/50 border border-white/10">
+          <form onSubmit={handleAdd} className="grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
+            <div><Label>Sessions</Label><Input type="number" value={newPkg.sessions} onChange={e => setNewPkg({...newPkg, sessions: parseInt(e.target.value)})} required /></div>
+            <div><Label>Label (EN)</Label><Input value={newPkg.label_en} onChange={e => setNewPkg({...newPkg, label_en: e.target.value})} placeholder="e.g. 10 Sessions" required /></div>
+            <div><Label>Label (AR)</Label><Input value={newPkg.label_ar} onChange={e => setNewPkg({...newPkg, label_ar: e.target.value})} placeholder="e.g. 10 جلسات" dir="rtl" required /></div>
+            <div><Label>Price (EGP)</Label><Input type="number" value={newPkg.price} onChange={e => setNewPkg({...newPkg, price: parseInt(e.target.value)})} required /></div>
+            <div><Label>Order</Label><Input type="number" value={newPkg.display_order} onChange={e => setNewPkg({...newPkg, display_order: parseInt(e.target.value)})} /></div>
+            <Button type="submit" disabled={addMutation.isPending} className="w-full">Save</Button>
+          </form>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {packages.sort((a, b) => a.display_order - b.display_order).map((pkg: any) => (
+          <Card key={pkg.id} className={`p-5 border flex flex-col gap-3 ${pkg.popular ? 'border-primary/50 bg-primary/5' : 'border-white/10 bg-secondary/30'}`}>
+            {editingPkgId === pkg.id ? (
+              <form onSubmit={handleUpdate} className="flex flex-col gap-3">
+                <div><Label className="text-xs">Sessions</Label><Input type="number" value={editPkg.sessions} onChange={e => setEditPkg({...editPkg, sessions: parseInt(e.target.value)})} required className="h-8" /></div>
+                <div><Label className="text-xs">Label (EN)</Label><Input value={editPkg.label_en} onChange={e => setEditPkg({...editPkg, label_en: e.target.value})} required className="h-8" /></div>
+                <div><Label className="text-xs">Label (AR)</Label><Input value={editPkg.label_ar} onChange={e => setEditPkg({...editPkg, label_ar: e.target.value})} dir="rtl" required className="h-8" /></div>
+                <div><Label className="text-xs">Price (EGP)</Label><Input type="number" value={editPkg.price} onChange={e => setEditPkg({...editPkg, price: parseInt(e.target.value)})} required className="h-8" /></div>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" type="submit" disabled={updateMutation.isPending} className="flex-1">Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingPkgId(null)} className="flex-1">Cancel</Button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="flex justify-between items-start">
+                  <h3 className="font-bold text-lg text-white">{pkg.label_en}</h3>
+                  {pkg.popular && <Badge className="bg-primary text-black hover:bg-primary text-[10px]">Popular</Badge>}
+                </div>
+                <p className="text-right font-medium text-white/80" dir="rtl">{pkg.label_ar}</p>
+                <p className="text-2xl font-black text-primary">{pkg.price.toLocaleString()} <span className="text-sm font-medium text-white/50">EGP</span></p>
+                <div className="flex justify-between items-center mt-2 pt-3 border-t border-white/10">
+                  <button 
+                    onClick={() => togglePopular(pkg)}
+                    className={`text-xs px-2 py-1 rounded transition-colors ${pkg.popular ? 'text-primary bg-primary/10' : 'text-white/50 hover:bg-white/5'}`}
+                  >
+                    Make {pkg.popular ? "Normal" : "Popular"}
+                  </button>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => startEdit(pkg)}
+                      className="text-white/50 hover:text-white hover:bg-white/5 p-1.5 rounded transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => { if(confirm("Delete this package?")) deleteMutation.mutate(pkg.id); }}
+                      className="text-red-400 hover:bg-red-400/10 p-1.5 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 

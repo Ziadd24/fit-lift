@@ -17,12 +17,7 @@ type CoachPhoto = {
 
 const GYM_PHONE = "201009987771";
 
-const COACH_PACKAGES = [
-  { sessions: 10, label: "10 جلسات", price: 1500, popular: false },
-  { sessions: 15, label: "15 جلسة", price: 1900, popular: false },
-  { sessions: 20, label: "20 جلسة", price: 2400, popular: true },
-  { sessions: 30, label: "30 جلسة", price: 3400, popular: false },
-] as const;
+
 
 function getCoachPackageWhatsAppLink(packageLabel: string, price: number) {
   const message = `أهلاً، أنا عايز أشترك في باقة ${packageLabel} بـ ${price} جنيه. ممكن نكمل التفاصيل؟`;
@@ -39,6 +34,14 @@ function CoachPackagesModal({
   lang: "en" | "ar";
 }) {
   const [isMobileSheet, setIsMobileSheet] = useState(false);
+  const { data: packages = [] } = useQuery({
+    queryKey: ["coach-packages-public"],
+    queryFn: async () => {
+      const res = await fetch("/api/coach-packages");
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
 
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
@@ -138,7 +141,7 @@ function CoachPackagesModal({
               </div>
 
               <div className={cn("mt-5", isMobileSheet ? "space-y-4" : "space-y-3")}>
-                {COACH_PACKAGES.map((pkg) => (
+                {packages.map((pkg: any) => (
                   <div
                     key={pkg.sessions}
                     className={cn(
@@ -155,7 +158,7 @@ function CoachPackagesModal({
                     )}>
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>{pkg.label}</h4>
+                          <h4 className={cn("font-black", isMobileSheet ? "text-xl" : "text-lg")}>{lang === "ar" ? pkg.label_ar : pkg.label_en}</h4>
                           {pkg.popular && (
                             <span className="rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-bold text-primary">
                               {copy.badge}
@@ -167,7 +170,7 @@ function CoachPackagesModal({
                         </p>
                       </div>
                       <a
-                        href={getCoachPackageWhatsAppLink(pkg.label, pkg.price)}
+                        href={getCoachPackageWhatsAppLink(lang === "ar" ? pkg.label_ar : pkg.label_en, pkg.price)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(
