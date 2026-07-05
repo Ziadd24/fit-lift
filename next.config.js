@@ -70,7 +70,7 @@ const nextConfig = {
 
               "font-src 'self' https://fonts.gstatic.com",
 
-              "img-src 'self' data: blob: https://*.supabase.co https://wa.me",
+              "img-src 'self' data: blob: https://*.supabase.co https://api.dicebear.com https://wa.me",
 
               connectSrc,
 

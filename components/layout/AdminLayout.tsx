@@ -32,7 +32,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   if (!_hasHydrated || !adminToken) return null;
 
   return (
-    <div className="h-screen overflow-hidden flex bg-background font-sans">
+    <div className="h-[100dvh] overflow-hidden flex bg-background font-sans">
       {/* Sidebar — desktop only */}
       <aside className="hidden md:flex w-60 flex-col flex-shrink-0 bg-card border-r border-white/5">
         {/* Logo */}

@@ -1,3 +1,5 @@
+import { validateImageBytes } from "./validate-file";
+
 const ALLOWED_UPLOAD_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -40,6 +42,14 @@ export function validateUploadFile(file: File): UploadValidationResult {
     };
   }
 
+  // Ensure HEIC doesn't bypass just by extension
+  if (ext === "heic" || ext === "heif") {
+    return {
+      valid: false,
+      error: "iPhone HEIC format not supported. Please convert to JPEG first.",
+    };
+  }
+
   const safeExtension = ext === "jpg" ? "jpeg" : ext;
 
   return {
@@ -49,16 +59,14 @@ export function validateUploadFile(file: File): UploadValidationResult {
 }
 
 export function validateUploadBytes(bytes: ArrayBuffer, declaredType: string): boolean {
-  // Basic validation - ensure bytes match declared type
-  // For a production app, you'd want more sophisticated magic number checking
   if (declaredType === "application/pdf") {
     // PDF starts with %PDF
     const view = new Uint8Array(bytes);
-    return view[0] === 0x25 && view[1] === 0x50 && view[2] === 0x44 && view[3] === 0x46;
+    return view.length >= 4 && view[0] === 0x25 && view[1] === 0x50 && view[2] === 0x44 && view[3] === 0x46;
   }
 
-  // For images, we rely on the browser's type detection
-  return true;
+  // For images, use the robust byte-level validation
+  return validateImageBytes(bytes, declaredType);
 }
 
 export function getFileTypeFromMimeType(mimeType: string): "image" | "pdf" {

@@ -554,7 +554,7 @@ export function WorkoutExerciseCard({
           aria-label={`Remove a set from ${exercise.name}`}
         >
           <span style={{ fontSize: 18, lineHeight: 1 }}>-</span>
-          {isArabic ? "Ø­Ø°Ù Ù…Ø¬Ù…ÙˆØ¹Ø©" : "Remove Set"}
+          {isArabic ? "حذف مجموعة" : "Remove Set"}
         </button>
         <button
           className="flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:text-white"

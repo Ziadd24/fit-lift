@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import {
   useListMembers,
   useCreateMember,
-  useDeleteMember,
 } from "@/lib/api-hooks";
 import { Button, Card, Input, Label, Badge } from "@/components/ui/PremiumComponents";
-import { Plus, Trash2, Search, X, Eye, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Plus, Search, X, Eye, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { isMembershipActive } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,35 +17,27 @@ import type { Member } from "@/lib/supabase";
 export default function AdminMembers() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("created_desc");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sortBy, setSortBy] = useState("code_asc");
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { data: membersPage, isLoading } = useListMembers(page, undefined, undefined, undefined, { pageSize: 30 }, sortBy);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset page on new search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: membersPage, isLoading } = useListMembers(page, debouncedSearch || undefined, undefined, undefined, { pageSize: 30 }, sortBy);
   const members = membersPage?.members || [];
   const totalPages = membersPage?.totalPages || 1;
-  const deleteMutation = useDeleteMember();
-
-  const filteredMembers = members.filter(
-    (m) =>
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.membership_code.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort);
     setPage(1);
-  };
-
-  const handleDelete = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    if (confirm("Are you sure you want to delete this member? All their data will be lost.")) {
-      deleteMutation.mutate(
-        { id },
-        { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }) }
-      );
-    }
   };
 
   return (
@@ -108,14 +99,14 @@ export default function AdminMembers() {
                     Loading members...
                   </td>
                 </tr>
-              ) : filteredMembers?.length === 0 ? (
+              ) : members?.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-muted-foreground">
                     No members found.
                   </td>
                 </tr>
               ) : (
-                filteredMembers?.map((m) => {
+                members?.map((m) => {
                   const active = isMembershipActive(m.sub_expiry_date);
                   return (
                     <tr
@@ -153,15 +144,6 @@ export default function AdminMembers() {
                             }}
                           >
                             <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive px-2"
-                            onClick={(e) => handleDelete(e, m.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>

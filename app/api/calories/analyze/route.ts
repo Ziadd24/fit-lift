@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -28,8 +29,9 @@ function getFriendlyAnalysisError(error: unknown) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const authedMemberId = verifyMemberAuth(req);
+    const coachId = verifyCoachAuth(req);
+    if (!authedMemberId && !coachId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { meal, image } = await req.json();

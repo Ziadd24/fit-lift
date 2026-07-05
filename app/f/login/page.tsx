@@ -38,7 +38,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center relative px-4">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center relative px-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
 
       <motion.div

@@ -293,7 +293,7 @@ export default function CoachesDirectory({
   return (
     <main
       dir={lang === "ar" ? "rtl" : "ltr"}
-      className="min-h-screen bg-background px-5 py-8 text-foreground md:px-8 lg:px-12"
+      className="min-h-[100dvh] bg-background px-5 py-8 text-foreground md:px-8 lg:px-12"
       style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}
     >
       <motion.div

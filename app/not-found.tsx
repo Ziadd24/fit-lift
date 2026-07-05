@@ -7,7 +7,7 @@ import { Dumbbell } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 text-center">
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-4 text-center">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
 
       <motion.div

@@ -220,27 +220,46 @@ function PricingSection({ lang, t }: { lang: "en" | "ar"; t: any }) {
                 </div>
 
                 <div className="mb-3 md:mb-4">
-                  <h4 className="text-[14px] md:text-[17px] font-black text-white uppercase tracking-[0.12em] md:tracking-[0.18em]">{bundle.name}</h4>
+                  <h4 
+                    className="text-[14px] md:text-[17px] font-black text-white uppercase tracking-[0.12em] md:tracking-[0.18em]"
+                    dir="auto"
+                  >
+                    {bundle.name}
+                  </h4>
                 </div>
 
-                <div className="flex items-end justify-center gap-2 md:gap-3 mb-1 md:mb-2">
+                <div 
+                  className="flex items-end justify-center gap-2 md:gap-3 mb-1 md:mb-2"
+                  dir="auto"
+                >
                   <span className={`font-black text-white leading-none ${bundle.highlight ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"}`}>
                     {bundle.price.toLocaleString()}
                   </span>
                   <span className="text-[15px] md:text-[18px] text-white/55 font-bold mb-1.5 md:mb-2">{t.pricing.currency}</span>
                 </div>
 
-                <p className="text-center text-[14px] md:text-[15px] text-white/45 mb-4 md:mb-6">{bundle.period}</p>
+                <p 
+                  className="text-center text-[14px] md:text-[15px] text-white/45 mb-4 md:mb-6"
+                  dir="auto"
+                >
+                  {bundle.period}
+                </p>
 
                 <div className="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)] mb-4 md:mb-6" />
 
-                <ul className="space-y-2 md:space-y-3 mb-4 md:mb-6 flex-1 w-full text-left">
+                <ul 
+                  className={cn(
+                    "space-y-2 md:space-y-3 mb-4 md:mb-6 flex-1 w-full",
+                    lang === "ar" ? "text-right" : "text-left"
+                  )}
+                  dir="auto"
+                >
                   {bundle.features.map((f: string, index: number) => (
                     <li key={index} className="flex items-center gap-2.5 md:gap-3 text-white/72 text-[13px] md:text-[15px]">
                       <span className="flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#47D84B]/10 flex-shrink-0">
                         <Check className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#47D84B]" strokeWidth={3} />
                       </span>
-                      <span>{f}</span>
+                      <span dir="auto">{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -1157,17 +1176,9 @@ export default function MemberPortal() {
     retry: false,
   });
 
-  const fallbackTransformations = useMemo(() => [
-    { id: "p1", member_name: lang === "ar" ? "أحمد" : "Ahmed", duration: lang === "ar" ? "١٠ أسابيع" : "10 Weeks", stats: lang === "ar" ? "–١٠ كجم / +٣ كجم عضل" : "–10 kg / +3 kg muscle", before_image_url: "/images/ahmed_transform.png", after_image_url: "/images/ahmed_transform.png", isSplit: true },
-    { id: "p2", member_name: lang === "ar" ? "نور" : "Nour", duration: lang === "ar" ? "٨ أسابيع" : "8 Weeks", stats: lang === "ar" ? "–٧ كجم / +٢ كجم عضل" : "–7 kg / +2 kg muscle", before_image_url: "/images/nour_transform.png", after_image_url: "/images/nour_transform.png", isSplit: true },
-    { id: "p3", member_name: lang === "ar" ? "عمر" : "Omar", duration: lang === "ar" ? "١٢ أسبوع" : "12 Weeks", stats: lang === "ar" ? "–١٥ كجم / +٤ كجم عضل" : "–15 kg / +4 kg muscle", before_image_url: "/images/omar_transform.png", after_image_url: "/images/omar_transform.png", isSplit: true },
-    { id: "p4", member_name: lang === "ar" ? "فاطمة" : "Fatma", duration: lang === "ar" ? "٦ أسابيع" : "6 Weeks", stats: lang === "ar" ? "–٥ كجم / +١.٥ كجم عضل" : "–5 kg / +1.5 kg muscle", before_image_url: "/images/fatma_transform.png", after_image_url: "/images/fatma_transform.png", isSplit: true },
-  ], [lang]);
-
   const visibleTransformations = useMemo(() => {
-    const fromDb = dbTransformations.filter((t: any) => t.is_visible);
-    return fromDb.length > 0 ? fromDb : fallbackTransformations;
-  }, [dbTransformations, fallbackTransformations]);
+    return dbTransformations.filter((t: any) => t.is_visible);
+  }, [dbTransformations]);
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -1207,10 +1218,10 @@ export default function MemberPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div className="min-h-[100dvh] bg-background text-foreground" dir={lang === "ar" ? "rtl" : "ltr"}>
       <DynamicPopup />
 
-      <section className="relative min-h-screen overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
+      <section className="relative min-h-[100dvh] overflow-hidden" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
       
         <div className="absolute inset-0 z-0">
           <Image
@@ -1320,7 +1331,7 @@ export default function MemberPortal() {
           )}
         </AnimatePresence>
       
-        <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-screen pt-[126px] pb-20 sm:pb-24">
+        <div className="relative z-20 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-[120px] flex flex-col justify-center min-h-[100dvh] pt-[126px] pb-20 sm:pb-24">
       
           <motion.div animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
             className="flex items-center gap-3 mb-5 sm:mb-6">
@@ -1516,8 +1527,8 @@ export default function MemberPortal() {
                 alt={lang === "ar" ? "\u062c\u062f\u0648\u0644 \u0627\u0644\u062c\u064a\u0645" : "Gym Schedule"}
                 width={1200}
                 height={1600}
-                style={{ width: '100%', height: 'auto' }}
-                className="object-contain"
+                style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain' }}
+                className="mx-auto"
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -1636,11 +1647,11 @@ export default function MemberPortal() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.name}</Label>
-                      <input name="name" type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input name="name" type="text" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-base md:text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-white/70 text-sm font-medium">{t.contact.form.phone}</Label>
-                      <input name="phone" type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-sm" />
+                      <input name="phone" type="tel" required className="w-full px-4 py-3 border border-white/10 rounded-xl bg-secondary text-white outline-none focus:border-[#7CFC00] transition-all text-base md:text-sm" />
                     </div>
                   </div>
 

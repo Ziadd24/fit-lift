@@ -1923,7 +1923,7 @@ export default function ClientDashboard() {
 
   if (!mounted || !hydrated) {
     return (
-      <div className="min-h-screen bg-[#0D0D10] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-[#0D0D10] flex items-center justify-center">
         <div className="w-full max-w-3xl px-6">
           <div style={{ background: "#16161A", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 24, padding: 24 }}>
             <SkeletonBlock width={220} height={28} />
@@ -1964,7 +1964,7 @@ export default function ClientDashboard() {
 
   return (
     <div
-      className={cn("cd-root min-h-screen flex flex-col overflow-hidden", disableHeavyAnimations && "reduced-motion")}
+      className={cn("cd-root min-h-[100dvh] flex flex-col overflow-hidden", disableHeavyAnimations && "reduced-motion")}
       style={{ fontFamily: "'Inter', sans-serif", background: "var(--dashboard-bg)", color: "var(--dashboard-text-primary)" }}
     >
       <div className="sr-only" aria-live="polite" aria-atomic="true">{liveAnnouncement}</div>

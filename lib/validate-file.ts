@@ -47,26 +47,41 @@ export function validateImageBytes(
   const bytes = new Uint8Array(buffer);
   const mimeType = declaredMimeType.toLowerCase();
 
+  let signatureMatched = false;
   for (const [type, signature] of Object.entries(IMAGE_SIGNATURES)) {
     if (mimeType === type || mimeType === type.replace("jpeg", "jpg")) {
       let matches = true;
       for (let i = 0; i < signature.length; i++) {
         if (bytes[i] !== signature[i]) { matches = false; break; }
       }
-      if (matches) return true;
+      if (!matches) return false; // Signature didn't match the declared type
+      signatureMatched = true;
+      break;
     }
   }
 
+  // If the mimeType wasn't found in our signatures at all, we reject it
+  if (!signatureMatched) {
+    return false;
+  }
+
+  // Extra check for WEBP
+  if (mimeType === "image/webp") {
+    if (bytes.length < 12) return false;
+    const isWebP = bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+    if (!isWebP) return false;
+  }
+
+  // Security check against embedded HTML/scripts (polyglot files)
   const header = new TextDecoder().decode(bytes.slice(0, 50)).toLowerCase();
   if (
     header.includes("<!doctype") ||
     header.includes("<html") ||
     header.includes("<script") ||
     header.includes("<?xml")
-  ) return false;
-
-  if (mimeType === "image/webp" && bytes.length > 12) {
-    return bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  ) {
+    return false;
   }
+
   return true;
 }

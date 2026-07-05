@@ -83,11 +83,11 @@ export function CoachLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div dir={dir} className={cn(cairo.className, "min-h-screen bg-background")}>
-      <div className={cn("min-h-screen flex flex-col", isRTL ? "md:flex-row-reverse" : "md:flex-row")}>
+    <div dir={dir} className={cn(cairo.className, "min-h-[100dvh] bg-background")}>
+      <div className={cn("min-h-[100dvh] flex flex-col", isRTL ? "md:flex-row-reverse" : "md:flex-row")}>
         <aside
           className={cn(
-            "hidden md:flex md:w-72 bg-card flex-col z-10 relative sticky top-0 h-screen overflow-y-auto",
+            "hidden md:flex md:w-72 bg-card flex-col z-10 relative sticky top-0 h-[100dvh] overflow-y-auto",
             isRTL ? "border-l border-white/5" : "border-r border-white/5"
           )}
         >

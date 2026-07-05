@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Lock, Loader2, Smartphone, LogOut, Check, Phone } from "lucide-react";
+import { ArrowRight, Lock, Loader2, Smartphone, LogOut, Check } from "lucide-react";
 import { PremiumLoader } from "@/components/ui/PremiumLoader";
 import Image from "next/image";
 import { useMemberLogin } from "@/features/auth/services/api";
@@ -331,7 +331,7 @@ export default function ClientLoginPage() {
                       Phone Number
                     </label>
                     <div className="relative">
-                      <Phone
+                      <Smartphone
                         size={16}
                         className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B8B8B] pointer-events-none"
                         aria-hidden="true"

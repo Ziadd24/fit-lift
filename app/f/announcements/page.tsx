@@ -34,6 +34,7 @@ export default function AdminAnnouncements() {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupSaving, setPopupSaving] = useState(false);
   const [popupLoaded, setPopupLoaded] = useState(false);
+  const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
     async function fetchPopupSettings() {
@@ -127,6 +128,16 @@ export default function AdminAnnouncements() {
       );
     }
   };
+
+  const filteredAnnouncements = announcements?.filter((a) => {
+    if (!filterText.trim()) return true;
+    const lowerFilter = filterText.toLowerCase();
+    return (
+      (a.title || "").toLowerCase().includes(lowerFilter) ||
+      (a.content || "").toLowerCase().includes(lowerFilter) ||
+      (a.target_member_name || "").toLowerCase().includes(lowerFilter)
+    );
+  });
 
   return (
     <AdminLayout>
@@ -234,16 +245,24 @@ export default function AdminAnnouncements() {
 
         {/* Feed */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-display text-white mb-4">Feed History</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h2 className="text-xl font-display text-white mb-0">Feed History</h2>
+            <Input 
+              placeholder="Search announcements..." 
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="sm:max-w-xs bg-black/40"
+            />
+          </div>
 
           {isLoading ? (
             <p className="text-muted-foreground">Loading feed...</p>
-          ) : announcements?.length === 0 ? (
+          ) : filteredAnnouncements?.length === 0 ? (
             <Card className="p-12 text-center border-dashed border-white/10 bg-transparent">
-              <p className="text-muted-foreground">No announcements posted yet.</p>
+              <p className="text-muted-foreground">No announcements found.</p>
             </Card>
           ) : (
-            announcements?.map((a) => (
+            filteredAnnouncements?.map((a) => (
               <Card key={a.id} className="p-6 relative group">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">

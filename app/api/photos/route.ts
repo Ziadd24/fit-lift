@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const searchParams = req.nextUrl.searchParams;
   const memberIdParam = searchParams.get("memberId");
   const memberId = memberIdParam ? parseInt(memberIdParam) : null;
   const isGlobal = searchParams.get("global") === "true";

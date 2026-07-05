@@ -496,19 +496,21 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
           // Update the signature ref to match the post-removal state
           // This prevents the useEffect from firing with mismatched indices
           prevSetsJsonRef.current = JSON.stringify(currentSets.map((s: any) => ({ exercise: s.exercise, sets: s.sets })));
-          toast.success(`${exerciseName} removed.`);
+          toast.success(isArabicLanguage(language) ? `تم إزالة ${exerciseName}.` : `${exerciseName} removed.`);
         },
       });
     }
   };
 
+  const prevCompletionRef = useRef(completionPct);
   useEffect(() => {
-    if (completionPct === 100 && totalSets > 0) {
+    if (completionPct === 100 && totalSets > 0 && prevCompletionRef.current < 100) {
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([120, 40, 120]);
-      setLiveAnnouncement(`${workout.title} finished.`);
-      toast.success(`${workout.title} complete.`);
+      setLiveAnnouncement(isArabicLanguage(language) ? `تم إنجاز ${workout.title}.` : `${workout.title} finished.`);
+      toast.success(isArabicLanguage(language) ? `تم إنجاز ${workout.title}.` : `${workout.title} complete.`, { id: `workout-complete-${workout.id}` });
     }
-  }, [completionPct, totalSets, workout.title]);
+    prevCompletionRef.current = completionPct;
+  }, [completionPct, totalSets, workout.title, workout.id, language]);
 
   const handleWeightChange = (exIdx: number, delta: number) => {
     setExerciseState(prev => prev.map((e, i) =>
@@ -530,7 +532,7 @@ const WorkoutCard = memo(function WorkoutCard({ workout, isPrivate, delay, onEdi
     try { localStorage.removeItem(setsStorageKey); } catch {}
     // Close/collapse the workout after finishing
     setExpanded(false);
-    toast.success(`${workout.title} finished! Great work!`);
+    toast.success(isArabicLanguage(language) ? `تم إنهاء ${workout.title}! عمل رائع!` : `${workout.title} finished! Great work!`, { id: `finish-${workout.id}` });
   };
 
   // Merge state into sets for display
@@ -1247,12 +1249,12 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 updateWorkoutMutation={updateWorkoutMutation}
                 onDelete={() =>
                   showConfirmToast({
-                    message: isArabic ? `تحب تحذف "${w.title}"؟` : `Delete "${w.title}"?`,
+                    message: isArabic ? `هل تريد حذف "${w.title}"؟` : `Delete "${w.title}"?`,
                     confirmLabel: isArabic ? "حذف" : "Delete",
                     onConfirm: () =>
                       deleteWorkoutMutation.mutate(
                         { id: w.id },
-                        { onSuccess: () => toast.success(isArabic ? "اتحذف التمرين." : "Workout deleted.") }
+                        { onSuccess: () => toast.success(isArabic ? "تم حذف التدريب." : "Workout deleted.") }
                       ),
                   })
                 }
@@ -1442,11 +1444,11 @@ export default function WorkoutsTab({ isPrivate, memberId, unitPreference = "kg"
                 const caloriesRaw = String(formData.get("calories") || "").trim();
                 const calories = parseInt(caloriesRaw, 10);
                 if (title.length < 3) {
-                  setWorkoutFormError(isArabic ? "عنوان التمرين لازم يكون ٣ حروف على الأقل." : "Workout title should be at least 3 characters.");
+                  setWorkoutFormError(isArabic ? "يجب أن يتكون عنوان التدريب من 3 أحرف على الأقل." : "Workout title should be at least 3 characters.");
                   return;
                 }
                 if (Number.isNaN(calories) || calories <= 0) {
-                  setWorkoutFormError(isArabic ? "السعرات لازم تكون رقم أكبر من ٠." : "Calories should be a number greater than 0.");
+                  setWorkoutFormError(isArabic ? "يجب أن تكون السعرات الحرارية رقماً أكبر من 0." : "Calories should be a number greater than 0.");
                   return;
                 }
                 const data = {

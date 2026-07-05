@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
+  const coachId = verifyCoachAuth(req);
+  const isAdmin = verifyAdminAuth(req);
+  const authedMemberId = verifyMemberAuth(req);
+
+  if (!coachId && !isAdmin && !authedMemberId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -17,7 +20,31 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "member_id or coach_id is required" }, { status: 400 });
   }
 
+  // Members can only view their own uploads
+  if (authedMemberId && !coachId && !isAdmin) {
+    if (memberIdStr && parseInt(memberIdStr) !== authedMemberId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const supabase = getSupabaseAdmin();
+
+  // Coaches can only see uploads for members in their roster
+  if (coachId && !isAdmin && memberIdStr) {
+    const parsedMemberId = parseInt(memberIdStr);
+    if (!isNaN(parsedMemberId)) {
+      const { data: member } = await supabase
+        .from("members")
+        .select("id")
+        .eq("id", parsedMemberId)
+        .eq("coach_id", coachId)
+        .single();
+      if (!member) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+  }
+
   let query = supabase
     .from("coach_uploads")
     .select("*, members(name), coaches(name)")
@@ -28,15 +55,20 @@ export async function GET(req: NextRequest) {
     if (isNaN(memberId)) {
       return NextResponse.json({ error: "Invalid member_id" }, { status: 400 });
     }
-    query = query.eq("member_id", memberId);
+    // If member is authed, force their own ID
+    if (authedMemberId && !coachId && !isAdmin) {
+      query = query.eq("member_id", authedMemberId);
+    } else {
+      query = query.eq("member_id", memberId);
+    }
   }
 
   if (coachIdStr) {
-    const coachId = parseInt(coachIdStr);
-    if (isNaN(coachId)) {
+    const coachIdParam = parseInt(coachIdStr);
+    if (isNaN(coachIdParam)) {
       return NextResponse.json({ error: "Invalid coach_id" }, { status: 400 });
     }
-    query = query.eq("coach_id", coachId);
+    query = query.eq("coach_id", coachIdParam);
   }
 
   if (category && (category === "training_program" || category === "diet_plan")) {

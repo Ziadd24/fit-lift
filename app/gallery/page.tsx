@@ -100,7 +100,7 @@ export default function ClassesPage() {
   const isRTL = lang === "ar";
 
   return (
-    <div className="min-h-screen bg-background" dir={isRTL ? "rtl" : "ltr"}>
+    <div className="min-h-[100dvh] bg-background" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <header className="border-b border-white/10 bg-black/40 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

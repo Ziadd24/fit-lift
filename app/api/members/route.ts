@@ -93,7 +93,10 @@ export async function GET(req: NextRequest) {
       break;
   }
 
-  const { data, error, count } = await query.order(orderColumn, { ascending: orderAscending }).range(from, to);
+  const { data, error, count } = await query
+    .order(orderColumn, { ascending: orderAscending })
+    .order('created_at', { ascending: false })
+    .range(from, to);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({
