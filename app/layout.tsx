@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 import { Providers } from "./providers";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 
 
@@ -81,6 +82,7 @@ export default function RootLayout({
       <body className="bg-background text-foreground overflow-x-hidden">
 
         <Providers>{children}</Providers>
+        <SpeedInsights />
       </body>
 
     </html>
