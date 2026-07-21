@@ -735,7 +735,7 @@ export function useDeleteAnnouncement() {
 
 
 
-export { useAdminLogin, useCoachLogin, useCoachRegister } from "@/features/auth/services/api";
+export { useAdminLogin, useCoachLogin } from "@/features/auth/services/api";
 
 /*
 export function useAdminLogin() {

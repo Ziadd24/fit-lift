@@ -42,26 +42,7 @@ export function useCoachLogin() {
   });
 }
 
-export function useCoachRegister() {
-  return useMutation<
-    { success: boolean; token: string; coach: Coach },
-    Error,
-    { name: string; password: string }
-  >({
-    mutationFn: async ({ name, password }) => {
-      const res = await fetch("/api/coach/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, password }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Registration failed");
-      }
-      return res.json();
-    },
-  });
-}
+
 
 export function useMemberLogin() {
   return useMutation<

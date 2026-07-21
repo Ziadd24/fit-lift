@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth, verifyAdminAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyAdminAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 
 type CalorieResult = Record<string, any> & {
   shared_with_coach?: boolean;
@@ -109,13 +109,9 @@ export async function POST(req: NextRequest) {
         if (!resolvedMemberId) {
           return NextResponse.json({ error: "member_id is required" }, { status: 400 });
         }
-        const { data: member } = await supabaseCheck
-          .from("members")
-          .select("id, membership_type")
-          .eq("id", resolvedMemberId)
-          .eq("coach_id", coachId)
-          .single();
-        if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+        if (!(await assertCoachOwnsMember(supabaseCheck, coachId, resolvedMemberId))) {
+          return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+        }
         sharedWithCoach = true;
         sharedCoachId = coachId;
       } else {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,13 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Coach must own the member, member must own the workout
     if (coachId) {
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("id", workout.member_id)
-        .eq("coach_id", coachId)
-        .single();
-      if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!(await assertCoachOwnsMember(supabase, coachId, workout.member_id))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     } else if (authedMemberId && workout.member_id !== authedMemberId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -101,13 +95,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     if (coachId) {
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("id", workout.member_id)
-        .eq("coach_id", coachId)
-        .single();
-      if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!(await assertCoachOwnsMember(supabase, coachId, workout.member_id))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     } else if (authedMemberId && workout.member_id !== authedMemberId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

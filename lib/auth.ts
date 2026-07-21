@@ -2,6 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { NextRequest } from "next/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 function getJwtSecret(): string {
   const secret = process.env.ADMIN_JWT_SECRET;
@@ -137,3 +138,20 @@ export async function verifyPassword(
   // Modern bcrypt verification
   return bcrypt.compare(password, hash);
 }
+
+// ─── Coach Ownership ─────────────────────────────────
+
+export async function assertCoachOwnsMember(
+  supabase: SupabaseClient,
+  coachId: number,
+  memberId: number
+): Promise<boolean> {
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("id", memberId)
+    .eq("coach_id", coachId)
+    .single();
+  return !!member;
+}
+

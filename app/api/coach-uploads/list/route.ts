@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const coachId = verifyCoachAuth(req);
@@ -33,13 +33,7 @@ export async function GET(req: NextRequest) {
   if (coachId && !isAdmin && memberIdStr) {
     const parsedMemberId = parseInt(memberIdStr);
     if (!isNaN(parsedMemberId)) {
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("id", parsedMemberId)
-        .eq("coach_id", coachId)
-        .single();
-      if (!member) {
+      if (!(await assertCoachOwnsMember(supabase, coachId, parsedMemberId))) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }

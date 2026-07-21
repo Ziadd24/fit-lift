@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth, verifyAdminAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyAdminAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,13 +35,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Members can only delete their own logs
     if (!isAdmin) {
       if (coachId) {
-        const { data: member } = await supabase
-          .from("members")
-          .select("id")
-          .eq("id", log.member_id)
-          .eq("coach_id", coachId)
-          .single();
-        if (!member) {
+        if (!(await assertCoachOwnsMember(supabase, coachId, log.member_id))) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
       } else if (authedMemberId) {

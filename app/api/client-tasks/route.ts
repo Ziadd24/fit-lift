@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyCoachAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,13 +14,9 @@ export async function GET(req: NextRequest) {
       const parsedId = parseInt(memberId);
       if (coachId) {
         // Verify member belongs to this coach
-        const { data: member } = await supabase
-          .from("members")
-          .select("id")
-          .eq("id", parsedId)
-          .eq("coach_id", coachId)
-          .single();
-        if (!member) return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+        if (!(await assertCoachOwnsMember(supabase, coachId, parsedId))) {
+          return NextResponse.json({ error: "Member not in your roster" }, { status: 403 });
+        }
       } else if (authedMemberId) {
         // Member can only access their own tasks
         if (parsedId !== authedMemberId) {

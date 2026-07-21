@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth } from "@/lib/auth";
+import { verifyAdminAuth, verifyCoachAuth, verifyMemberAuth, assertCoachOwnsMember } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 type BodyMetricEntry = {
@@ -144,13 +144,7 @@ async function resolveMemberAccess(req: NextRequest, requestedMemberId?: number 
       return { error: NextResponse.json({ error: "memberId is required" }, { status: 400 }) };
     }
     if (coachId) {
-      const { data: member } = await supabase
-        .from("members")
-        .select("id")
-        .eq("id", requestedMemberId)
-        .eq("coach_id", coachId)
-        .single();
-      if (!member) {
+      if (!(await assertCoachOwnsMember(supabase, coachId, requestedMemberId))) {
         return { error: NextResponse.json({ error: "Member not in your roster" }, { status: 403 }) };
       }
     }

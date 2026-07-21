@@ -415,7 +415,7 @@ function CoachPackagesModal({
               <div className={cn("mt-5", isMobileSheet ? "space-y-4" : "space-y-3")}>
                 {packages.map((pkg: any) => (
                   <div
-                    key={pkg.sessions}
+                    key={pkg.id}
                     className={cn(
                       "rounded-2xl border transition-all",
                       isMobileSheet ? "px-5 py-5" : "px-4 py-4",
